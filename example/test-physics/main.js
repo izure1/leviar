@@ -5401,6 +5401,32 @@ var LveObject = class extends EventEmitter {
     }
   }
   /**
+   * 물리 바디의 각속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
+   * @param angularVelocity 각속도 (라디안/초)
+   */
+  setAngularVelocity(angularVelocity) {
+    if (!this._body) {
+      console.warn("[LveObject] setAngularVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      return;
+    }
+    const Matter3 = globalThis.__Matter__;
+    if (Matter3) {
+      Matter3.Body.setAngularVelocity(this._body, angularVelocity);
+    }
+  }
+  /**
+   * 물리 바디에 토크(회전력)를 적용합니다. attribute.physics가 설정된 경우에만 동작합니다.
+   * Matter.js는 매 스텝마다 torque를 소비하므로, 매 프레임 호출하면 지속적인 회전력이 됩니다.
+   * @param torque 토크 값 (양수: 시계 방향, 음수: 반시계 방향)
+   */
+  applyTorque(torque) {
+    if (!this._body) {
+      console.warn("[LveObject] applyTorque: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      return;
+    }
+    this._body.torque += torque;
+  }
+  /**
    * 객체의 속성을 애니메이션으로 부드럽게 변경합니다.
    * @param target 변경할 속성과 목표값 (숫자 or 복합 대입 연산자 문자열)
    * @param duration 지속 시간 (ms)
@@ -10093,9 +10119,8 @@ function addBox(x, y) {
     box.animate({ style: { opacity: 0.9, borderWidth: 0 } }, 150);
   });
   box.on("click", () => {
-    const fx = (Math.random() - 0.5) * 50;
-    const fy = Math.random() * 50 + 20;
-    box.applyForce({ x: fx, y: fy });
+    const force = (Math.random() - 0.5) * 50;
+    box.applyTorque(force);
   });
 }
 for (let i = 0; i < 10; i++) {
@@ -10109,6 +10134,7 @@ world.createRectangle({
     zIndex: -1
   }
 }).on("click", (e) => {
+  e.stopPropagation();
   const mx = e.clientX - window.innerWidth / 2;
   const my = window.innerHeight / 2 - e.clientY;
   addBox(mx, my);

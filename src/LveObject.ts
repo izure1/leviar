@@ -178,6 +178,34 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
   }
 
   /**
+   * 물리 바디의 각속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
+   * @param angularVelocity 각속도 (라디안/초)
+   */
+  setAngularVelocity(angularVelocity: number) {
+    if (!this._body) {
+      console.warn('[LveObject] setAngularVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      return
+    }
+    const Matter = (globalThis as any).__Matter__
+    if (Matter) {
+      Matter.Body.setAngularVelocity(this._body, angularVelocity)
+    }
+  }
+
+  /**
+   * 물리 바디에 토크(회전력)를 적용합니다. attribute.physics가 설정된 경우에만 동작합니다.
+   * Matter.js는 매 스텝마다 torque를 소비하므로, 매 프레임 호출하면 지속적인 회전력이 됩니다.
+   * @param torque 토크 값 (양수: 시계 방향, 음수: 반시계 방향)
+   */
+  applyTorque(torque: number) {
+    if (!this._body) {
+      console.warn('[LveObject] applyTorque: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      return
+    }
+    this._body.torque += torque
+  }
+
+  /**
    * 객체의 속성을 애니메이션으로 부드럽게 변경합니다.
    * @param target 변경할 속성과 목표값 (숫자 or 복합 대입 연산자 문자열)
    * @param duration 지속 시간 (ms)

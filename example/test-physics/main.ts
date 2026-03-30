@@ -56,9 +56,8 @@ function addBox(x: number, y: number) {
   });
 
   box.on('click', () => {
-    const fx = (Math.random() - 0.5) * 50;
-    const fy = Math.random() * 50 + 20;
-    box.applyForce({ x: fx, y: fy });
+    const force = (Math.random() - 0.5) * 50;
+    box.applyTorque(force);
   });
 }
 
@@ -76,6 +75,7 @@ world.createRectangle({
     zIndex: -1,
   }
 }).on('click', (e) => {
+  e.stopPropagation()
   const mx = e.clientX - window.innerWidth / 2;
   const my = window.innerHeight / 2 - e.clientY;
   addBox(mx, my);
