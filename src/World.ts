@@ -263,8 +263,8 @@ export class World extends EventEmitter {
       const screenX = dx * perspectiveScale
       const screenY = dy * perspectiveScale
 
-      const baseW = style.width ?? 0
-      const baseH = style.height ?? 0
+      const baseW = obj._renderedSize?.w ?? style.width ?? 0
+      const baseH = obj._renderedSize?.h ?? style.height ?? 0
       const w = baseW * perspectiveScale * transform.scale.x
       const h = baseH * perspectiveScale * transform.scale.y
 
