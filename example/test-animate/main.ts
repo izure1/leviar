@@ -35,7 +35,7 @@ world.createText({
 })
 
 const pureAnim = new Animation({
-  val: 0,
+  val: 100,
 })
 
 const readout = world.createText({
@@ -48,10 +48,10 @@ pureAnim.start((state) => {
   readout.attribute.text = Math.round(state.val).toString()
 }, 3000, 'easeInOutQuart')
 
-setTimeout(() => {
-  pureAnim.pause()
-  setTimeout(() => pureAnim.resume(), 1000)
-}, 1000)
+// setTimeout(() => {
+//   pureAnim.pause()
+//   setTimeout(() => pureAnim.resume(), 1000)
+// }, 1000)
 
 // 4. 재귀적인 속성 (Dataset) 테스트
 const dataItem = world.createText({

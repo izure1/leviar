@@ -322,7 +322,7 @@ export class Renderer {
     const perspectiveScale = depth === 0 ? 1 : focalLength / depth
 
     const screenX = (transform.position.x - camX) * perspectiveScale * transform.scale.x
-    const screenY = -((transform.position.y - camY) * perspectiveScale * transform.scale.y) // WebGL은 Y 반전
+    const screenY = (transform.position.y - camY) * perspectiveScale * transform.scale.y // WebGL은 Y 반전 (X) -> Lve4는 양수가 위로가야함
 
     const w = (style.width ?? 0) * perspectiveScale * transform.scale.x
     const h = (style.height ?? 0) * perspectiveScale * transform.scale.y

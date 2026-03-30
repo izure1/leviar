@@ -5193,10 +5193,8 @@ function animateObject(source, rawTarget, duration, easing = "linear") {
     const easedT = easingFn(rawT);
     applyInterpolated(source, from, to, easedT, rawTarget);
     if (rawT < 1) {
-      ;
       anim._rafId = requestAnimationFrame((ts) => tick(ts));
     } else {
-      ;
       anim._rafId = null;
     }
   };
@@ -6857,14 +6855,14 @@ var Renderer = class {
       return b.id - a.id;
     }
   }
-  getRenderList({ scene, camera, frustumCull, sort }) {
+  getRenderList({ scene, camera: camera2, frustumCull, sort }) {
     let renderList = [];
-    if (camera && frustumCull) camera.updateFrustum();
+    if (camera2 && frustumCull) camera2.updateFrustum();
     scene.traverse((node) => {
       if (!node.visible) return true;
       if (!node.draw) return;
-      if (frustumCull && node.frustumCulled && camera) {
-        if (!camera.frustumIntersectsMesh(node)) return;
+      if (frustumCull && node.frustumCulled && camera2) {
+        if (!camera2.frustumIntersectsMesh(node)) return;
       }
       renderList.push(node);
     });
@@ -6881,9 +6879,9 @@ var Renderer = class {
           ui.push(node);
         }
         node.zDepth = 0;
-        if (node.renderOrder !== 0 || !node.program.depthTest || !camera) return;
+        if (node.renderOrder !== 0 || !node.program.depthTest || !camera2) return;
         node.worldMatrix.getTranslation(tempVec32);
-        tempVec32.applyMatrix4(camera.projectionViewMatrix);
+        tempVec32.applyMatrix4(camera2.projectionViewMatrix);
         node.zDepth = tempVec32.z;
       });
       opaque.sort(this.sortOpaque);
@@ -6893,7 +6891,7 @@ var Renderer = class {
     }
     return renderList;
   }
-  render({ scene, camera, target = null, update = true, sort = true, frustumCull = true, clear }) {
+  render({ scene, camera: camera2, target = null, update = true, sort = true, frustumCull = true, clear }) {
     if (target === null) {
       this.bindFramebuffer();
       this.setViewport(this.width * this.dpr, this.height * this.dpr);
@@ -6915,10 +6913,10 @@ var Renderer = class {
       );
     }
     if (update) scene.updateMatrixWorld();
-    if (camera) camera.updateMatrixWorld();
-    const renderList = this.getRenderList({ scene, camera, frustumCull, sort });
+    if (camera2) camera2.updateMatrixWorld();
+    const renderList = this.getRenderList({ scene, camera: camera2, frustumCull, sort });
     renderList.forEach((node) => {
-      node.draw({ camera });
+      node.draw({ camera: camera2 });
     });
   }
 };
@@ -8618,8 +8616,8 @@ var Mesh = class extends Transform {
     this.afterRenderCallbacks.push(f);
     return this;
   }
-  draw({ camera } = {}) {
-    if (camera) {
+  draw({ camera: camera2 } = {}) {
+    if (camera2) {
       if (!this.program.uniforms.modelMatrix) {
         Object.assign(this.program.uniforms, {
           modelMatrix: { value: null },
@@ -8630,20 +8628,20 @@ var Mesh = class extends Transform {
           cameraPosition: { value: null }
         });
       }
-      this.program.uniforms.projectionMatrix.value = camera.projectionMatrix;
-      this.program.uniforms.cameraPosition.value = camera.worldPosition;
-      this.program.uniforms.viewMatrix.value = camera.viewMatrix;
-      this.modelViewMatrix.multiply(camera.viewMatrix, this.worldMatrix);
+      this.program.uniforms.projectionMatrix.value = camera2.projectionMatrix;
+      this.program.uniforms.cameraPosition.value = camera2.worldPosition;
+      this.program.uniforms.viewMatrix.value = camera2.viewMatrix;
+      this.modelViewMatrix.multiply(camera2.viewMatrix, this.worldMatrix);
       this.normalMatrix.getNormalMatrix(this.modelViewMatrix);
       this.program.uniforms.modelMatrix.value = this.worldMatrix;
       this.program.uniforms.modelViewMatrix.value = this.modelViewMatrix;
       this.program.uniforms.normalMatrix.value = this.normalMatrix;
     }
-    this.beforeRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
+    this.beforeRenderCallbacks.forEach((f) => f && f({ mesh: this, camera: camera2 }));
     let flipFaces = this.program.cullFace && this.worldMatrix.determinant() < 0;
     this.program.use({ flipFaces });
     this.geometry.draw({ mode: this.mode, program: this.program });
-    this.afterRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
+    this.afterRenderCallbacks.forEach((f) => f && f({ mesh: this, camera: camera2 }));
   }
 };
 
@@ -9256,7 +9254,7 @@ var Renderer2 = class {
     const focalLength = 500;
     const perspectiveScale = depth === 0 ? 1 : focalLength / depth;
     const screenX = (transform.position.x - camX) * perspectiveScale * transform.scale.x;
-    const screenY = -((transform.position.y - camY) * perspectiveScale * transform.scale.y);
+    const screenY = (transform.position.y - camY) * perspectiveScale * transform.scale.y;
     const w = (style.width ?? 0) * perspectiveScale * transform.scale.x;
     const h = (style.height ?? 0) * perspectiveScale * transform.scale.y;
     const rotation = transform.rotation.z;
@@ -9805,7 +9803,7 @@ var World = class {
 
 // example/test-text/main.ts
 var world = new World();
-world.createCamera();
+var camera = world.createCamera();
 function label(text, x, y, z) {
   world.createText({
     attribute: { text },
@@ -9874,6 +9872,13 @@ aligns.forEach((align, i) => {
     style: { color: alignColors[i], fontSize: 18, fontFamily: "sans-serif", width: 200, textAlign: align },
     transform: { position: { x: 150, y: 220 + i * 70, z: 300 } }
   });
+});
+camera.transform.position.z = -200;
+window.addEventListener("mousemove", (e) => {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  camera.transform.position.x = (e.clientX - cx) * 0.12;
+  camera.transform.position.y = (e.clientY - cy) * 0.12;
 });
 world.start();
 /*! Bundled license information:

@@ -293,13 +293,13 @@ export function animateObject(
     applyInterpolated(source, from, to, easedT, rawTarget)
 
     if (rawT < 1) {
-      ; (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
+      (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
     } else {
-      ; (anim as any)._rafId = null
+      (anim as any)._rafId = null
     }
   }
 
-    ; (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
+  (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
 
   return anim
 }

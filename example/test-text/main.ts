@@ -1,7 +1,7 @@
 import { World } from '../../src/index.js'
 
 const world = new World()
-world.createCamera()
+const camera = world.createCamera()
 
 function label(text: string, x: number, y: number, z: number) {
   world.createText({
@@ -85,6 +85,15 @@ aligns.forEach((align, i) => {
     style: { color: alignColors[i], fontSize: 18, fontFamily: 'sans-serif', width: 200, textAlign: align },
     transform: { position: { x: 150, y: 220 + i * 70, z: 300 } },
   })
+})
+
+camera.transform.position.z = -200
+
+window.addEventListener('mousemove', (e) => {
+  const cx = window.innerWidth / 2
+  const cy = window.innerHeight / 2
+  camera.transform.position.x = (e.clientX - cx) * 0.12
+  camera.transform.position.y = (e.clientY - cy) * 0.12
 })
 
 world.start()

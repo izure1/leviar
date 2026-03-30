@@ -4065,7 +4065,7 @@ var require_matter = __commonJS({
                   }
                 );
               };
-              Render.status = function(context, x, y, width, height, count, label2, indicator, plotY) {
+              Render.status = function(context, x, y, width, height, count, label, indicator, plotY) {
                 context.strokeStyle = "#888";
                 context.fillStyle = "#444";
                 context.lineWidth = 1;
@@ -4082,7 +4082,7 @@ var require_matter = __commonJS({
                 context.textBaseline = "middle";
                 context.textAlign = "right";
                 context.fillStyle = "#eee";
-                context.fillText(label2, x + width, y - 5);
+                context.fillText(label, x + width, y - 5);
               };
               Render.constraints = function(constraints, context) {
                 var c = context;
@@ -6855,14 +6855,14 @@ var Renderer = class {
       return b.id - a.id;
     }
   }
-  getRenderList({ scene, camera: camera2, frustumCull, sort }) {
+  getRenderList({ scene, camera, frustumCull, sort }) {
     let renderList = [];
-    if (camera2 && frustumCull) camera2.updateFrustum();
+    if (camera && frustumCull) camera.updateFrustum();
     scene.traverse((node) => {
       if (!node.visible) return true;
       if (!node.draw) return;
-      if (frustumCull && node.frustumCulled && camera2) {
-        if (!camera2.frustumIntersectsMesh(node)) return;
+      if (frustumCull && node.frustumCulled && camera) {
+        if (!camera.frustumIntersectsMesh(node)) return;
       }
       renderList.push(node);
     });
@@ -6879,9 +6879,9 @@ var Renderer = class {
           ui.push(node);
         }
         node.zDepth = 0;
-        if (node.renderOrder !== 0 || !node.program.depthTest || !camera2) return;
+        if (node.renderOrder !== 0 || !node.program.depthTest || !camera) return;
         node.worldMatrix.getTranslation(tempVec32);
-        tempVec32.applyMatrix4(camera2.projectionViewMatrix);
+        tempVec32.applyMatrix4(camera.projectionViewMatrix);
         node.zDepth = tempVec32.z;
       });
       opaque.sort(this.sortOpaque);
@@ -6891,7 +6891,7 @@ var Renderer = class {
     }
     return renderList;
   }
-  render({ scene, camera: camera2, target = null, update = true, sort = true, frustumCull = true, clear }) {
+  render({ scene, camera, target = null, update = true, sort = true, frustumCull = true, clear }) {
     if (target === null) {
       this.bindFramebuffer();
       this.setViewport(this.width * this.dpr, this.height * this.dpr);
@@ -6913,10 +6913,10 @@ var Renderer = class {
       );
     }
     if (update) scene.updateMatrixWorld();
-    if (camera2) camera2.updateMatrixWorld();
-    const renderList = this.getRenderList({ scene, camera: camera2, frustumCull, sort });
+    if (camera) camera.updateMatrixWorld();
+    const renderList = this.getRenderList({ scene, camera, frustumCull, sort });
     renderList.forEach((node) => {
-      node.draw({ camera: camera2 });
+      node.draw({ camera });
     });
   }
 };
@@ -8616,8 +8616,8 @@ var Mesh = class extends Transform {
     this.afterRenderCallbacks.push(f);
     return this;
   }
-  draw({ camera: camera2 } = {}) {
-    if (camera2) {
+  draw({ camera } = {}) {
+    if (camera) {
       if (!this.program.uniforms.modelMatrix) {
         Object.assign(this.program.uniforms, {
           modelMatrix: { value: null },
@@ -8628,20 +8628,20 @@ var Mesh = class extends Transform {
           cameraPosition: { value: null }
         });
       }
-      this.program.uniforms.projectionMatrix.value = camera2.projectionMatrix;
-      this.program.uniforms.cameraPosition.value = camera2.worldPosition;
-      this.program.uniforms.viewMatrix.value = camera2.viewMatrix;
-      this.modelViewMatrix.multiply(camera2.viewMatrix, this.worldMatrix);
+      this.program.uniforms.projectionMatrix.value = camera.projectionMatrix;
+      this.program.uniforms.cameraPosition.value = camera.worldPosition;
+      this.program.uniforms.viewMatrix.value = camera.viewMatrix;
+      this.modelViewMatrix.multiply(camera.viewMatrix, this.worldMatrix);
       this.normalMatrix.getNormalMatrix(this.modelViewMatrix);
       this.program.uniforms.modelMatrix.value = this.worldMatrix;
       this.program.uniforms.modelViewMatrix.value = this.modelViewMatrix;
       this.program.uniforms.normalMatrix.value = this.normalMatrix;
     }
-    this.beforeRenderCallbacks.forEach((f) => f && f({ mesh: this, camera: camera2 }));
+    this.beforeRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
     let flipFaces = this.program.cullFace && this.worldMatrix.determinant() < 0;
     this.program.use({ flipFaces });
     this.geometry.draw({ mode: this.mode, program: this.program });
-    this.afterRenderCallbacks.forEach((f) => f && f({ mesh: this, camera: camera2 }));
+    this.afterRenderCallbacks.forEach((f) => f && f({ mesh: this, camera }));
   }
 };
 
@@ -9801,91 +9801,76 @@ var World = class {
   }
 };
 
-// example/test-asset/main.ts
+// example/test-physics/main.ts
 var world = new World();
-var camera = world.createCamera();
-camera.transform.position.z = -100;
-await world.loader.load({
-  "logo": "../asset/image/logo.png",
-  "sprite": "../asset/image/sprite.png",
-  "video": "../asset/video/sample.mp4"
+world.createCamera();
+world.setGravity({ x: 0, y: -9.8 });
+world.createRectangle({
+  attribute: {
+    name: "floor",
+    className: "physics-object",
+    physics: "static"
+  },
+  style: {
+    width: 600,
+    height: 50,
+    color: "#444444"
+  },
+  transform: {
+    position: { x: 0, y: -300, z: 0 }
+  }
 });
-world.spriteManager.create({
-  name: "play",
-  src: "sprite",
-  frameWidth: 44,
-  frameHeight: 40,
-  frameRate: 10,
-  loop: true,
-  start: 0,
-  end: 10
-});
-world.videoManager.create({
-  name: "sample",
-  src: "video",
-  loop: true,
-  start: 0
-});
-function label(text, x, y, z) {
-  world.createText({
-    attribute: { text },
-    style: { color: "#888", fontSize: 13, fontFamily: "sans-serif, monospace" },
-    transform: { position: { x, y, z } }
+for (let i = 0; i < 10; i++) {
+  world.createRectangle({
+    attribute: {
+      className: "physics-object box",
+      physics: "dynamic"
+    },
+    style: {
+      width: 50,
+      height: 50,
+      color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+      opacity: 0.9
+    },
+    transform: {
+      position: { x: (Math.random() - 0.5) * 200, y: 300 + Math.random() * 200, z: 0 }
+    }
   });
 }
-label("\u2460 LveImage \u2014 logo.png (auto size)", -500, -250, 300);
-var img1 = world.createImage({
-  transform: { position: { x: -380, y: -160, z: 300 } }
-});
-img1.play("logo");
-label("\u2461 LveImage \u2014 logo.png (200\xD7200)", -500, 20, 300);
-var img2 = world.createImage({
-  style: { width: 200, height: 200 },
-  transform: { position: { x: -400, y: 120, z: 300 } }
-});
-img2.play("logo");
-label("\u2462 Placeholder (no src)", -500, 250, 300);
-world.createImage({
-  style: { width: 80, height: 80 },
-  transform: { position: { x: -460, y: 310, z: 300 } }
-});
-label("\u2463 Sprite \u2014 sprite.png (10fps, 44\xD740)", 80, -250, 300);
-var spr = world.createSprite({
-  style: { width: 132, height: 120 },
-  transform: { position: { x: 180, y: -160, z: 300 } }
-});
-spr.play("play");
-label("\u2464 Sprite \uC6D0\uACBD (z=600)", 80, 60, 300);
-var sprFar = world.createSprite({
-  style: { width: 132, height: 120 },
-  transform: { position: { x: 180, y: 160, z: 600 } }
-});
-sprFar.play("play");
-label("\u2465 LveVideo \u2014 sample.mp4", -200, -250, 300);
-var vid = world.createVideo({
-  style: { width: 200, height: 120 },
-  transform: { position: { x: -120, y: -160, z: 300 } }
-});
-vid.play("sample");
-world.particleManager.create({
-  name: "flame",
-  src: "star",
-  loop: true,
-  lifespan: 1500,
-  interval: 200,
-  rate: 8
-});
-label("\u2466 Particle \u2014 flame (\uC77C\uBC18 \uBAA8\uB4DC)", -200, 60, 300);
-var ptcl = world.createParticle({
-  style: { width: 30, height: 30, blendMode: "lighter" },
-  transform: { position: { x: -120, y: 160, z: 300 } }
-});
-ptcl.play("flame");
-window.addEventListener("mousemove", (e) => {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  camera.transform.position.x = (e.clientX - cx) * 0.1;
-  camera.transform.position.y = (e.clientY - cy) * 0.1;
+window.addEventListener("click", (e) => {
+  const mx = e.clientX - window.innerWidth / 2;
+  const my = window.innerHeight / 2 - e.clientY;
+  const boxes = world.select(".box");
+  let clicked = false;
+  boxes.forEach((box) => {
+    const hw = (box.style.width ?? 0) / 2;
+    const hh = (box.style.height ?? 0) / 2;
+    const px = box.transform.position.x;
+    const py = box.transform.position.y;
+    if (mx >= px - hw && mx <= px + hw && my >= py - hh && my <= py + hh) {
+      const fx = (Math.random() - 0.5) * 50;
+      const fy = Math.random() * 50 + 20;
+      box.applyForce({ x: fx, y: fy });
+      clicked = true;
+    }
+  });
+  if (!clicked) {
+    world.createRectangle({
+      attribute: {
+        className: "physics-object box",
+        physics: "dynamic"
+      },
+      style: {
+        width: 50,
+        height: 50,
+        color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+        opacity: 0.9
+      },
+      transform: {
+        position: { x: mx, y: my, z: 0 }
+      }
+    });
+  }
 });
 world.start();
 /*! Bundled license information:

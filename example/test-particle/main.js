@@ -5193,10 +5193,8 @@ function animateObject(source, rawTarget, duration, easing = "linear") {
     const easedT = easingFn(rawT);
     applyInterpolated(source, from, to, easedT, rawTarget);
     if (rawT < 1) {
-      ;
       anim._rafId = requestAnimationFrame((ts) => tick(ts));
     } else {
-      ;
       anim._rafId = null;
     }
   };
@@ -9256,7 +9254,7 @@ var Renderer2 = class {
     const focalLength = 500;
     const perspectiveScale = depth === 0 ? 1 : focalLength / depth;
     const screenX = (transform.position.x - camX) * perspectiveScale * transform.scale.x;
-    const screenY = -((transform.position.y - camY) * perspectiveScale * transform.scale.y);
+    const screenY = (transform.position.y - camY) * perspectiveScale * transform.scale.y;
     const w = (style.width ?? 0) * perspectiveScale * transform.scale.x;
     const h = (style.height ?? 0) * perspectiveScale * transform.scale.y;
     const rotation = transform.rotation.z;
