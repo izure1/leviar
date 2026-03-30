@@ -279,6 +279,43 @@ export class World extends EventEmitter {
     return this.loader
   }
 
+  /**
+   * 캔버스의 x, y 좌표(0 ~ width, 0 ~ height)를 현재 카메라 기준의 월드 좌표로 변환합니다.
+   * @param x 캔버스 좌측 상단을 0으로 하는 x 좌표
+   * @param y 캔버스 좌측 상단을 0으로 하는 y 좌표
+   * @param focalLength (선택) 카메라의 깊이(Z 거리). 기본값은 world.focalLength 입니다.
+   */
+  canvasToWorld(x: number, y: number, focalLength?: number): { x: number; y: number; z: number } {
+    const canvas = this._canvas
+    if (!canvas) return { x: 0, y: 0, z: 0 }
+
+    const targetDepth = focalLength ?? this.focalLength
+
+    // 캔버스 중앙을 (0, 0)으로 변환하고, y축 방향을 월드 좌표계에 맞게 반전 (World 객체 Y는 위쪽이 +)
+    const screenX = x - canvas.width / 2
+    const screenY = -(y - canvas.height / 2)
+
+    let camX = 0
+    let camY = 0
+    let camZ = 0
+    const activeCam = this.camera
+
+    if (activeCam) {
+      camX = activeCam.transform.position.x
+      camY = activeCam.transform.position.y
+      camZ = activeCam.transform.position.z
+    }
+
+    // 원근 투영에 따른 실제 스케일 비율 (깊이가 깊어질수록 실제 공간의 단위는 커짐)
+    const scale = targetDepth / this.focalLength
+
+    return {
+      x: camX + screenX * scale,
+      y: camY + screenY * scale,
+      z: camZ + targetDepth
+    }
+  }
+
   // ─── Object 생성 ─────────────────────────────────────────
 
   createCamera(options?: LveObjectOptions): Camera {

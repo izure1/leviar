@@ -69,9 +69,8 @@ for (let i = 0; i < 10; i++) {
 // 빈 배경 영역 클릭용 더미 오브젝트
 world.on('click', (obj, e) => {
   if (obj) return
-  const mx = e.clientX - window.innerWidth / 2;
-  const my = window.innerHeight / 2 - e.clientY;
-  addBox(mx, my);
+  const { x, y } = world.canvasToWorld(e.clientX, e.clientY)
+  addBox(x, y);
 });
 
 world.start()
