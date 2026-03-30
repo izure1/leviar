@@ -1,5 +1,6 @@
 import Matter from 'matter-js'
 import type { LveObject } from './LveObject.js'
+import { PHYSICS_THROTTLE_FRAMES, PHYSICS_DEBOUNCE_FRAMES } from './dirty.js'
 
 /**
  * CSS 단축 표기법 margin 문자열을 파싱합니다.
@@ -146,12 +147,29 @@ export class PhysicsEngine {
 
   /**
    * LveObject._renderedSize 기반으로 물리 바디 크기를 동기화합니다.
-   * 매 프레임 World에서 호출되며, 크기가 변경된 경우에만 updateBodySize를 호출합니다.
+   * dirty + 디바운스(개혁) 또는 스로틄(강제) 조건 달성 시에만 크기를 재확인합니다.
    */
   syncObjectSizes(objects: Iterable<LveObject>) {
     const EPS = 0.5
     for (const obj of objects) {
       if (!obj._body || !obj._renderedSize) continue
+
+      // 스로틄: 마지막 업데이트 이후 프레임 카운터 증가
+      obj._physicsThrottleCount++
+      // 디바운스: dirty 상태일 때만 idle 카운터 증가
+      if (obj._dirtyPhysics) obj._physicsIdleCount++
+
+      const shouldCheck = obj._dirtyPhysics && (
+        obj._physicsIdleCount >= PHYSICS_DEBOUNCE_FRAMES    // 디바운스: K프레임 변경 없음 → 마무리
+        || obj._physicsThrottleCount >= PHYSICS_THROTTLE_FRAMES // 스로틄: N프레임 초과 → 강제
+      )
+
+      if (!shouldCheck) continue
+
+      obj._dirtyPhysics = false
+      obj._physicsIdleCount = 0
+      obj._physicsThrottleCount = 0  // 업데이트 후 양쪽 리셋
+
       const { w, h } = obj._renderedSize
       const last = this.lastSizeMap.get(obj.attribute.id)
       if (last && Math.abs(last.w - w) < EPS && Math.abs(last.h - h) < EPS) continue

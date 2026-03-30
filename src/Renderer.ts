@@ -12,6 +12,7 @@ import { colorVertex, colorFragment, ellipseVertex, ellipseFragment } from './sh
 import { textureVertex, textureFragment } from './shaders/texture.js'
 import { instancedVertex, instancedFragment } from './shaders/instanced.js'
 import { parseTextMarkup } from './utils/textMarkup.js'
+import { TEXTURE_THROTTLE_FRAMES, TEXTURE_DEBOUNCE_FRAMES } from './dirty.js'
 
 import type { LveObject } from './LveObject.js'
 import type { Camera as LveCamera } from './objects/Camera.js'
@@ -501,26 +502,18 @@ export class Renderer {
     const maxW = style.width != null ? style.width * RENDER_SCALE : null
     const maxH = style.height != null ? style.height * RENDER_SCALE : null
 
-    // 캐시 키: perspectiveScale 미포함 (draw 시점에만 적용)
     let entry = this.textCache.get(id)
-    const textKey = [
-      rawText,
-      style.fontSize,
-      style.color,
-      style.fontFamily,
-      style.fontWeight,
-      style.fontStyle,
-      style.lineHeight,
-      style.textAlign,
-      maxW,
-      maxH,
-      style.shadowColor ?? '',
-      style.shadowBlur ?? 0,
-      style.shadowOffsetX ?? 0,
-      style.shadowOffsetY ?? 0,
-    ].join('|')
 
-    let needRender = !entry || entry.lastText !== textKey
+    // 스로틄: 마지막 렌더 이후 프레임 카운터 증가
+    obj._textureThrottleCount++
+    // 디바운스: dirty 상태일 때만 idle 카운터 증가
+    if (obj._dirtyTexture) obj._textureIdleCount++
+
+    const needRender = !entry
+      || (obj._dirtyTexture && (
+        obj._textureIdleCount >= TEXTURE_DEBOUNCE_FRAMES    // 디바운스: K프레임 동안 변경 없음 → 마무리
+        || obj._textureThrottleCount >= TEXTURE_THROTTLE_FRAMES // 스로틄: N프레임 초과 → 강제 업데이트
+      ))
 
     if (!entry) {
       const canvas = document.createElement('canvas')
@@ -533,7 +526,9 @@ export class Renderer {
 
     if (needRender) {
       this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH)
-      entry.lastText = textKey
+      obj._dirtyTexture = false
+      obj._textureIdleCount = 0
+      obj._textureThrottleCount = 0  // 렌더 후 양쪽 리셋
     }
 
     const cw = entry.canvas.width

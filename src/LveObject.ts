@@ -3,6 +3,11 @@ import type Matter from 'matter-js'
 import { animateObject } from './Animation.js'
 import type { Animation } from './Animation.js'
 import { EventEmitter } from './EventEmitter.js'
+import {
+  STYLE_DIRTY_MAP,
+  ATTR_DIRTY_MAP,
+  SCALE_DIRTY_MAP,
+} from './dirty.js'
 import type {
   Attribute,
   AnimateTarget,
@@ -108,6 +113,37 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
    */
   _renderedSize: { w: number; h: number } | null = null
 
+  /** Offscreen Canvas · 텍스처 재생성이 필요함을 나타내는 dirty flag */
+  _dirtyTexture: boolean = true
+
+  /** 물리 바디 크기 재확인이 필요함을 나타내는 dirty flag */
+  _dirtyPhysics: boolean = false
+
+  /**
+   * 마지막 텍스처 변경 이후 경과한 프레임 수.
+   * 새 변경이 오면 0으로 리셋, 임계값 도달 시 텍스처를 업데이트합니다. (디바운스)
+   */
+  _textureIdleCount: number = 0
+
+  /**
+   * 마지막 물리 변경 이후 경과한 프레임 수.
+   * 새 변경이 오면 0으로 리셋, 임계값 도달 시 물리 실제 크기를 재확인합니다. (디바운스)
+   */
+  _physicsIdleCount: number = 0
+
+  /**
+   * 마지막 텍스처 업데이트 이후 경과한 프레임 수.
+   * 렌더 후 0으로 리셋, 임계값 도달 시 강제 업데이트합니다. (스로틀)
+   */
+  _textureThrottleCount: number = 0
+
+  /**
+   * 마지막 물리 업데이트 이후 경과한 프레임 수.
+   * 업데이트 후 0으로 리셋, 임계값 도달 시 강제 재확인합니다. (스로틀)
+   */
+  _physicsThrottleCount: number = 0
+
+
   constructor(type: string, options?: LveObjectOptions) {
     super()
 
@@ -147,6 +183,41 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
       rotation: makeVec3Proxy(rawRotation, this, 'rotationmodified'),
       scale: makeVec3Proxy(rawScale, this, 'scalemodified'),
     }
+
+    // Proxy 이벤트에서 룩업 테이블 기반으로 dirty flag 갱신
+    // dirty를 세울 때 idle 카운터를 0으로 리셋하여 디바운스 기준점 재설정
+    this.on('cssmodified', (key) => {
+      const flags = STYLE_DIRTY_MAP[key]
+      if (!flags) return
+      if (flags.includes('texture')) {
+        this._dirtyTexture = true
+        this._textureIdleCount = 0
+      }
+      if (flags.includes('physics')) {
+        this._dirtyPhysics = true
+        this._physicsIdleCount = 0
+      }
+    })
+    this.on('attrmodified', (key) => {
+      const flags = ATTR_DIRTY_MAP[key]
+      if (!flags) return
+      if (flags.includes('texture')) {
+        this._dirtyTexture = true
+        this._textureIdleCount = 0
+      }
+      if (flags.includes('physics')) {
+        this._dirtyPhysics = true
+        this._physicsIdleCount = 0
+      }
+    })
+    this.on('scalemodified', (key) => {
+      const flags = SCALE_DIRTY_MAP[key]
+      if (!flags) return
+      if (flags.includes('physics')) {
+        this._dirtyPhysics = true
+        this._physicsIdleCount = 0
+      }
+    })
   }
 
   setDataset(key: string, value: DatasetValue) {
