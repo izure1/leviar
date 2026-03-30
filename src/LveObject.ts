@@ -173,6 +173,10 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
       y: options?.transform?.scale?.y ?? 1,
       z: options?.transform?.scale?.z ?? 1,
     }
+    const rawPivot = {
+      x: options?.transform?.pivot?.x ?? 0.5,
+      y: options?.transform?.pivot?.y ?? 0.5,
+    }
 
     // Proxy로 감싸서 변경 감지
     this.attribute = makeTrackedProxy(rawAttribute, this, 'attrmodified')
@@ -182,6 +186,16 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
       position: makeVec3Proxy(rawPosition, this, 'positionmodified'),
       rotation: makeVec3Proxy(rawRotation, this, 'rotationmodified'),
       scale: makeVec3Proxy(rawScale, this, 'scalemodified'),
+      pivot: new Proxy(rawPivot, {
+        set: (obj, prop, value) => {
+          const prev = (obj as any)[prop]
+            ; (obj as any)[prop] = value
+          if (prev !== value) {
+            this.emit('pivotmodified', String(prop), value, prev)
+          }
+          return true
+        }
+      })
     }
 
     // Proxy 이벤트에서 룩업 테이블 기반으로 dirty flag 갱신
@@ -217,6 +231,10 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
         this._dirtyPhysics = true
         this._physicsIdleCount = 0
       }
+    })
+    this.on('pivotmodified', () => {
+      this._dirtyPhysics = true
+      this._physicsIdleCount = 0
     })
   }
 

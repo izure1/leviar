@@ -74,6 +74,7 @@ export interface Transform {
   position: Vec3
   rotation: Vec3
   scale: Vec3
+  pivot: { x: number, y: number }
 }
 
 // ============================================================
@@ -88,6 +89,7 @@ export interface LveObjectOptions {
     position?: Partial<Vec3>
     rotation?: Partial<Vec3>
     scale?: Partial<Vec3>
+    pivot?: Partial<{ x: number, y: number }>
   }
 }
 
@@ -151,6 +153,7 @@ export interface LveObjectEvents {
   rotationmodified: [key: string, value: any, prev: any]
   positionmodified: [key: string, value: any, prev: any]
   scalemodified: [key: string, value: any, prev: any]
+  pivotmodified: [key: string, value: any, prev: any]
   // 재생 이벤트 (video, sprite, particle)
   play: []
   pause: []

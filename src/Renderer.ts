@@ -6,8 +6,14 @@ import {
   Program,
   Mesh,
   Texture,
+  Mat4,
+  Vec3 as OglVec3
 } from 'ogl'
 import type { OGLRenderingContext } from 'ogl'
+
+const AXIS_X = new OglVec3(1, 0, 0)
+const AXIS_Y = new OglVec3(0, 1, 0)
+const AXIS_Z = new OglVec3(0, 0, 1)
 import { colorVertex, colorFragment, ellipseVertex, ellipseFragment } from './shaders/color.js'
 import { textureVertex, textureFragment } from './shaders/texture.js'
 import { instancedVertex, instancedFragment } from './shaders/instanced.js'
@@ -142,6 +148,15 @@ export class Renderer {
   private ellipseMesh!: Mesh
   private textureMesh!: Mesh
   private placeholderMesh!: Mesh
+
+  // 상태 보존용 렌더 변수 (Model 매트릭스 계산용)
+  private _modelMat = new Mat4()
+  private _activeObj!: LveObject
+  private _activeCamRotX = 0
+  private _activeCamRotY = 0
+  private _activeCamRotZ = 0
+  private _activeRenderW = 0
+  private _activeRenderH = 0
 
   // 오브젝트별 Mesh 캐시
   private meshCache = new Map<string, Mesh>()
@@ -323,20 +338,55 @@ export class Renderer {
           _textureIdleCount: 0
         }
       }
-      this._drawText(this._noCameraText as LveObject, 0, 0, 1, 0, timestamp)
+      this._drawText(this._noCameraText as LveObject, 0, 0, 1, timestamp)
       return
     }
 
     const camX = activeCamera.transform.position.x
     const camY = activeCamera.transform.position.y
     const camZ = activeCamera.transform.position.z
+    const camRotX = activeCamera.transform.rotation.x || 0
+    const camRotY = activeCamera.transform.rotation.y || 0
+    const camRotZ = activeCamera.transform.rotation.z || 0
 
-    // z 기준 오름차순 정렬
+    // 카메라의 회전 역변환 헬퍼 (위치 역산용)
+    const radX = -camRotX * Math.PI / 180
+    const radY = -camRotY * Math.PI / 180
+    const radZ = -camRotZ * Math.PI / 180
+
+    const getCamTransformed = (obj: LveObject) => {
+      let dx = obj.transform.position.x - camX
+      let dy = obj.transform.position.y - camY
+      let dz = obj.transform.position.z - camZ
+
+      if (radY !== 0) {
+        const cosY = Math.cos(radY), sinY = Math.sin(radY)
+        const nx = dx * cosY + dz * sinY
+        const nz = -dx * sinY + dz * cosY
+        dx = nx; dz = nz
+      }
+      if (radX !== 0) {
+        const cosX = Math.cos(radX), sinX = Math.sin(radX)
+        const ny = dy * cosX - dz * sinX
+        const nz = dy * sinX + dz * cosX
+        dy = ny; dz = nz
+      }
+      if (radZ !== 0) {
+        const cosZ = Math.cos(radZ), sinZ = Math.sin(radZ)
+        const nx = dx * cosZ - dy * sinZ
+        const ny = dx * sinZ + dy * cosZ
+        dx = nx; dy = ny
+      }
+      return { dx, dy, dz }
+    }
+
+    // z 기준 오름차순 정렬 (변환된 dz 기준)
     const renderables = Array.from(objects)
       .filter(o => o.attribute.type !== 'camera' && o.style.display !== 'none')
+      .map(o => ({ obj: o, ...getCamTransformed(o) }))
       .sort((a, b) => {
-        const zdiff = b.transform.position.z - a.transform.position.z
-        return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
+        const zdiff = b.dz - a.dz
+        return zdiff !== 0 ? zdiff : a.obj.style.zIndex - b.obj.style.zIndex
       })
 
     // 화면 클리어
@@ -348,8 +398,8 @@ export class Renderer {
       this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,
     )
 
-    for (const obj of renderables) {
-      this._drawObject(obj, camX, camY, camZ, assets, timestamp)
+    for (const item of renderables) {
+      this._drawObject(item.obj, item.dx, item.dy, item.dz, camRotX, camRotY, camRotZ, assets, timestamp)
     }
   }
 
@@ -357,43 +407,54 @@ export class Renderer {
 
   private _drawObject(
     obj: LveObject,
-    camX: number,
-    camY: number,
-    camZ: number,
+    dx: number,
+    dy: number,
+    dz: number,
+    camRotX: number,
+    camRotY: number,
+    camRotZ: number,
     assets: LoadedAssets,
     timestamp: number,
   ) {
     const { style, transform } = obj
 
-    // rawDepth = 카메라로부터의 부호 있는 거리. 음수 = 카메라 뒤 → 숨김
-    const rawDepth = transform.position.z - camZ
+    // rawDepth = 카메라로부터의 부호 있는 변환된 거리. 음수 = 카메라 뒤 → 숨김
+    const rawDepth = dz
     if (rawDepth < 0) return
 
     const focalLength = this.focalLength
     // depth=0이면 1:1 스케일, focalLength만큼 떨어졌을 때 1:1 스케일
     const perspectiveScale = rawDepth === 0 ? 1 : focalLength / rawDepth
 
-    const screenX = (transform.position.x - camX) * perspectiveScale
-    const screenY = (transform.position.y - camY) * perspectiveScale
+    const screenX = dx * perspectiveScale
+    const screenY = dy * perspectiveScale
 
     const w = (style.width ?? 0) * perspectiveScale * transform.scale.x
     const h = (style.height ?? 0) * perspectiveScale * transform.scale.y
-    const rotation = transform.rotation.z
+    const rotation = 0 // 더 이상 _drawXXX 헬퍼로 직접 전달하지 않고 ModelMatrix 내부에서 처리
+
+    // 현재 렌더링 상태 저장 (Model Matrix 계산용)
+    this._activeObj = obj
+    this._activeCamRotX = camRotX
+    this._activeCamRotY = camRotY
+    this._activeCamRotZ = camRotZ
+    this._activeRenderW = w
+    this._activeRenderH = h
 
     const type = obj.attribute.type
 
     if (type === 'rectangle') {
-      this._drawRectangle(obj, screenX, screenY, w, h, rotation)
+      this._drawRectangle(obj, screenX, screenY, w, h)
     } else if (type === 'ellipse') {
-      this._drawEllipse(obj, screenX, screenY, w, h, rotation)
+      this._drawEllipse(obj, screenX, screenY, w, h)
     } else if (type === 'text') {
-      this._drawText(obj, screenX, screenY, perspectiveScale, rotation, timestamp)
+      this._drawText(obj, screenX, screenY, perspectiveScale, timestamp)
     } else if (type === 'image') {
-      this._drawAsset(obj as LveImage, screenX, screenY, w, h, perspectiveScale, rotation, assets)
+      this._drawAsset(obj as LveImage, screenX, screenY, w, h, perspectiveScale, assets)
     } else if (type === 'video') {
-      this._drawVideo(obj as LveVideo, screenX, screenY, w, h, perspectiveScale, rotation, assets)
+      this._drawVideo(obj as LveVideo, screenX, screenY, w, h, perspectiveScale, assets)
     } else if (type === 'sprite') {
-      this._drawSprite(obj as Sprite, screenX, screenY, w, h, perspectiveScale, rotation, assets, timestamp)
+      this._drawSprite(obj as Sprite, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
     } else if (type === 'particle') {
       this._drawParticle(obj as Particle, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
     }
@@ -402,22 +463,38 @@ export class Renderer {
   // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
 
   /**
-   * 2D 직교 렌더링용 모델 행렬을 Float32Array(16)으로 반환합니다.
+   * 3D 회전과 Pivot이 반영된 모델 행렬을 반환합니다.
    * column-major 순서 (WebGL 표준)
    */
-  private _makeModelMatrix(x: number, y: number, w: number, h: number, rotDeg: number): Float32Array {
-    const cos = Math.cos((rotDeg * Math.PI) / 180)
-    const sin = Math.sin((rotDeg * Math.PI) / 180)
-    const m = new Float32Array(16)
-    // [0]  [4]  [8]  [12]
-    // [1]  [5]  [9]  [13]
-    // [2]  [6]  [10] [14]
-    // [3]  [7]  [11] [15]
-    m[0] = cos * w; m[4] = -sin * h; m[8] = 0; m[12] = x
-    m[1] = sin * w; m[5] = cos * h; m[9] = 0; m[13] = y
-    m[2] = 0; m[6] = 0; m[10] = 1; m[14] = 0
-    m[3] = 0; m[7] = 0; m[11] = 0; m[15] = 1
-    return m
+  private _makeModelMatrix(x: number, y: number, w: number, h: number): Float32Array {
+    this._modelMat.identity()
+    // 1. 카메라 투영 위치로 이동
+    this._modelMat.translate(new OglVec3(x, y, 0))
+
+    // 2. 화면 평면 기준 역카메라 회전 (카메라가 기울면 월드가 반대로 기우는 효과)
+    if (this._activeCamRotY) this._modelMat.rotate(-this._activeCamRotY * Math.PI / 180, AXIS_Y)
+    if (this._activeCamRotX) this._modelMat.rotate(-this._activeCamRotX * Math.PI / 180, AXIS_X)
+    if (this._activeCamRotZ) this._modelMat.rotate(-this._activeCamRotZ * Math.PI / 180, AXIS_Z)
+
+    // 3. 객체의 고유 회전 적용
+    const rot = this._activeObj.transform.rotation
+    if (rot.z) this._modelMat.rotate(rot.z * Math.PI / 180, AXIS_Z)
+    if (rot.y) this._modelMat.rotate(rot.y * Math.PI / 180, AXIS_Y)
+    if (rot.x) this._modelMat.rotate(rot.x * Math.PI / 180, AXIS_X)
+
+    // 4. Pivot을 기준으로 기하학적 중심선 이동 (크기 w, h는 스케일, _activeRenderW는 베이스)
+    // Canvas 좌표계(Y-down) 특성상 pivotY=0이 Top이 되도록 Y 오프셋은 음수 적용
+    const pivot = this._activeObj.transform.pivot
+    this._modelMat.translate(new OglVec3(
+      (0.5 - pivot.x) * this._activeRenderW,
+      -(0.5 - pivot.y) * this._activeRenderH,
+      0
+    ))
+
+    // 5. 최종 쿼드 스케일링
+    this._modelMat.scale(new OglVec3(w, h, 1))
+
+    return this._modelMat as unknown as Float32Array
   }
 
   /** ogl 카메라의 projectionMatrix를 Float32Array로 반환 */
@@ -429,13 +506,13 @@ export class Renderer {
 
   private _drawColorMesh(
     program: Program,
-    x: number, y: number, w: number, h: number, rotDeg: number,
+    x: number, y: number, w: number, h: number,
     color: string, opacity: number,
   ) {
     const [r, g, b, a] = parseCSSColor(color)
     program.uniforms['uColor'].value = [r, g, b, a]
     program.uniforms['uOpacity'].value = opacity
-    program.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rotDeg)
+    program.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
     program.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
     this.colorMesh.draw({ camera: this.camera })
@@ -443,7 +520,7 @@ export class Renderer {
 
   private _drawTextureMesh(
     texture: Texture,
-    x: number, y: number, w: number, h: number, rotDeg: number,
+    x: number, y: number, w: number, h: number,
     opacity: number,
     flipY = false,
     uvOffset: [number, number] = [0, 0],
@@ -455,7 +532,7 @@ export class Renderer {
     prog.uniforms['uFlipY'].value = flipY ? 1 : 0
     prog.uniforms['uUVOffset'].value = uvOffset
     prog.uniforms['uUVScale'].value = uvScale
-    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rotDeg)
+    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
     prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
     this.textureMesh.draw({ camera: this.camera })
@@ -463,7 +540,7 @@ export class Renderer {
 
   // ─── Rectangle ──────────────────────────────────────────────────────────
 
-  private _drawRectangle(obj: LveObject, x: number, y: number, w: number, h: number, rot: number) {
+  private _drawRectangle(obj: LveObject, x: number, y: number, w: number, h: number) {
     const { style } = obj
     if (!style.color && !style.borderColor && !style.outlineColor) return
 
@@ -471,24 +548,24 @@ export class Renderer {
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = (style.borderWidth ?? 0)
       const ow = style.outlineWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, rot, style.outlineColor, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, style.opacity)
     }
 
     // 테두리 (border)
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, rot, style.borderColor, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, style.opacity)
     }
 
     // 본체
     if (style.color) {
-      this._drawColorMesh(this.colorProgram, x, y, w, h, rot, style.color, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, style.opacity)
     }
   }
 
   // ─── Ellipse ────────────────────────────────────────────────────────────
 
-  private _drawEllipse(obj: LveObject, x: number, y: number, w: number, h: number, rot: number) {
+  private _drawEllipse(obj: LveObject, x: number, y: number, w: number, h: number) {
     const { style } = obj
     if (!style.color && !style.borderColor && !style.outlineColor) return
 
@@ -496,7 +573,7 @@ export class Renderer {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
       this.ellipseProgram.uniforms['uOpacity'].value = style.opacity
-      this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh, rot)
+      this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh)
       this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.ellipseMesh.draw({ camera: this.camera })
     }
@@ -522,7 +599,7 @@ export class Renderer {
 
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
 
-  private _drawText(obj: LveObject, x: number, y: number, perspectiveScale: number, rot: number, _timestamp: number) {
+  private _drawText(obj: LveObject, x: number, y: number, perspectiveScale: number, _timestamp: number) {
     const { style, attribute } = obj
     const id = obj.attribute.id
     const rawText = attribute.text ?? ''
@@ -573,7 +650,7 @@ export class Renderer {
 
     // canvas는 TEXT_RENDER_SCALE 기준, 표시는 perspectiveScale 기준으로 보정
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale * obj.transform.scale.x, ch * displayScale * obj.transform.scale.y, rot, style.opacity, false)
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale * obj.transform.scale.x, ch * displayScale * obj.transform.scale.y, style.opacity, false)
   }
 
   private _renderTextToCanvas(
@@ -739,11 +816,11 @@ export class Renderer {
 
   // ─── Image ──────────────────────────────────────────────────────────────
 
-  private _drawAsset(obj: LveImage, x: number, y: number, w: number, h: number, perspectiveScale: number, rot: number, assets: LoadedAssets) {
+  private _drawAsset(obj: LveImage, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets) {
     const src = obj._src
     const asset = src ? assets[src] : undefined
     if (!asset || !(asset instanceof HTMLImageElement)) {
-      this._drawPlaceholder(x, y, w || 60, h || 60, rot)
+      this._drawPlaceholder(x, y, w || 60, h || 60)
       return
     }
 
@@ -758,16 +835,16 @@ export class Renderer {
 
     const texture = this._getOrCreateAssetTexture(src!, asset)
 
-    this._drawTextureMesh(texture, x, y, drawW, drawH, rot, obj.style.opacity, false)
+    this._drawTextureMesh(texture, x, y, drawW, drawH, obj.style.opacity, false)
   }
 
   // ─── Video ──────────────────────────────────────────────────────────────
 
-  private _drawVideo(obj: LveVideo, x: number, y: number, w: number, h: number, perspectiveScale: number, rot: number, assets: LoadedAssets) {
+  private _drawVideo(obj: LveVideo, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets) {
     const src = obj._src
     const asset = src ? assets[src] : undefined
     if (!asset || !(asset instanceof HTMLVideoElement)) {
-      this._drawPlaceholder(x, y, w || 60, h || 60, rot)
+      this._drawPlaceholder(x, y, w || 60, h || 60)
       return
     }
 
@@ -811,12 +888,12 @@ export class Renderer {
     tex.image = asset
     tex.needsUpdate = true
 
-    this._drawTextureMesh(tex, x, y, drawW, drawH, rot, obj.style.opacity)
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity)
   }
 
   // ─── Sprite ─────────────────────────────────────────────────────────────
 
-  private _drawSprite(sprite: Sprite, x: number, y: number, w: number, h: number, perspectiveScale: number, rot: number, assets: LoadedAssets, timestamp: number) {
+  private _drawSprite(sprite: Sprite, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets, timestamp: number) {
     sprite.tick(timestamp)
 
     const clip = sprite._clip
@@ -825,7 +902,7 @@ export class Renderer {
 
     const asset = assets[src]
     if (!asset || !(asset instanceof HTMLImageElement)) {
-      this._drawPlaceholder(x, y, w || 60, h || 60, rot)
+      this._drawPlaceholder(x, y, w || 60, h || 60)
       return
     }
 
@@ -834,7 +911,7 @@ export class Renderer {
     if (!clip) {
       const drawW = w || asset.naturalWidth * perspectiveScale * sprite.transform.scale.x
       const drawH = h || asset.naturalHeight * perspectiveScale * sprite.transform.scale.y
-      this._drawTextureMesh(texture, x, y, drawW, drawH, rot, sprite.style.opacity)
+      this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.style.opacity)
       return
     }
 
@@ -853,7 +930,7 @@ export class Renderer {
 
     this._drawTextureMesh(
       texture,
-      x, y, drawW, drawH, rot,
+      x, y, drawW, drawH,
       sprite.style.opacity,
       false,
       [uvOffsetX, uvOffsetY],
@@ -878,7 +955,7 @@ export class Renderer {
 
     const asset = assets[clip.src]
     if (!asset || !(asset instanceof HTMLImageElement)) {
-      this._drawPlaceholder(emX, emY, w || 30, h || 30, 0)
+      this._drawPlaceholder(emX, emY, w || 30, h || 30)
       return
     }
 
@@ -916,7 +993,6 @@ export class Renderer {
       this._drawTextureMesh(
         texture,
         ix, iy, iw, ih,
-        0,
         obj.style.opacity * opacity,
       )
     }
@@ -930,8 +1006,8 @@ export class Renderer {
 
   // ─── Placeholder ────────────────────────────────────────────────────────
 
-  private _drawPlaceholder(x: number, y: number, w: number, h: number, rot: number) {
-    this.placeholderProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rot)
+  private _drawPlaceholder(x: number, y: number, w: number, h: number) {
+    this.placeholderProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
     this.placeholderProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
     this.placeholderMesh.draw({ camera: this.camera })
   }

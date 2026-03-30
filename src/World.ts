@@ -17,6 +17,11 @@ import type { LveObjectOptions, LoadedAssets, Attribute } from './types.js'
 import type { RectangleOptions } from './objects/Rectangle.js'
 import { Renderer } from './Renderer.js'
 import { EventEmitter } from './EventEmitter.js'
+import { Mat4, Vec3 as OglVec3 } from 'ogl'
+
+const AXIS_X = new OglVec3(1, 0, 0)
+const AXIS_Y = new OglVec3(0, 1, 0)
+const AXIS_Z = new OglVec3(0, 0, 1)
 
 export interface WorldOptions {
   /** 캔버스 엘리먼트. 지정하지 않으면 자동으로 생성합니다. */
@@ -184,41 +189,119 @@ export class World extends EventEmitter {
     const mouseX = (e.clientX - rect.left) * scaleX - canvas.width / 2
     const mouseY = -((e.clientY - rect.top) * scaleY - canvas.height / 2)
 
-    // 카메라 위치
-    let camX = 0
-    let camY = 0
-    let camZ = 0
+    // 카메라 위치 및 회전
+    let camX = 0, camY = 0, camZ = 0
+    let camRotX = 0, camRotY = 0, camRotZ = 0
     const activeCam = this.camera
     if (activeCam) {
       camX = activeCam.transform.position.x
       camY = activeCam.transform.position.y
       camZ = activeCam.transform.position.z
+      camRotX = activeCam.transform.rotation.x || 0
+      camRotY = activeCam.transform.rotation.y || 0
+      camRotZ = activeCam.transform.rotation.z || 0
     }
+
+    const radX = -camRotX * Math.PI / 180
+    const radY = -camRotY * Math.PI / 180
+    const radZ = -camRotZ * Math.PI / 180
 
     const focalLength = this.focalLength
     const result: LveObject[] = []
+    const modelMat = new Mat4()
 
-    for (const obj of this.objects) {
-      if (obj.attribute.type === 'camera') continue
-      if (obj.style.display === 'none') continue
-      if (!obj.style.pointerEvents) continue
+    const pointInPoly = (px: number, py: number, poly: { x: number, y: number }[]) => {
+      let inside = false
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y
+        const xj = poly[j].x, yj = poly[j].y
+        const intersect = ((yi > py) !== (yj > py))
+          && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)
+        if (intersect) inside = !inside
+      }
+      return inside
+    }
 
+    // z 기준 내림차순 정렬을 위해 모든 변환 사전 계산 (상단 객체 우선 판정)
+    const objectsData = Array.from(this.objects)
+      .filter(obj => obj.attribute.type !== 'camera' && obj.style.display !== 'none' && obj.style.pointerEvents)
+      .map(obj => {
+        let dx = obj.transform.position.x - camX
+        let dy = obj.transform.position.y - camY
+        let dz = obj.transform.position.z - camZ
+
+        if (radY !== 0) {
+          const cosY = Math.cos(radY), sinY = Math.sin(radY)
+          const nx = dx * cosY + dz * sinY
+          const nz = -dx * sinY + dz * cosY
+          dx = nx; dz = nz
+        }
+        if (radX !== 0) {
+          const cosX = Math.cos(radX), sinX = Math.sin(radX)
+          const ny = dy * cosX - dz * sinX
+          const nz = dy * sinX + dz * cosX
+          dy = ny; dz = nz
+        }
+        if (radZ !== 0) {
+          const cosZ = Math.cos(radZ), sinZ = Math.sin(radZ)
+          const nx = dx * cosZ - dy * sinZ
+          const ny = dx * sinZ + dy * cosZ
+          dx = nx; dy = ny
+        }
+        return { obj, dx, dy, dz }
+      })
+      .filter(data => data.dz >= 0)
+      .sort((a, b) => {
+        const zdiff = b.dz - a.dz
+        return zdiff !== 0 ? zdiff : a.obj.style.zIndex - b.obj.style.zIndex
+      })
+
+    for (const { obj, dx, dy, dz } of objectsData) {
       const { transform, style } = obj
-      const rawDepth = transform.position.z - camZ
-      if (rawDepth < 0) continue
+      const perspectiveScale = dz === 0 ? 1 : focalLength / dz
 
-      const perspectiveScale = rawDepth === 0 ? 1 : focalLength / rawDepth
-      const screenX = (transform.position.x - camX) * perspectiveScale * transform.scale.x
-      const screenY = (transform.position.y - camY) * perspectiveScale * transform.scale.y
-      const hw = ((style.width ?? 0) * perspectiveScale * transform.scale.x) / 2
-      const hh = ((style.height ?? 0) * perspectiveScale * transform.scale.y) / 2
+      const screenX = dx * perspectiveScale
+      const screenY = dy * perspectiveScale
 
-      if (hw <= 0 || hh <= 0) continue
+      const baseW = style.width ?? 0
+      const baseH = style.height ?? 0
+      const w = baseW * perspectiveScale * transform.scale.x
+      const h = baseH * perspectiveScale * transform.scale.y
 
-      if (
-        mouseX >= screenX - hw && mouseX <= screenX + hw &&
-        mouseY >= screenY - hh && mouseY <= screenY + hh
-      ) {
+      if (w <= 0 || h <= 0) continue
+
+      modelMat.identity()
+      modelMat.translate(new OglVec3(screenX, screenY, 0))
+
+      if (camRotY) modelMat.rotate(-camRotY * Math.PI / 180, AXIS_Y)
+      if (camRotX) modelMat.rotate(-camRotX * Math.PI / 180, AXIS_X)
+      if (camRotZ) modelMat.rotate(-camRotZ * Math.PI / 180, AXIS_Z)
+
+      const rot = transform.rotation
+      if (rot.z) modelMat.rotate(rot.z * Math.PI / 180, AXIS_Z)
+      if (rot.y) modelMat.rotate(rot.y * Math.PI / 180, AXIS_Y)
+      if (rot.x) modelMat.rotate(rot.x * Math.PI / 180, AXIS_X)
+
+      const pivot = transform.pivot
+      modelMat.translate(new OglVec3(
+        (0.5 - pivot.x) * w,
+        -(0.5 - pivot.y) * h,
+        0
+      ))
+      modelMat.scale(new OglVec3(w, h, 1))
+
+      const m = modelMat as unknown as Float32Array
+      // Quad 꼭짓점 투영 (-0.5 ~ +0.5)
+      const getPt = (px: number, py: number) => ({
+        x: m[0] * px + m[4] * py + m[12],
+        y: m[1] * px + m[5] * py + m[13]
+      })
+      const corners = [
+        getPt(-0.5, -0.5), getPt(0.5, -0.5),
+        getPt(0.5, 0.5), getPt(-0.5, 0.5)
+      ]
+
+      if (pointInPoly(mouseX, mouseY, corners)) {
         result.push(obj)
       }
     }
@@ -290,29 +373,54 @@ export class World extends EventEmitter {
     if (!canvas) return { x: 0, y: 0, z: 0 }
 
     const targetDepth = focalLength ?? this.focalLength
-
-    // 캔버스 중앙을 (0, 0)으로 변환하고, y축 방향을 월드 좌표계에 맞게 반전 (World 객체 Y는 위쪽이 +)
     const screenX = x - canvas.width / 2
     const screenY = -(y - canvas.height / 2)
 
-    let camX = 0
-    let camY = 0
-    let camZ = 0
+    let camX = 0, camY = 0, camZ = 0
     const activeCam = this.camera
+
+    const scale = targetDepth / this.focalLength
+    let dx = screenX * scale
+    let dy = screenY * scale
+    let dz = targetDepth
 
     if (activeCam) {
       camX = activeCam.transform.position.x
       camY = activeCam.transform.position.y
       camZ = activeCam.transform.position.z
+
+      const rotX = activeCam.transform.rotation.x || 0
+      const rotY = activeCam.transform.rotation.y || 0
+      const rotZ = activeCam.transform.rotation.z || 0
+
+      const radZ = rotZ * Math.PI / 180
+      const radX = rotX * Math.PI / 180
+      const radY = rotY * Math.PI / 180
+
+      if (radZ !== 0) {
+        const c = Math.cos(radZ), s = Math.sin(radZ)
+        const nx = dx * c - dy * s
+        const ny = dx * s + dy * c
+        dx = nx; dy = ny
+      }
+      if (radX !== 0) {
+        const c = Math.cos(radX), s = Math.sin(radX)
+        const ny = dy * c - dz * s
+        const nz = dy * s + dz * c
+        dy = ny; dz = nz
+      }
+      if (radY !== 0) {
+        const c = Math.cos(radY), s = Math.sin(radY)
+        const nx = dx * c + dz * s
+        const nz = -dx * s + dz * c
+        dx = nx; dz = nz
+      }
     }
 
-    // 원근 투영에 따른 실제 스케일 비율 (깊이가 깊어질수록 실제 공간의 단위는 커짐)
-    const scale = targetDepth / this.focalLength
-
     return {
-      x: camX + screenX * scale,
-      y: camY + screenY * scale,
-      z: camZ + targetDepth
+      x: camX + dx,
+      y: camY + dy,
+      z: camZ + dz
     }
   }
 
