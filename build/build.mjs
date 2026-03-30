@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild'
+import { glob } from 'node:fs/promises'
 
 const watch = process.argv.includes('--watch')
 
@@ -13,19 +14,26 @@ const libOptions = {
   platform: 'browser',
 }
 
-/** 예제 페이지 번들 설정 */
-const exampleOptions = {
-  entryPoints: ['example/main.ts'],
-  bundle: true,
-  format: /** @type {'esm'} */ ('esm'),
-  outfile: 'example/main.js',
-  sourcemap: true,
-  target: 'esnext',
-  platform: 'browser',
+/** 예제 페이지들 번들 설정 (example//main.ts 전체) */
+async function getExampleOptions() {
+  const entries = []
+  for await (const file of glob('example/*/main.ts')) {
+    entries.push(file.replace(/\\/g, '/'))
+  }
+  return {
+    entryPoints: entries,
+    bundle: true,
+    format: /** @type {'esm'} */ ('esm'),
+    outdir: 'example',
+    outbase: 'example',
+    sourcemap: true,
+    target: 'esnext',
+    platform: 'browser',
+  }
 }
 
 if (watch) {
-  // dev 서버 모드: 예제 번들을 빌드하고 정적 파일 서버 실행
+  const exampleOptions = await getExampleOptions()
   const ctx = await esbuild.context(exampleOptions)
   await ctx.watch()
 
@@ -36,7 +44,6 @@ if (watch) {
 
   console.log(`[lve4] dev server: http://localhost:${port}`)
 } else {
-  // 프로덕션 빌드: 라이브러리만 번들
   const result = await esbuild.build(libOptions)
   if (result.errors.length > 0) {
     console.error('[lve4] build failed')

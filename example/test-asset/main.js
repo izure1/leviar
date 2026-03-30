@@ -750,7 +750,7 @@ var World = class {
   }
 };
 
-// example/main.ts
+// example/test-asset/main.ts
 function generateSpriteSheet() {
   const FRAMES = 12;
   const FW = 80;
@@ -825,26 +825,8 @@ await loader.load({
   "img-red": imgRedUrl,
   "img-blue": imgBlueUrl
 });
-manager.create({
-  name: "spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 12,
-  loop: true,
-  start: 0,
-  end: 12
-});
-manager.create({
-  name: "slow-spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 4,
-  loop: true,
-  start: 0,
-  end: 12
-});
+manager.create({ name: "spin", src: "sprite-sheet", frameWidth: 80, frameHeight: 80, frameRate: 12, loop: true, start: 0, end: 12 });
+manager.create({ name: "slow-spin", src: "sprite-sheet", frameWidth: 80, frameHeight: 80, frameRate: 4, loop: true, start: 0, end: 12 });
 function label(text, x, y, z) {
   world.createText({
     attribute: { text },
@@ -853,41 +835,19 @@ function label(text, x, y, z) {
   });
 }
 label("\u2460 LveImage (img-red, 160\xD7120)", -500, -250, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 160, height: 120 },
-  transform: { position: { x: -420, y: -180, z: 300 } }
-});
+world.createImage({ attribute: { src: "img-red" }, style: { width: 160, height: 120 }, transform: { position: { x: -420, y: -180, z: 300 } } });
 label("\u2461 LveImage (auto size)", -500, -30, 300);
-world.createImage({
-  attribute: { src: "img-blue" },
-  transform: { position: { x: -420, y: 40, z: 300 } }
-});
+world.createImage({ attribute: { src: "img-blue" }, transform: { position: { x: -420, y: 40, z: 300 } } });
 label("\u2462 Placeholder (no src)", -500, 160, 300);
-world.createImage({
-  style: { width: 100, height: 100 },
-  transform: { position: { x: -450, y: 230, z: 300 } }
-});
+world.createImage({ style: { width: 100, height: 100 }, transform: { position: { x: -450, y: 230, z: 300 } } });
 label("\u2463 Sprite (spin 12fps)", 50, -250, 300);
-var sprFast = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 100, height: 100 },
-  transform: { position: { x: 100, y: -180, z: 300 } }
-});
+var sprFast = world.createSprite({ attribute: { src: "sprite-sheet" }, style: { width: 100, height: 100 }, transform: { position: { x: 100, y: -180, z: 300 } } });
 sprFast.play("spin", manager);
 label("\u2464 Sprite (slow-spin 4fps)", 50, -30, 300);
-var sprSlow = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 120, height: 120 },
-  transform: { position: { x: 110, y: 60, z: 300 } }
-});
+var sprSlow = world.createSprite({ attribute: { src: "sprite-sheet" }, style: { width: 120, height: 120 }, transform: { position: { x: 110, y: 60, z: 300 } } });
 sprSlow.play("slow-spin", manager);
-label("\u2465 \uC6D0\uACBD (z=600)", 50, 200, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 200, height: 150 },
-  transform: { position: { x: 100, y: 280, z: 600 } }
-});
+label("\u2465 \uC6D0\uACBD (z=600)", 250, 200, 300);
+world.createImage({ attribute: { src: "img-red" }, style: { width: 200, height: 150 }, transform: { position: { x: 350, y: 280, z: 600 } } });
 window.addEventListener("mousemove", (e) => {
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;

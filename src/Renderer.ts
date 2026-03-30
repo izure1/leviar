@@ -1,7 +1,9 @@
 import type { LveObject } from './LveObject.js'
 import type { Camera } from './objects/Camera.js'
+import type { Sprite } from './objects/Sprite.js'
 import { parseTextMarkup } from './utils/textMarkup.js'
 import type { TextSpan } from './utils/textMarkup.js'
+import type { LoadedAssets } from './types.js'
 
 /**
  * WebGL 기반 렌더러.
@@ -26,7 +28,7 @@ export class Renderer {
     return this.canvas.height
   }
 
-  render(objects: Set<LveObject>) {
+  render(objects: Set<LveObject>, assets: LoadedAssets = {}, timestamp: number = 0) {
     const { ctx } = this
     ctx.clearRect(0, 0, this.width, this.height)
 
@@ -52,7 +54,7 @@ export class Renderer {
       })
 
     for (const obj of renderables) {
-      this.drawObject(ctx, obj, camX, camY, camZ)
+      this.drawObject(ctx, obj, camX, camY, camZ, assets, timestamp)
     }
   }
 
@@ -61,7 +63,9 @@ export class Renderer {
     obj: LveObject,
     camX: number,
     camY: number,
-    camZ: number
+    camZ: number,
+    assets: LoadedAssets = {},
+    timestamp: number = 0
   ) {
     const { style, transform } = obj
 
@@ -113,6 +117,10 @@ export class Renderer {
       this.drawEllipse(ctx, obj, screenX, screenY, w, h)
     } else if (type === 'text') {
       this.drawText(ctx, obj, screenX, screenY, perspectiveScale)
+    } else if (type === 'image' || type === 'video' || type === 'particle') {
+      this.drawAsset(ctx, obj, screenX, screenY, w, h, assets)
+    } else if (type === 'sprite') {
+      this.drawSprite(ctx, obj as Sprite, screenX, screenY, w, h, assets, timestamp)
     }
 
     ctx.restore()
@@ -344,5 +352,114 @@ export class Renderer {
     if (maxW !== null || maxH !== null) {
       ctx.restore()
     }
+  }
+
+  // ─── 에셋 드로잉 (image / video / particle) ───────────────
+
+  private drawAsset(
+    ctx: CanvasRenderingContext2D,
+    obj: LveObject,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    assets: LoadedAssets
+  ) {
+    const src = obj.attribute.src
+    const asset = src ? assets[src] : undefined
+
+    if (!asset) {
+      this.drawPlaceholder(ctx, x, y, w || 60, h || 60)
+      return
+    }
+
+    const natW = asset instanceof HTMLImageElement
+      ? asset.naturalWidth
+      : (asset as HTMLVideoElement).videoWidth
+    const natH = asset instanceof HTMLImageElement
+      ? asset.naturalHeight
+      : (asset as HTMLVideoElement).videoHeight
+
+    const drawW = w || natW
+    const drawH = h || natH
+
+    ctx.drawImage(asset as CanvasImageSource, x - drawW / 2, y - drawH / 2, drawW, drawH)
+
+    if (obj.style.borderColor && obj.style.borderWidth) {
+      ctx.strokeStyle = obj.style.borderColor
+      ctx.lineWidth = obj.style.borderWidth
+      ctx.strokeRect(x - drawW / 2, y - drawH / 2, drawW, drawH)
+    }
+  }
+
+  // ─── 스프라이트 시트 드로잉 ───────────────────────────────
+
+  private drawSprite(
+    ctx: CanvasRenderingContext2D,
+    sprite: Sprite,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    assets: LoadedAssets,
+    timestamp: number
+  ) {
+    sprite.tick(timestamp)
+
+    const clip = sprite._clip
+    const src = clip?.src ?? sprite.attribute.src
+    if (!src) return
+
+    const asset = assets[src]
+    if (!asset || !(asset instanceof HTMLImageElement)) {
+      this.drawPlaceholder(ctx, x, y, w || 60, h || 60)
+      return
+    }
+
+    if (!clip) {
+      // 클립 미지정: 이미지 전체 렌더링
+      const drawW = w || asset.naturalWidth
+      const drawH = h || asset.naturalHeight
+      ctx.drawImage(asset, x - drawW / 2, y - drawH / 2, drawW, drawH)
+      return
+    }
+
+    const { frameWidth, frameHeight } = clip
+    const sheetCols = Math.floor(asset.naturalWidth / frameWidth)
+
+    const frameIdx = sprite._currentFrame
+    const col = frameIdx % sheetCols
+    const row = Math.floor(frameIdx / sheetCols)
+    const sx = col * frameWidth
+    const sy = row * frameHeight
+
+    const drawW = w || frameWidth
+    const drawH = h || frameHeight
+
+    ctx.drawImage(
+      asset,
+      sx, sy, frameWidth, frameHeight,
+      x - drawW / 2, y - drawH / 2, drawW, drawH
+    )
+  }
+
+  // ─── 에셋 미로드 시 placeholder ──────────────────────────
+
+  private drawPlaceholder(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ) {
+    ctx.strokeStyle = '#ff006688'
+    ctx.lineWidth = 1
+    ctx.strokeRect(x - w / 2, y - h / 2, w, h)
+    ctx.beginPath()
+    ctx.moveTo(x - w / 2, y - h / 2)
+    ctx.lineTo(x + w / 2, y + h / 2)
+    ctx.moveTo(x + w / 2, y - h / 2)
+    ctx.lineTo(x - w / 2, y + h / 2)
+    ctx.stroke()
   }
 }

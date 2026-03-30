@@ -54,6 +54,10 @@ world.start()
 
 다음 [문서](./docs/text.md)를 확인하십시오.
 
+## 스프라이트 요소
+
+다음 [문서](./docs/sprite.md)를 확인하십시오.
+
 ## 물리엔진
 
 다음 [문서](./docs/physics.md)를 확인하십시오.

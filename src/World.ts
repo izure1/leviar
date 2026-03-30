@@ -8,7 +8,8 @@ import { LveImage } from './objects/LveImage.js'
 import { LveVideo } from './objects/LveVideo.js'
 import { Sprite } from './objects/Sprite.js'
 import { Particle } from './objects/Particle.js'
-import type { LveObjectOptions } from './types.js'
+import { SpriteManager } from './SpriteManager.js'
+import type { LveObjectOptions, LoadedAssets } from './types.js'
 import type { RectangleOptions } from './objects/Rectangle.js'
 import { Renderer } from './Renderer.js'
 
@@ -16,6 +17,8 @@ export class World {
   private renderer: Renderer
   private objects: Set<LveObject> = new Set()
   private rafId: number | null = null
+  /** 모든 Loader에서 로드된 에셋의 통합 맵 */
+  private _assets: LoadedAssets = {}
 
   constructor(canvas?: HTMLCanvasElement) {
     const canvasEl = canvas ?? this.createCanvas()
@@ -37,8 +40,22 @@ export class World {
     return canvas
   }
 
+  /**
+   * 스프라이트 애니메이션 클립을 관리하는 SpriteManager를 생성합니다.
+   */
+  createSpriteManager(): SpriteManager {
+    return new SpriteManager()
+  }
+
+  /**
+   * 에셋 로더를 생성합니다. 로드 완료 시 World 내부 에셋 맵에 자동으로 병합됩니다.
+   */
   createLoader(): Loader {
-    return new Loader()
+    const loader = new Loader()
+    loader.on('complete', ({ assets }) => {
+      Object.assign(this._assets, assets)
+    })
+    return loader
   }
 
   createCamera(options?: LveObjectOptions): Camera {
@@ -89,15 +106,15 @@ export class World {
     return particle
   }
 
-  removeObject(obj: import('./LveObject.js').LveObject) {
+  removeObject(obj: LveObject) {
     this.objects.delete(obj)
   }
 
   start() {
     if (this.rafId !== null) return
 
-    const loop = () => {
-      this.renderer.render(this.objects)
+    const loop = (timestamp: number) => {
+      this.renderer.render(this.objects, this._assets, timestamp)
       this.rafId = requestAnimationFrame(loop)
     }
 

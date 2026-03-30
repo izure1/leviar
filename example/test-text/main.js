@@ -221,8 +221,8 @@ var Sprite = class extends LveObject {
    * 지정한 이름의 애니메이션 클립을 재생합니다.
    * SpriteManager 인스턴스와 연동됩니다.
    */
-  play(name, manager2) {
-    const clip = manager2.get(name);
+  play(name, manager) {
+    const clip = manager.get(name);
     if (!clip) {
       console.warn(`[Sprite] \uD074\uB9BD '${name}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
       return;
@@ -363,16 +363,16 @@ var Renderer = class {
   render(objects, assets = {}, timestamp = 0) {
     const { ctx } = this;
     ctx.clearRect(0, 0, this.width, this.height);
-    let camera2 = null;
+    let camera = null;
     for (const obj of objects) {
       if (obj.attribute.type === "camera") {
-        camera2 = obj;
+        camera = obj;
         break;
       }
     }
-    const camX = camera2?.transform.position.x ?? 0;
-    const camY = camera2?.transform.position.y ?? 0;
-    const camZ = camera2?.transform.position.z ?? 0;
+    const camX = camera?.transform.position.x ?? 0;
+    const camY = camera?.transform.position.y ?? 0;
+    const camZ = camera?.transform.position.z ?? 0;
     const renderables = Array.from(objects).filter((o) => o.attribute.type !== "camera" && o.style.display !== "none").sort((a, b) => {
       const zdiff = a.transform.position.z - b.transform.position.z;
       return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex;
@@ -685,11 +685,11 @@ var World = class {
    * 에셋 로더를 생성합니다. 로드 완료 시 World 내부 에셋 맵에 자동으로 병합됩니다.
    */
   createLoader() {
-    const loader2 = new Loader();
-    loader2.on("complete", ({ assets }) => {
+    const loader = new Loader();
+    loader.on("complete", ({ assets }) => {
       Object.assign(this._assets, assets);
     });
-    return loader2;
+    return loader;
   }
   createCamera(options) {
     const cam = new Camera(options);
@@ -750,149 +750,77 @@ var World = class {
   }
 };
 
-// example/main.ts
-function generateSpriteSheet() {
-  const FRAMES = 12;
-  const FW = 80;
-  const FH = 80;
-  const c = document.createElement("canvas");
-  c.width = FW * FRAMES;
-  c.height = FH;
-  const ctx = c.getContext("2d");
-  for (let i = 0; i < FRAMES; i++) {
-    const hue = i / FRAMES * 360;
-    ctx.fillStyle = `hsl(${hue}, 60%, 25%)`;
-    ctx.fillRect(i * FW, 0, FW, FH);
-    ctx.fillStyle = `hsl(${hue}, 90%, 65%)`;
-    ctx.beginPath();
-    ctx.arc(i * FW + FW / 2, FH / 2, 26, 0, Math.PI * 2);
-    ctx.fill();
-    const eyeX = i * FW + FW / 2 + Math.round(Math.cos(i / FRAMES * Math.PI * 2) * 6);
-    const eyeY = FH / 2 - 8;
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(eyeX - 6, eyeY, 5, 0, Math.PI * 2);
-    ctx.arc(eyeX + 6, eyeY, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#111";
-    ctx.beginPath();
-    ctx.arc(eyeX - 6, eyeY + 1, 2, 0, Math.PI * 2);
-    ctx.arc(eyeX + 6, eyeY + 1, 2, 0, Math.PI * 2);
-    ctx.fill();
-    const smile = Math.sin(i / FRAMES * Math.PI * 2 + Math.PI) * 6;
-    ctx.strokeStyle = "#111";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(i * FW + FW / 2, FH / 2 + 6, 8, 0 + smile * 0.05, Math.PI - smile * 0.05);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = "10px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(`${i}`, i * FW + FW / 2, FH - 6);
-  }
-  return c.toDataURL("image/png");
-}
-function generateColorImage(color, w, h) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(255,255,255,0.3)";
-  ctx.lineWidth = 2;
-  for (let x = -h; x < w; x += 20) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + h, h);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "rgba(255,255,255,0.6)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(2, 2, w - 4, h - 4);
-  return c.toDataURL("image/png");
-}
+// example/test-text/main.ts
 var world = new World();
-var camera = world.createCamera();
-camera.transform.position.z = -100;
-var loader = world.createLoader();
-var manager = world.createSpriteManager();
-var spriteSheetUrl = generateSpriteSheet();
-var imgRedUrl = generateColorImage("#c0392b", 160, 120);
-var imgBlueUrl = generateColorImage("#2980b9", 200, 150);
-await loader.load({
-  "sprite-sheet": spriteSheetUrl,
-  "img-red": imgRedUrl,
-  "img-blue": imgBlueUrl
-});
-manager.create({
-  name: "spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 12,
-  loop: true,
-  start: 0,
-  end: 12
-});
-manager.create({
-  name: "slow-spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 4,
-  loop: true,
-  start: 0,
-  end: 12
-});
+world.createCamera();
 function label(text, x, y, z) {
   world.createText({
     attribute: { text },
-    style: { color: "#888", fontSize: 13, fontFamily: "monospace" },
+    style: { color: "#aaaaaa", fontSize: 13, fontFamily: "monospace" },
     transform: { position: { x, y, z } }
   });
 }
-label("\u2460 LveImage (img-red, 160\xD7120)", -500, -250, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 160, height: 120 },
-  transform: { position: { x: -420, y: -180, z: 300 } }
+label("\u2460 \uAE30\uBCF8 \uD14D\uC2A4\uD2B8 (auto size)", -550, -280, 300);
+world.createText({
+  attribute: { text: "Hello, World!\nYou can use multiple lines." },
+  style: { color: "#ffffff", fontSize: 22, fontFamily: "sans-serif" },
+  transform: { position: { x: -550, y: -250, z: 300 } }
 });
-label("\u2461 LveImage (auto size)", -500, -30, 300);
-world.createImage({
-  attribute: { src: "img-blue" },
-  transform: { position: { x: -420, y: 40, z: 300 } }
+label("\u2461 \uC778\uB77C\uC778 \uB9C8\uD06C\uC5C5 \uC2A4\uD0C0\uC77C", -550, -130, 300);
+world.createText({
+  attribute: {
+    text: 'Normal <style fontSize="28" fontWeight="bold" color="#7ec8e3">Bold Blue</style> and <style fontStyle="italic" color="#f4a261">Italic Orange</style> text.'
+  },
+  style: { color: "#ffffff", fontSize: 18, fontFamily: "sans-serif" },
+  transform: { position: { x: -550, y: -100, z: 300 } }
 });
-label("\u2462 Placeholder (no src)", -500, 160, 300);
-world.createImage({
-  style: { width: 100, height: 100 },
-  transform: { position: { x: -450, y: 230, z: 300 } }
+label("\u2462 \uC911\uCCA9 \uB9C8\uD06C\uC5C5 (\uBD80\uBAA8 \uC0C1\uC18D)", -550, 30, 300);
+world.createText({
+  attribute: {
+    text: '<style color="#e76f51" fontSize="22">Outer <style fontSize="14" fontWeight="300" fontStyle="italic">inner-lighter</style> back-to-outer</style>'
+  },
+  style: { color: "#ffffff", fontSize: 18, fontFamily: "sans-serif" },
+  transform: { position: { x: -550, y: 60, z: 300 } }
 });
-label("\u2463 Sprite (spin 12fps)", 50, -250, 300);
-var sprFast = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 100, height: 100 },
-  transform: { position: { x: 100, y: -180, z: 300 } }
+label("\u2463 borderColor / borderWidth", -550, 140, 300);
+world.createText({
+  attribute: { text: '<style fontSize="36" fontWeight="bold" color="#0a0a14" borderColor="#c77dff" borderWidth="2">Outlined Text</style>' },
+  style: { fontSize: 36, fontFamily: "sans-serif" },
+  transform: { position: { x: -550, y: 170, z: 300 } }
 });
-sprFast.play("spin", manager);
-label("\u2464 Sprite (slow-spin 4fps)", 50, -30, 300);
-var sprSlow = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 120, height: 120 },
-  transform: { position: { x: 110, y: 60, z: 300 } }
+label("\u2464 width + word-wrap + textAlign: center", 50, -280, 300);
+world.createRectangle({
+  style: { color: "#1a1a2e", width: 300, height: 150, borderColor: "#444", borderWidth: 1 },
+  transform: { position: { x: 200, y: -195, z: 299 } }
 });
-sprSlow.play("slow-spin", manager);
-label("\u2465 \uC6D0\uACBD (z=600)", 50, 200, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 200, height: 150 },
-  transform: { position: { x: 100, y: 280, z: 600 } }
+world.createText({
+  attribute: { text: "This is a long sentence that should wrap inside the fixed width container." },
+  style: { color: "#e0e0e0", fontSize: 18, fontFamily: "sans-serif", width: 300, textAlign: "center" },
+  transform: { position: { x: 50, y: -270, z: 300 } }
 });
-window.addEventListener("mousemove", (e) => {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  camera.transform.position.x = (e.clientX - cx) * 0.1;
-  camera.transform.position.y = (e.clientY - cy) * 0.1;
+label("\u2465 width + height \u2192 \uD074\uB9AC\uD551", 50, 20, 300);
+world.createRectangle({
+  style: { color: "#1a1a2e", width: 300, height: 40, borderColor: "#e76f51", borderWidth: 1 },
+  transform: { position: { x: 200, y: 60, z: 299 } }
+});
+world.createText({
+  attribute: { text: "Line 1: visible\nLine 2: visible\nLine 3: clipped out\nLine 4: also clipped" },
+  style: { color: "#90e0ef", fontSize: 18, fontFamily: "sans-serif", width: 300, height: 40 },
+  transform: { position: { x: 50, y: 40, z: 300 } }
+});
+label("\u2466 textAlign \uBE44\uAD50", 50, 180, 300);
+var aligns = ["left", "center", "right"];
+var alignColors = ["#f4a261", "#2ec4b6", "#e71d36"];
+aligns.forEach((align, i) => {
+  world.createRectangle({
+    style: { color: "#1a1a2e", width: 200, height: 50, borderColor: "#555", borderWidth: 1 },
+    transform: { position: { x: 150, y: 220 + i * 70, z: 299 } }
+  });
+  world.createText({
+    attribute: { text: `align: ${align}` },
+    style: { color: alignColors[i], fontSize: 18, fontFamily: "sans-serif", width: 200, textAlign: align },
+    transform: { position: { x: 50, y: 210 + i * 70, z: 300 } }
+  });
 });
 world.start();
 //# sourceMappingURL=main.js.map

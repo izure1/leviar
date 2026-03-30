@@ -221,8 +221,8 @@ var Sprite = class extends LveObject {
    * 지정한 이름의 애니메이션 클립을 재생합니다.
    * SpriteManager 인스턴스와 연동됩니다.
    */
-  play(name, manager2) {
-    const clip = manager2.get(name);
+  play(name, manager) {
+    const clip = manager.get(name);
     if (!clip) {
       console.warn(`[Sprite] \uD074\uB9BD '${name}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
       return;
@@ -685,11 +685,11 @@ var World = class {
    * 에셋 로더를 생성합니다. 로드 완료 시 World 내부 에셋 맵에 자동으로 병합됩니다.
    */
   createLoader() {
-    const loader2 = new Loader();
-    loader2.on("complete", ({ assets }) => {
+    const loader = new Loader();
+    loader.on("complete", ({ assets }) => {
       Object.assign(this._assets, assets);
     });
-    return loader2;
+    return loader;
   }
   createCamera(options) {
     const cam = new Camera(options);
@@ -750,149 +750,75 @@ var World = class {
   }
 };
 
-// example/main.ts
-function generateSpriteSheet() {
-  const FRAMES = 12;
-  const FW = 80;
-  const FH = 80;
-  const c = document.createElement("canvas");
-  c.width = FW * FRAMES;
-  c.height = FH;
-  const ctx = c.getContext("2d");
-  for (let i = 0; i < FRAMES; i++) {
-    const hue = i / FRAMES * 360;
-    ctx.fillStyle = `hsl(${hue}, 60%, 25%)`;
-    ctx.fillRect(i * FW, 0, FW, FH);
-    ctx.fillStyle = `hsl(${hue}, 90%, 65%)`;
-    ctx.beginPath();
-    ctx.arc(i * FW + FW / 2, FH / 2, 26, 0, Math.PI * 2);
-    ctx.fill();
-    const eyeX = i * FW + FW / 2 + Math.round(Math.cos(i / FRAMES * Math.PI * 2) * 6);
-    const eyeY = FH / 2 - 8;
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(eyeX - 6, eyeY, 5, 0, Math.PI * 2);
-    ctx.arc(eyeX + 6, eyeY, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#111";
-    ctx.beginPath();
-    ctx.arc(eyeX - 6, eyeY + 1, 2, 0, Math.PI * 2);
-    ctx.arc(eyeX + 6, eyeY + 1, 2, 0, Math.PI * 2);
-    ctx.fill();
-    const smile = Math.sin(i / FRAMES * Math.PI * 2 + Math.PI) * 6;
-    ctx.strokeStyle = "#111";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(i * FW + FW / 2, FH / 2 + 6, 8, 0 + smile * 0.05, Math.PI - smile * 0.05);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = "10px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(`${i}`, i * FW + FW / 2, FH - 6);
-  }
-  return c.toDataURL("image/png");
-}
-function generateColorImage(color, w, h) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(255,255,255,0.3)";
-  ctx.lineWidth = 2;
-  for (let x = -h; x < w; x += 20) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + h, h);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = "rgba(255,255,255,0.6)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(2, 2, w - 4, h - 4);
-  return c.toDataURL("image/png");
-}
+// example/test-parallax/main.ts
 var world = new World();
 var camera = world.createCamera();
-camera.transform.position.z = -100;
-var loader = world.createLoader();
-var manager = world.createSpriteManager();
-var spriteSheetUrl = generateSpriteSheet();
-var imgRedUrl = generateColorImage("#c0392b", 160, 120);
-var imgBlueUrl = generateColorImage("#2980b9", 200, 150);
-await loader.load({
-  "sprite-sheet": spriteSheetUrl,
-  "img-red": imgRedUrl,
-  "img-blue": imgBlueUrl
-});
-manager.create({
-  name: "spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 12,
-  loop: true,
-  start: 0,
-  end: 12
-});
-manager.create({
-  name: "slow-spin",
-  src: "sprite-sheet",
-  frameWidth: 80,
-  frameHeight: 80,
-  frameRate: 4,
-  loop: true,
-  start: 0,
-  end: 12
-});
-function label(text, x, y, z) {
-  world.createText({
-    attribute: { text },
-    style: { color: "#888", fontSize: 13, fontFamily: "monospace" },
-    transform: { position: { x, y, z } }
+var layers = [
+  { z: 800, count: 6, size: 180, colors: ["#1a1a3e", "#0d0d2b", "#16163a"] },
+  { z: 500, count: 8, size: 100, colors: ["#2a0a4e", "#1e0a3e", "#3a0a5e"] },
+  { z: 300, count: 10, size: 60, colors: ["#4b0082", "#6a0dad", "#7b2fbe"] },
+  { z: 150, count: 12, size: 36, colors: ["#9b30ff", "#c77dff", "#e0aaff"] }
+];
+var rand = (min, max) => Math.random() * (max - min) + min;
+for (const layer of layers) {
+  for (let i = 0; i < layer.count; i++) {
+    const color = layer.colors[Math.floor(Math.random() * layer.colors.length)];
+    world.createEllipse({
+      style: {
+        color,
+        opacity: rand(0.3, 0.8),
+        width: rand(layer.size * 0.5, layer.size * 1.5),
+        height: rand(layer.size * 0.3, layer.size),
+        blur: rand(2, 8)
+      },
+      transform: {
+        position: {
+          x: rand(-1200, 1200),
+          y: rand(-700, 700),
+          z: layer.z + rand(-50, 50)
+        }
+      }
+    });
+  }
+}
+for (let i = 0; i < 25; i++) {
+  const size = rand(4, 18);
+  world.createRectangle({
+    style: {
+      color: `hsl(${rand(200, 300)}, 80%, 70%)`,
+      opacity: rand(0.4, 1),
+      width: size,
+      height: size,
+      borderRadius: 2
+    },
+    transform: {
+      position: { x: rand(-900, 900), y: rand(-500, 500), z: rand(60, 130) },
+      rotation: { z: rand(0, 45) }
+    }
   });
 }
-label("\u2460 LveImage (img-red, 160\xD7120)", -500, -250, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 160, height: 120 },
-  transform: { position: { x: -420, y: -180, z: 300 } }
+world.createText({
+  attribute: { text: "Lve4" },
+  style: { color: "#ffffff", opacity: 0.95, fontSize: 72, fontFamily: "Segoe UI, sans-serif", fontWeight: "bold", textAlign: "center" },
+  transform: { position: { x: -100, y: -30, z: 200 } }
 });
-label("\u2461 LveImage (auto size)", -500, -30, 300);
-world.createImage({
-  attribute: { src: "img-blue" },
-  transform: { position: { x: -420, y: 40, z: 300 } }
+world.createText({
+  attribute: { text: "2.5D Parallax Engine" },
+  style: { color: "#c77dff", opacity: 0.8, fontSize: 22, fontFamily: "Segoe UI, sans-serif", textAlign: "center" },
+  transform: { position: { x: -120, y: 60, z: 200 } }
 });
-label("\u2462 Placeholder (no src)", -500, 160, 300);
-world.createImage({
-  style: { width: 100, height: 100 },
-  transform: { position: { x: -450, y: 230, z: 300 } }
-});
-label("\u2463 Sprite (spin 12fps)", 50, -250, 300);
-var sprFast = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 100, height: 100 },
-  transform: { position: { x: 100, y: -180, z: 300 } }
-});
-sprFast.play("spin", manager);
-label("\u2464 Sprite (slow-spin 4fps)", 50, -30, 300);
-var sprSlow = world.createSprite({
-  attribute: { src: "sprite-sheet" },
-  style: { width: 120, height: 120 },
-  transform: { position: { x: 110, y: 60, z: 300 } }
-});
-sprSlow.play("slow-spin", manager);
-label("\u2465 \uC6D0\uACBD (z=600)", 50, 200, 300);
-world.createImage({
-  attribute: { src: "img-red" },
-  style: { width: 200, height: 150 },
-  transform: { position: { x: 100, y: 280, z: 600 } }
-});
+camera.transform.position.z = -50;
 window.addEventListener("mousemove", (e) => {
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
-  camera.transform.position.x = (e.clientX - cx) * 0.1;
-  camera.transform.position.y = (e.clientY - cy) * 0.1;
+  camera.transform.position.x = (e.clientX - cx) * 0.12;
+  camera.transform.position.y = (e.clientY - cy) * 0.12;
 });
+window.addEventListener("wheel", (e) => {
+  camera.transform.position.z = Math.min(
+    Math.max(camera.transform.position.z + e.deltaY * 0.1, -200),
+    200
+  );
+}, { passive: true });
 world.start();
 //# sourceMappingURL=main.js.map
