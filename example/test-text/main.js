@@ -9087,6 +9087,11 @@ var Renderer2 = class {
   instancedProgram;
   // Placeholder 색상 Program (에러 표시)
   placeholderProgram;
+  // 공유 메쉬 (매 프레임 객체 생성 방지)
+  colorMesh;
+  ellipseMesh;
+  textureMesh;
+  placeholderMesh;
   // 오브젝트별 Mesh 캐시
   meshCache = /* @__PURE__ */ new Map();
   // 텍스트 텍스처 캐시 (id → TextTextureEntry)
@@ -9209,6 +9214,10 @@ var Renderer2 = class {
       depthTest: false,
       depthWrite: false
     });
+    this.colorMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.colorProgram });
+    this.ellipseMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.ellipseProgram });
+    this.textureMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.textureProgram });
+    this.placeholderMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.placeholderProgram });
   }
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
   render(objects, assets = {}, timestamp = 0) {
@@ -9306,8 +9315,7 @@ var Renderer2 = class {
     program.uniforms["uOpacity"].value = opacity;
     program.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h, rotDeg);
     program.uniforms["uProjectionMatrix"].value = this._projMatrix();
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program });
-    mesh.draw({ camera: this.camera });
+    this.colorMesh.draw({ camera: this.camera });
   }
   _drawTextureMesh(texture, x, y, w, h, rotDeg, opacity, flipY = false, uvOffset = [0, 0], uvScale = [1, 1]) {
     const prog = this.textureProgram;
@@ -9318,8 +9326,7 @@ var Renderer2 = class {
     prog.uniforms["uUVScale"].value = uvScale;
     prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h, rotDeg);
     prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: prog });
-    mesh.draw({ camera: this.camera });
+    this.textureMesh.draw({ camera: this.camera });
   }
   // ─── Rectangle ──────────────────────────────────────────────────────────
   _drawRectangle(obj, x, y, w, h, rot) {
@@ -9338,8 +9345,7 @@ var Renderer2 = class {
     this.ellipseProgram.uniforms["uOpacity"].value = style.opacity;
     this.ellipseProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h, rot);
     this.ellipseProgram.uniforms["uProjectionMatrix"].value = this._projMatrix();
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.ellipseProgram });
-    mesh.draw({ camera: this.camera });
+    this.ellipseMesh.draw({ camera: this.camera });
   }
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
   _drawText(obj, x, y, perspectiveScale, rot, _timestamp) {
@@ -9637,8 +9643,7 @@ var Renderer2 = class {
   _drawPlaceholder(x, y, w, h, rot) {
     this.placeholderProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h, rot);
     this.placeholderProgram.uniforms["uProjectionMatrix"].value = this._projMatrix();
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.placeholderProgram });
-    mesh.draw({ camera: this.camera });
+    this.placeholderMesh.draw({ camera: this.camera });
   }
   // ─── Texture 캐시 ────────────────────────────────────────────────────────
   _getOrCreateAssetTexture(src, asset) {

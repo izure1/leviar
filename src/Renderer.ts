@@ -113,6 +113,12 @@ export class Renderer {
   // Placeholder 색상 Program (에러 표시)
   private placeholderProgram!: Program
 
+  // 공유 메쉬 (매 프레임 객체 생성 방지)
+  private colorMesh!: Mesh
+  private ellipseMesh!: Mesh
+  private textureMesh!: Mesh
+  private placeholderMesh!: Mesh
+
   // 오브젝트별 Mesh 캐시
   private meshCache = new Map<string, Mesh>()
 
@@ -250,6 +256,12 @@ export class Renderer {
       depthTest: false,
       depthWrite: false,
     })
+
+    // ─── 공유 메쉬 초기화 ──────────────────────────────────────────────
+    this.colorMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.colorProgram })
+    this.ellipseMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.ellipseProgram })
+    this.textureMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.textureProgram })
+    this.placeholderMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.placeholderProgram })
   }
 
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
@@ -374,8 +386,7 @@ export class Renderer {
     program.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rotDeg)
     program.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program })
-    mesh.draw({ camera: this.camera })
+    this.colorMesh.draw({ camera: this.camera })
   }
 
   private _drawTextureMesh(
@@ -395,8 +406,7 @@ export class Renderer {
     prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rotDeg)
     prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: prog })
-    mesh.draw({ camera: this.camera })
+    this.textureMesh.draw({ camera: this.camera })
   }
 
   // ─── Rectangle ──────────────────────────────────────────────────────────
@@ -420,8 +430,7 @@ export class Renderer {
     this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rot)
     this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.ellipseProgram })
-    mesh.draw({ camera: this.camera })
+    this.ellipseMesh.draw({ camera: this.camera })
   }
 
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -802,8 +811,7 @@ export class Renderer {
   private _drawPlaceholder(x: number, y: number, w: number, h: number, rot: number) {
     this.placeholderProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, rot)
     this.placeholderProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
-    const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.placeholderProgram })
-    mesh.draw({ camera: this.camera })
+    this.placeholderMesh.draw({ camera: this.camera })
   }
 
   // ─── Texture 캐시 ────────────────────────────────────────────────────────
