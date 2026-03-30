@@ -29,7 +29,7 @@ export interface WorldOptions {
   /**
    * 원근 투영 초점 거리.
    * 카메라 기본 Z는 `-focalLength` 로 설정됩니다.
-   * z=0 오브젝트가 1:1 스케일로 렌더링됩니다.
+   * 카메라와 오브젝트 사이의 transform.position.z의 차이가 focalLength일때 1:1 스케일로 렌더링됩니다.
    * @default 100
    */
   focalLength?: number
@@ -176,7 +176,7 @@ export class World extends EventEmitter {
   }
 
   /**
-   * 화면좌표 기준으로 마우스 위치에 갹쳐지는 객체를 반환합니다. (AABB hit-test)
+   * 화면좌표 기준으로 마우스 위치에 겹쳐지는 객체를 반환합니다. (AABB hit-test)
    */
   private _getHitObjects(e: MouseEvent): LveObject[] {
     const canvas = this._canvas
@@ -366,33 +366,36 @@ export class World extends EventEmitter {
    * 캔버스의 x, y 좌표(0 ~ width, 0 ~ height)를 현재 카메라 기준의 월드 좌표로 변환합니다.
    * @param x 캔버스 좌측 상단을 0으로 하는 x 좌표
    * @param y 캔버스 좌측 상단을 0으로 하는 y 좌표
-   * @param focalLength (선택) 카메라의 깊이(Z 거리). 기본값은 world.focalLength 입니다.
+   * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표. 기본값은 0 입니다.
    */
-  canvasToWorld(x: number, y: number, focalLength?: number): { x: number; y: number; z: number } {
+  canvasToWorld(x: number, y: number, targetZ: number = 0): { x: number; y: number; z: number } {
     const canvas = this._canvas
     if (!canvas) return { x: 0, y: 0, z: 0 }
 
-    const targetDepth = focalLength ?? this.focalLength
     const screenX = x - canvas.width / 2
     const screenY = -(y - canvas.height / 2)
 
     let camX = 0, camY = 0, camZ = 0
+    let rotX = 0, rotY = 0, rotZ = 0
     const activeCam = this.camera
-
-    const scale = targetDepth / this.focalLength
-    let dx = screenX * scale
-    let dy = screenY * scale
-    let dz = targetDepth
 
     if (activeCam) {
       camX = activeCam.transform.position.x
       camY = activeCam.transform.position.y
       camZ = activeCam.transform.position.z
 
-      const rotX = activeCam.transform.rotation.x || 0
-      const rotY = activeCam.transform.rotation.y || 0
-      const rotZ = activeCam.transform.rotation.z || 0
+      rotX = activeCam.transform.rotation.x || 0
+      rotY = activeCam.transform.rotation.y || 0
+      rotZ = activeCam.transform.rotation.z || 0
+    }
 
+    const targetDepth = targetZ - camZ
+    const scale = targetDepth / this.focalLength
+    let dx = screenX * scale
+    let dy = screenY * scale
+    let dz = targetDepth
+
+    if (activeCam) {
       const radZ = rotZ * Math.PI / 180
       const radX = rotX * Math.PI / 180
       const radY = rotY * Math.PI / 180
