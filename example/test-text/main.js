@@ -6066,26 +6066,28 @@ var Renderer = class {
       return w;
     });
     const containerW = maxW ?? Math.max(...measuredWidths, 0);
+    const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+    const originX = x - containerW / 2;
+    const originY = y - totalH / 2;
     if (maxW !== null || maxH !== null) {
-      const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
       const clipW = maxW ?? containerW;
       const clipH = maxH ?? totalH;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(x, y, clipW, clipH);
+      ctx.rect(originX, originY, clipW, clipH);
       ctx.clip();
     }
-    let curY = y;
+    let curY = originY;
     for (let li = 0; li < renderLines.length; li++) {
       const rl = renderLines[li];
       const lineW = measuredWidths[li];
       let lineStartX;
       if (textAlign === "center") {
-        lineStartX = x + (containerW - lineW) / 2;
+        lineStartX = originX + (containerW - lineW) / 2;
       } else if (textAlign === "right") {
-        lineStartX = x + containerW - lineW;
+        lineStartX = originX + containerW - lineW;
       } else {
-        lineStartX = x;
+        lineStartX = originX;
       }
       let penX = lineStartX;
       const baseline = curY + rl.lineH * 0.8;
@@ -6445,7 +6447,7 @@ world.createRectangle({
 world.createText({
   attribute: { text: "This is a long sentence that should wrap inside the fixed width container." },
   style: { color: "#e0e0e0", fontSize: 18, fontFamily: "sans-serif", width: 300, textAlign: "center" },
-  transform: { position: { x: 50, y: -270, z: 300 } }
+  transform: { position: { x: 200, y: -195, z: 300 } }
 });
 label("\u2465 width + height \u2192 \uD074\uB9AC\uD551", 50, 20, 300);
 world.createRectangle({
@@ -6455,7 +6457,7 @@ world.createRectangle({
 world.createText({
   attribute: { text: "Line 1: visible\nLine 2: visible\nLine 3: clipped out\nLine 4: also clipped" },
   style: { color: "#90e0ef", fontSize: 18, fontFamily: "sans-serif", width: 300, height: 40 },
-  transform: { position: { x: 50, y: 40, z: 300 } }
+  transform: { position: { x: 200, y: 60, z: 300 } }
 });
 label("\u2466 textAlign \uBE44\uAD50", 50, 180, 300);
 var aligns = ["left", "center", "right"];
@@ -6468,7 +6470,7 @@ aligns.forEach((align, i) => {
   world.createText({
     attribute: { text: `align: ${align}` },
     style: { color: alignColors[i], fontSize: 18, fontFamily: "sans-serif", width: 200, textAlign: align },
-    transform: { position: { x: 50, y: 210 + i * 70, z: 300 } }
+    transform: { position: { x: 150, y: 220 + i * 70, z: 300 } }
   });
 });
 world.start();

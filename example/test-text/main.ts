@@ -56,7 +56,7 @@ world.createRectangle({
 world.createText({
   attribute: { text: 'This is a long sentence that should wrap inside the fixed width container.' },
   style: { color: '#e0e0e0', fontSize: 18, fontFamily: 'sans-serif', width: 300, textAlign: 'center' },
-  transform: { position: { x: 50, y: -270, z: 300 } },
+  transform: { position: { x: 200, y: -195, z: 300 } },
 })
 
 // ⑥ 클리핑 (height: 40)
@@ -68,7 +68,7 @@ world.createRectangle({
 world.createText({
   attribute: { text: 'Line 1: visible\nLine 2: visible\nLine 3: clipped out\nLine 4: also clipped' },
   style: { color: '#90e0ef', fontSize: 18, fontFamily: 'sans-serif', width: 300, height: 40 },
-  transform: { position: { x: 50, y: 40, z: 300 } },
+  transform: { position: { x: 200, y: 60, z: 300 } },
 })
 
 // ⑦ textAlign 비교
@@ -83,7 +83,7 @@ aligns.forEach((align, i) => {
   world.createText({
     attribute: { text: `align: ${align}` },
     style: { color: alignColors[i], fontSize: 18, fontFamily: 'sans-serif', width: 200, textAlign: align },
-    transform: { position: { x: 50, y: 210 + i * 70, z: 300 } },
+    transform: { position: { x: 150, y: 220 + i * 70, z: 300 } },
   })
 })
 

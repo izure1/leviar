@@ -303,18 +303,21 @@ export class Renderer {
     const containerW = maxW ?? Math.max(...measuredWidths, 0)
 
     // ─── 클리핑 영역 설정 ────────────────────────────────
+    const totalH = renderLines.reduce((s, r) => s + r.lineH, 0)
+    const originX = x - containerW / 2
+    const originY = y - totalH / 2
+
     if (maxW !== null || maxH !== null) {
-      const totalH = renderLines.reduce((s, r) => s + r.lineH, 0)
       const clipW = maxW ?? containerW
       const clipH = maxH ?? totalH
       ctx.save()
       ctx.beginPath()
-      ctx.rect(x, y, clipW, clipH)
+      ctx.rect(originX, originY, clipW, clipH)
       ctx.clip()
     }
 
     // ─── 실제 렌더링 ─────────────────────────────────────
-    let curY = y
+    let curY = originY
     for (let li = 0; li < renderLines.length; li++) {
       const rl = renderLines[li]
 
@@ -322,11 +325,11 @@ export class Renderer {
       const lineW = measuredWidths[li]
       let lineStartX: number
       if (textAlign === 'center') {
-        lineStartX = x + (containerW - lineW) / 2
+        lineStartX = originX + (containerW - lineW) / 2
       } else if (textAlign === 'right') {
-        lineStartX = x + containerW - lineW
+        lineStartX = originX + containerW - lineW
       } else {
-        lineStartX = x
+        lineStartX = originX
       }
 
       let penX = lineStartX

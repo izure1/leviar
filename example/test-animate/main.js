@@ -6066,26 +6066,28 @@ var Renderer = class {
       return w;
     });
     const containerW = maxW ?? Math.max(...measuredWidths, 0);
+    const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+    const originX = x - containerW / 2;
+    const originY = y - totalH / 2;
     if (maxW !== null || maxH !== null) {
-      const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
       const clipW = maxW ?? containerW;
       const clipH = maxH ?? totalH;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(x, y, clipW, clipH);
+      ctx.rect(originX, originY, clipW, clipH);
       ctx.clip();
     }
-    let curY = y;
+    let curY = originY;
     for (let li = 0; li < renderLines.length; li++) {
       const rl = renderLines[li];
       const lineW = measuredWidths[li];
       let lineStartX;
       if (textAlign === "center") {
-        lineStartX = x + (containerW - lineW) / 2;
+        lineStartX = originX + (containerW - lineW) / 2;
       } else if (textAlign === "right") {
-        lineStartX = x + containerW - lineW;
+        lineStartX = originX + containerW - lineW;
       } else {
-        lineStartX = x;
+        lineStartX = originX;
       }
       let penX = lineStartX;
       const baseline = curY + rl.lineH * 0.8;
@@ -6404,7 +6406,7 @@ var world = new World();
 world.createCamera();
 var text = world.createText({
   attribute: { text: "Move and Fade" },
-  style: { color: "#7ec8e3", fontSize: 36, opacity: 0.2, width: 100, textAlign: "center" },
+  style: { color: "#7ec8e3", fontSize: 36, opacity: 0.2 },
   transform: { position: { x: -0, y: 0, z: 0 } }
 });
 text.animate({
