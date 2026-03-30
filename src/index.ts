@@ -2,6 +2,7 @@ export { World } from './World.js'
 export { Loader } from './Loader.js'
 export { Renderer } from './Renderer.js'
 export { LveObject } from './LveObject.js'
+export { Animation } from './Animation.js'
 export { AssetManager } from './AssetManager.js'
 export { SpriteManager } from './SpriteManager.js'
 export { VideoManager } from './VideoManager.js'
@@ -21,8 +22,10 @@ export { Particle } from './objects/Particle.js'
 // Types
 export type {
   Attribute,
+  AnimateTarget,
   Dataset,
   DatasetValue,
+  EasingType,
   Style,
   Transform,
   Vec3,

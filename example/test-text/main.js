@@ -4987,6 +4987,235 @@ function v4() {
   ].join("-");
 }
 
+// src/Animation.ts
+var easings = {
+  linear: (t) => t,
+  easeIn: (t) => t * t,
+  easeOut: (t) => t * (2 - t),
+  easeInOut: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+  easeInQuad: (t) => t * t,
+  easeOutQuad: (t) => t * (2 - t),
+  easeInOutQuad: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+  easeInCubic: (t) => t * t * t,
+  easeOutCubic: (t) => --t * t * t + 1,
+  easeInOutCubic: (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
+  easeInQuart: (t) => t * t * t * t,
+  easeOutQuart: (t) => 1 - --t * t * t * t,
+  easeInOutQuart: (t) => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * --t * t * t * t,
+  easeInQuint: (t) => t * t * t * t * t,
+  easeOutQuint: (t) => 1 + --t * t * t * t * t,
+  easeInOutQuint: (t) => t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t,
+  easeInSine: (t) => 1 - Math.cos(t * Math.PI / 2),
+  easeOutSine: (t) => Math.sin(t * Math.PI / 2),
+  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+  easeInExpo: (t) => t === 0 ? 0 : Math.pow(2, 10 * t - 10),
+  easeOutExpo: (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t),
+  easeInOutExpo: (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2,
+  easeInCirc: (t) => 1 - Math.sqrt(1 - t * t),
+  easeOutCirc: (t) => Math.sqrt(1 - (t - 1) * (t - 1)),
+  easeInOutCirc: (t) => t < 0.5 ? (1 - Math.sqrt(1 - 4 * t * t)) / 2 : (Math.sqrt(1 - (-2 * t + 2) * (-2 * t + 2)) + 1) / 2,
+  easeInBack: (t) => {
+    const c1 = 1.70158;
+    return (c1 + 1) * t * t * t - c1 * t * t;
+  },
+  easeOutBack: (t) => {
+    const c1 = 1.70158;
+    return 1 + (c1 + 1) * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  },
+  easeInOutBack: (t) => {
+    const c1 = 1.70158;
+    const c2 = c1 * 1.525;
+    return t < 0.5 ? Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2) / 2 : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (2 * t - 2) + c2) + 2) / 2;
+  },
+  easeInElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * (2 * Math.PI / 3));
+  },
+  easeOutElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+  },
+  easeInOutElastic: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return t < 0.5 ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * (2 * Math.PI / 4.5))) / 2 : Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * (2 * Math.PI / 4.5)) / 2 + 1;
+  },
+  easeInBounce: (t) => 1 - easings.easeOutBounce(1 - t),
+  easeOutBounce: (t) => {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    if (t < 1 / d1) return n1 * t * t;
+    if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+    if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  },
+  easeInOutBounce: (t) => t < 0.5 ? (1 - easings.easeOutBounce(1 - 2 * t)) / 2 : (1 + easings.easeOutBounce(2 * t - 1)) / 2
+};
+function resolveTarget(current, raw) {
+  if (typeof raw === "number") return raw;
+  if (raw.startsWith("+=")) return current + parseFloat(raw.slice(2));
+  if (raw.startsWith("-=")) return current - parseFloat(raw.slice(2));
+  if (raw.startsWith("*=")) return current * parseFloat(raw.slice(2));
+  if (raw.startsWith("/=")) return current / parseFloat(raw.slice(2));
+  return parseFloat(raw);
+}
+function snapshotNumbers(source, target) {
+  const snapshot = {};
+  for (const key of Object.keys(target)) {
+    const tVal = target[key];
+    const sVal = source?.[key];
+    if (tVal !== null && typeof tVal === "object" && !Array.isArray(tVal)) {
+      snapshot[key] = snapshotNumbers(sVal ?? {}, tVal);
+    } else if (typeof tVal === "number" || typeof tVal === "string") {
+      snapshot[key] = typeof sVal === "number" ? sVal : 0;
+    }
+  }
+  return snapshot;
+}
+function interpolate(from, to, t, rawTarget) {
+  const result = {};
+  for (const key of Object.keys(to)) {
+    const toVal = to[key];
+    const fromVal = from?.[key];
+    const raw = rawTarget[key];
+    if (toVal !== null && typeof toVal === "object" && !Array.isArray(toVal)) {
+      result[key] = interpolate(fromVal ?? {}, toVal, t, raw);
+    } else if (typeof toVal === "number" && typeof fromVal === "number") {
+      result[key] = fromVal + (toVal - fromVal) * t;
+    }
+  }
+  return result;
+}
+function resolveAllTargets(current, raw) {
+  const resolved = {};
+  for (const key of Object.keys(raw)) {
+    const rVal = raw[key];
+    const cVal = current?.[key];
+    if (rVal !== null && typeof rVal === "object" && !Array.isArray(rVal)) {
+      resolved[key] = resolveAllTargets(cVal ?? {}, rVal);
+    } else if (typeof rVal === "number" || typeof rVal === "string") {
+      resolved[key] = resolveTarget(typeof cVal === "number" ? cVal : 0, rVal);
+    }
+  }
+  return resolved;
+}
+var Animation = class {
+  _initialTarget;
+  _rafId = null;
+  _startTime = null;
+  _pausedElapsed = 0;
+  _isPaused = false;
+  _duration = 0;
+  _easingFn = easings.linear;
+  _callback = null;
+  _from = {};
+  _to = {};
+  constructor(target) {
+    this._initialTarget = target;
+  }
+  /**
+   * 애니메이션을 시작합니다.
+   * @param callback 매 프레임마다 현재 상태를 전달받는 콜백
+   * @param duration 지속 시간 (ms)
+   * @param easing 이징 함수 이름 (기본값: 'linear')
+   */
+  start(callback, duration, easing = "linear") {
+    this.stop();
+    this._callback = callback;
+    this._duration = duration;
+    this._easingFn = easings[easing] ?? easings.linear;
+    this._from = snapshotNumbers({}, this._initialTarget);
+    this._to = resolveAllTargets({}, this._initialTarget);
+    this._pausedElapsed = 0;
+    this._isPaused = false;
+    this._tick(null);
+  }
+  pause() {
+    if (this._isPaused || this._startTime === null) return;
+    this._isPaused = true;
+    this._pausedElapsed += performance.now() - this._startTime;
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+  }
+  resume() {
+    if (!this._isPaused) return;
+    this._isPaused = false;
+    this._startTime = null;
+    this._tick(null);
+  }
+  stop() {
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    this._startTime = null;
+    this._pausedElapsed = 0;
+    this._isPaused = false;
+  }
+  _tick(timestamp) {
+    const now = timestamp ?? performance.now();
+    if (this._startTime === null) {
+      this._startTime = now - this._pausedElapsed;
+    }
+    const elapsed = now - this._startTime;
+    const rawT = Math.min(elapsed / this._duration, 1);
+    const easedT = this._easingFn(rawT);
+    const state = interpolate(this._from, this._to, easedT, this._initialTarget);
+    this._callback?.(state);
+    if (rawT < 1) {
+      this._rafId = requestAnimationFrame((ts) => this._tick(ts));
+    } else {
+      this._rafId = null;
+    }
+  }
+};
+function animateObject(source, rawTarget, duration, easing = "linear") {
+  const from = snapshotNumbers(source, rawTarget);
+  const to = resolveAllTargets(source, rawTarget);
+  const easingFn = easings[easing] ?? easings.linear;
+  let startTime = null;
+  const anim = new Animation(rawTarget);
+  anim._from = from;
+  anim._to = to;
+  anim._duration = duration;
+  anim._easingFn = easingFn;
+  anim._pausedElapsed = 0;
+  anim._isPaused = false;
+  const tick = (timestamp) => {
+    const now = timestamp ?? performance.now();
+    if (startTime === null) startTime = now;
+    const elapsed = now - startTime;
+    const rawT = Math.min(elapsed / duration, 1);
+    const easedT = easingFn(rawT);
+    applyInterpolated(source, from, to, easedT, rawTarget);
+    if (rawT < 1) {
+      ;
+      anim._rafId = requestAnimationFrame((ts) => tick(ts));
+    } else {
+      ;
+      anim._rafId = null;
+    }
+  };
+  anim._rafId = requestAnimationFrame((ts) => tick(ts));
+  return anim;
+}
+function applyInterpolated(source, from, to, t, raw) {
+  for (const key of Object.keys(to)) {
+    const toVal = to[key];
+    const fromVal = from?.[key];
+    if (toVal !== null && typeof toVal === "object" && !Array.isArray(toVal)) {
+      if (source[key] === void 0 || source[key] === null) source[key] = {};
+      applyInterpolated(source[key], fromVal ?? {}, toVal, t, raw[key]);
+    } else if (typeof toVal === "number" && typeof fromVal === "number") {
+      source[key] = fromVal + (toVal - fromVal) * t;
+    }
+  }
+}
+
 // src/LveObject.ts
 function makeVec3(partial) {
   return {
@@ -5088,6 +5317,27 @@ var LveObject = class {
     if (Matter3) {
       Matter3.Body.setVelocity(this._body, velocity);
     }
+  }
+  /**
+   * 객체의 속성을 애니메이션으로 부드럽게 변경합니다.
+   * @param target 변경할 속성과 목표값 (숫자 or 복합 대입 연산자 문자열)
+   * @param duration 지속 시간 (ms)
+   * @param easing 이징 함수 이름 (기본값: 'linear')
+   */
+  animate(target, duration, easing = "linear") {
+    const normalized = { ...target };
+    if (normalized.position) {
+      if (!normalized.transform) normalized.transform = {};
+      normalized.transform.position = normalized.position;
+      delete normalized.position;
+    }
+    const source = {
+      style: this.style,
+      transform: this.transform,
+      dataset: this.dataset,
+      attribute: this.attribute
+    };
+    return animateObject(source, normalized, duration, easing);
   }
 };
 

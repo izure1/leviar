@@ -24,8 +24,6 @@ world.particleManager.create({
   lifespan: 2000,
   interval: 300,
   rate: 5,
-  spawnWidth: 300,
-  spawnHeight: 300,
 })
 
 world.particleManager.create({

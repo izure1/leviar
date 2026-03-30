@@ -100,3 +100,37 @@ export type LoadedAsset = HTMLImageElement | HTMLVideoElement
 export type LoadedAssets = Record<string, LoadedAsset>
 
 export type LoaderEventType = 'load' | 'loading' | 'loaded' | 'error' | 'complete'
+
+// ============================================================
+// Animation Types
+// ============================================================
+
+export type EasingType =
+  | 'linear'
+  | 'easeIn' | 'easeOut' | 'easeInOut'
+  | 'easeInQuad' | 'easeOutQuad' | 'easeInOutQuad'
+  | 'easeInCubic' | 'easeOutCubic' | 'easeInOutCubic'
+  | 'easeInQuart' | 'easeOutQuart' | 'easeInOutQuart'
+  | 'easeInQuint' | 'easeOutQuint' | 'easeInOutQuint'
+  | 'easeInSine' | 'easeOutSine' | 'easeInOutSine'
+  | 'easeInExpo' | 'easeOutExpo' | 'easeInOutExpo'
+  | 'easeInCirc' | 'easeOutCirc' | 'easeInOutCirc'
+  | 'easeInBack' | 'easeOutBack' | 'easeInOutBack'
+  | 'easeInElastic' | 'easeOutElastic' | 'easeInOutElastic'
+  | 'easeInBounce' | 'easeOutBounce' | 'easeInOutBounce'
+
+/** 애니메이션 대상 값. 숫자 또는 복합 대입 연산자 문자열 ('+=100', '-=50', '*=2', '/=2') */
+export type AnimateValue = number | string
+
+export interface AnimateTarget {
+  style?: Partial<Record<keyof Style, AnimateValue>>
+  /** animate.md 예제처럼 최상위 position 키 사용 가능 → 내부적으로 transform.position으로 리매핑 */
+  position?: Partial<Record<keyof Vec3, AnimateValue>>
+  transform?: {
+    position?: Partial<Record<keyof Vec3, AnimateValue>>
+    rotation?: Partial<Record<keyof Vec3, AnimateValue>>
+    scale?: Partial<Record<keyof Vec3, AnimateValue>>
+  }
+  dataset?: Record<string, any>
+  [key: string]: any
+}

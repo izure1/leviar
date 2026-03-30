@@ -1,9 +1,13 @@
 import { v4 as uuidv4 } from './utils/uuid.js'
 import type Matter from 'matter-js'
+import { animateObject } from './Animation.js'
+import type { Animation } from './Animation.js'
 import type {
   Attribute,
+  AnimateTarget,
   Dataset,
   DatasetValue,
+  EasingType,
   LveObjectOptions,
   Style,
   Transform,
@@ -121,5 +125,30 @@ export abstract class LveObject {
     if (Matter) {
       Matter.Body.setVelocity(this._body, velocity)
     }
+  }
+
+  /**
+   * 객체의 속성을 애니메이션으로 부드럽게 변경합니다.
+   * @param target 변경할 속성과 목표값 (숫자 or 복합 대입 연산자 문자열)
+   * @param duration 지속 시간 (ms)
+   * @param easing 이징 함수 이름 (기본값: 'linear')
+   */
+  animate(target: AnimateTarget, duration: number, easing: EasingType = 'linear'): Animation {
+    // animate.md 예제처럼 최상위 position → transform.position 으로 리매핑합니다
+    const normalized: Record<string, any> = { ...target }
+    if (normalized.position) {
+      if (!normalized.transform) normalized.transform = {}
+      normalized.transform.position = normalized.position
+      delete normalized.position
+    }
+
+    // LveObject가 가진 실제 속성 맵을 구성합니다
+    const source: Record<string, any> = {
+      style: this.style,
+      transform: this.transform,
+      dataset: this.dataset,
+      attribute: this.attribute,
+    }
+    return animateObject(source, normalized as any, duration, easing)
   }
 }
