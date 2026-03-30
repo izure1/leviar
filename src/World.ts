@@ -235,10 +235,9 @@ export class World extends EventEmitter {
 
   /**
    * 월드의 활성 카메라 객체를 반환합니다. 
-   * 지정된 카메라가 없다면 가장 처음 등록된 `camera` 타입의 객체를 반환합니다.
    */
   get camera(): LveObject | null {
-    return this._activeCamera ?? Array.from(this.objects).find(obj => obj.attribute.type === 'camera') ?? null
+    return this._activeCamera
   }
 
   /**
@@ -284,6 +283,9 @@ export class World extends EventEmitter {
 
   createCamera(options?: LveObjectOptions): Camera {
     const cam = new Camera(options)
+    if (options?.transform?.position?.z === undefined) {
+      cam.transform.position.z = -this.focalLength
+    }
     this.objects.add(cam)
     this._tryAddPhysics(cam)
     return cam

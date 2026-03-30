@@ -1,13 +1,9 @@
 import { World } from '../../src/index.js'
 
 const world = new World()
-const camera = world.createCamera({
-  transform: {
-    position: {
-      z: -100
-    }
-  }
-})
+const camera = world.createCamera()
+
+world.camera = camera
 
 function label(text: string, x: number, y: number, z: number) {
   world.createText({

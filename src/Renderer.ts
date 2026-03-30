@@ -146,6 +146,9 @@ export class Renderer {
   // 텍스트 텍스처 캐시 (id → TextTextureEntry)
   private textCache = new Map<string, TextTextureEntry>()
 
+  // 카메라 미지정 시 렌더링할 텍스트 오브젝트 모의 객체
+  private _noCameraText: any
+
   // 에셋 텍스처 캐시 (src → Texture)
   private assetTextureCache = new Map<string, Texture>()
 
@@ -292,20 +295,38 @@ export class Renderer {
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
 
   render(objects: Set<LveObject>, assets: LoadedAssets = {}, timestamp: number = 0, activeCamera: LveObject | null = null) {
-    // Camera 찾기
-    let lveCamera: LveObject | null = activeCamera
-    if (!lveCamera) {
-      for (const obj of objects) {
-        if (obj.attribute.type === 'camera') {
-          lveCamera = obj
-          break
+    if (!activeCamera) {
+      // 검은 화면 (알림 목적)
+      this.gl.clearColor(0, 0, 0, 1)
+      this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+      this.gl.enable(this.gl.BLEND)
+      this.gl.blendFuncSeparate(
+        this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA,
+        this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,
+      )
+
+      // 경고 텍스트 렌더링
+      if (!this._noCameraText) {
+        this._noCameraText = {
+          attribute: { id: '__no_camera_warning__', type: 'text', text: 'No Camera' },
+          style: { color: '#ff5555', fontSize: 24, textAlign: 'center', opacity: 1 },
+          transform: {
+            position: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1 },
+            rotation: { z: 0 }
+          },
+          _dirtyTexture: true,
+          _textureThrottleCount: 0,
+          _textureIdleCount: 0
         }
       }
+      this._drawText(this._noCameraText as LveObject, 0, 0, 1, 0, timestamp)
+      return
     }
 
-    const camX = lveCamera?.transform.position.x ?? 0
-    const camY = lveCamera?.transform.position.y ?? 0
-    const camZ = lveCamera?.transform.position.z ?? 0
+    const camX = activeCamera.transform.position.x
+    const camY = activeCamera.transform.position.y
+    const camZ = activeCamera.transform.position.z
 
     // z 기준 오름차순 정렬
     const renderables = Array.from(objects)

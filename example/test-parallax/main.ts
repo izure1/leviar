@@ -1,13 +1,9 @@
 import { World } from '../../src/index.js'
 
 const world = new World()
-const camera = world.createCamera({
-  transform: {
-    position: {
-      z: -100
-    }
-  }
-})
+const camera = world.createCamera()
+
+world.camera = camera
 
 const layers = [
   { z: 800, count: 6, size: 180, colors: ['#1a1a3e', '#0d0d2b', '#16163a'] },

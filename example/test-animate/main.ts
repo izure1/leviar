@@ -1,13 +1,9 @@
 import { World, Animation } from '../../src/index.js'
 
 const world = new World()
-world.createCamera({
-  transform: {
-    position: {
-      z: -100
-    }
-  }
-})
+const camera = world.createCamera()
+
+world.camera = camera
 
 // 1. LveObject.animate() 테스트
 const text = world.createText({

@@ -6,13 +6,9 @@ const CX = W / 2
 const Z = 0
 
 const world = new World()
-const camera = world.createCamera({
-  transform: {
-    position: {
-      z: -100
-    }
-  }
-})
+const camera = world.createCamera()
+
+world.camera = camera
 
 await world.loader.load({
   'star': '../asset/image/star.png',

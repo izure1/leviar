@@ -2,7 +2,8 @@ import { World } from '../../src/index.js'
 
 const world = new World()
 const camera = world.createCamera()
-camera.transform.position.z = 0
+
+world.camera = camera
 
 await world.loader.load({
   'logo': '../asset/image/logo.png',

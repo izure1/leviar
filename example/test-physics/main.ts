@@ -1,14 +1,9 @@
 import { World } from '../../src/index.js'
 
 const world = new World()
-world.createCamera({
-  transform: {
-    position: {
-      z: -100
-    }
-  }
-})
+const camera = world.createCamera()
 
+world.camera = camera
 world.setGravity({ x: 0, y: -1 })
 
 // 바닥 생성
