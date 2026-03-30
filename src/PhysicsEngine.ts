@@ -1,8 +1,30 @@
 import Matter from 'matter-js'
 import type { LveObject } from './LveObject.js'
 
-  // globalThis에 Matter를 노출하여 LveObject에서 applyForce/setVelocity 호출 가능하게 함
-  ; (globalThis as any).__Matter__ = Matter
+/**
+ * CSS 단축 표기법 margin 문자열을 파싱합니다.
+ * "10"        → top: 10, right: 10, bottom: 10, left: 10
+ * "10 20"     → top: 10, right: 20, bottom: 10, left: 20
+ * "10 20 30"  → top: 10, right: 20, bottom: 30, left: 20
+ * "10 20 30 40" → top: 10, right: 20, bottom: 30, left: 40
+ */
+function parseMargin(margin?: string): { top: number; right: number; bottom: number; left: number } {
+  if (!margin) return { top: 0, right: 0, bottom: 0, left: 0 }
+  const parts = margin.trim().split(/\s+/).map(Number)
+  if (parts.some(isNaN)) return { top: 0, right: 0, bottom: 0, left: 0 }
+  if (parts.length === 1) {
+    return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] }
+  } else if (parts.length === 2) {
+    return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] }
+  } else if (parts.length === 3) {
+    return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] }
+  } else {
+    return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] }
+  }
+}
+
+// globalThis에 Matter를 노출하여 LveObject에서 applyForce/setVelocity 호출 가능하게 함
+; (globalThis as any).__Matter__ = Matter
 
 /**
  * matter-js 기반 물리 엔진 래퍼.
@@ -49,13 +71,18 @@ export class PhysicsEngine {
       },
     }
 
+    // style.margin을 파싱하여 물리 바디 크기에 반영
+    const m = parseMargin(obj.style.margin)
+    const physW = (w || 32) + m.left + m.right
+    const physH = (h || 32) + m.top + m.bottom
+
     // 박스 또는 원으로 바디 생성 (type 기반)
     let body: Matter.Body
     if (obj.attribute.type === 'ellipse') {
-      const r = Math.min(w, h) / 2 || 16
+      const r = Math.min(physW, physH) / 2
       body = Matter.Bodies.circle(x, y, r, options as any)
     } else {
-      body = Matter.Bodies.rectangle(x, y, w || 32, h || 32, options as any)
+      body = Matter.Bodies.rectangle(x, y, physW, physH, options as any)
     }
 
     // IBodyDefinition에 없는 필드는 직접 할당

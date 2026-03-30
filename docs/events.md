@@ -77,3 +77,37 @@ object.emit('event1 event2')
   - 마우스가 객체 위로 올라갔을 때 발생합니다. 매개변수로 마우스 이벤트를 전달받습니다.
 - 'mouseout'
   - 마우스가 객체 밖으로 나갔을 때 발생합니다. 매개변수로 마우스 이벤트를 전달받습니다.
+
+## 전역 이벤트
+
+아래와 같은 방식으로 전역 이벤트를 등록할 수 있습니다.
+
+```typescript
+const world = new World()
+
+world.on('event', () => {
+  console.log('event')
+})
+
+world.off('event', () => {
+  console.log('event')
+})
+
+world.once('event', () => {
+  console.log('event')
+})
+
+world.emit('event')
+```
+
+특정 객체에서 발생한 이벤트를 전역에서 받아 수신할 수 있습니다.
+전역 on, off, once 메서드는 첫번째 매개변수로 객체를 받습니다.
+
+```typescript
+const world = new World()
+const obj = world.createRectangle()
+
+world.on('click', (obj, e) => {
+  console.log('click', obj, e)
+})
+```

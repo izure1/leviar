@@ -3,14 +3,15 @@ import { World } from '../../src/index.js'
 const world = new World()
 world.createCamera()
 
-world.setGravity({ x: 0, y: -9.8 })
+world.setGravity({ x: 0, y: -1 })
 
 // 바닥 생성
 world.createRectangle({
   attribute: {
     name: 'floor',
     className: 'physics-object',
-    physics: 'static'
+    physics: 'static',
+    friction: 0.5,
   },
   style: {
     width: 600,
@@ -32,7 +33,10 @@ function addBox(x: number, y: number) {
   const box = world.createRectangle({
     attribute: {
       className: 'physics-object box',
-      physics: 'dynamic'
+      physics: 'dynamic',
+      density: 0.001,
+      friction: 0.1,
+      restitution: 0.7,
     },
     style: {
       width: 50,
@@ -41,6 +45,7 @@ function addBox(x: number, y: number) {
       opacity: 0.9,
       borderColor: '#ffffff',
       borderWidth: 0,
+      margin: '10 20'
     },
     transform: {
       position: { x, y, z: 0 }
@@ -55,7 +60,8 @@ function addBox(x: number, y: number) {
     box.animate({ style: { opacity: 0.9, borderWidth: 0 } }, 150);
   });
 
-  box.on('click', () => {
+  box.on('click', (e) => {
+    e.stopImmediatePropagation()
     const force = (Math.random() - 0.5) * 50;
     box.applyTorque(force);
   });
@@ -75,7 +81,6 @@ world.createRectangle({
     zIndex: -1,
   }
 }).on('click', (e) => {
-  e.stopPropagation()
   const mx = e.clientX - window.innerWidth / 2;
   const my = window.innerHeight / 2 - e.clientY;
   addBox(mx, my);

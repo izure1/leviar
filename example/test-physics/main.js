@@ -5887,6 +5887,20 @@ var ParticleManager = class extends AssetManager {
 
 // src/PhysicsEngine.ts
 var import_matter_js2 = __toESM(require_matter(), 1);
+function parseMargin(margin) {
+  if (!margin) return { top: 0, right: 0, bottom: 0, left: 0 };
+  const parts = margin.trim().split(/\s+/).map(Number);
+  if (parts.some(isNaN)) return { top: 0, right: 0, bottom: 0, left: 0 };
+  if (parts.length === 1) {
+    return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
+  } else if (parts.length === 2) {
+    return { top: parts[0], right: parts[1], bottom: parts[0], left: parts[1] };
+  } else if (parts.length === 3) {
+    return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
+  } else {
+    return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+  }
+}
 globalThis.__Matter__ = import_matter_js2.default;
 var PhysicsEngine = class {
   engine;
@@ -5923,12 +5937,15 @@ var PhysicsEngine = class {
         category: attr.collisionCategory ?? 1
       }
     };
+    const m = parseMargin(obj.style.margin);
+    const physW = (w || 32) + m.left + m.right;
+    const physH = (h || 32) + m.top + m.bottom;
     let body;
     if (obj.attribute.type === "ellipse") {
-      const r = Math.min(w, h) / 2 || 16;
+      const r = Math.min(physW, physH) / 2;
       body = import_matter_js2.default.Bodies.circle(x, y, r, options);
     } else {
-      body = import_matter_js2.default.Bodies.rectangle(x, y, w || 32, h || 32, options);
+      body = import_matter_js2.default.Bodies.rectangle(x, y, physW, physH, options);
     }
     if (attr.fixedRotation) {
       import_matter_js2.default.Body.setInertia(body, Infinity);
@@ -10074,12 +10091,13 @@ var World = class {
 // example/test-physics/main.ts
 var world = new World();
 world.createCamera();
-world.setGravity({ x: 0, y: -9.8 });
+world.setGravity({ x: 0, y: -1 });
 world.createRectangle({
   attribute: {
     name: "floor",
     className: "physics-object",
-    physics: "static"
+    physics: "static",
+    friction: 0.5
   },
   style: {
     width: 600,
@@ -10098,7 +10116,10 @@ function addBox(x, y) {
   const box = world.createRectangle({
     attribute: {
       className: "physics-object box",
-      physics: "dynamic"
+      physics: "dynamic",
+      density: 1e-3,
+      friction: 0.1,
+      restitution: 0.7
     },
     style: {
       width: 50,
@@ -10106,7 +10127,8 @@ function addBox(x, y) {
       color: `hsl(${Math.random() * 360}, 80%, 60%)`,
       opacity: 0.9,
       borderColor: "#ffffff",
-      borderWidth: 0
+      borderWidth: 0,
+      margin: "10 20"
     },
     transform: {
       position: { x, y, z: 0 }
@@ -10118,7 +10140,8 @@ function addBox(x, y) {
   box.on("mouseout", () => {
     box.animate({ style: { opacity: 0.9, borderWidth: 0 } }, 150);
   });
-  box.on("click", () => {
+  box.on("click", (e) => {
+    e.stopImmediatePropagation();
     const force = (Math.random() - 0.5) * 50;
     box.applyTorque(force);
   });
@@ -10134,7 +10157,6 @@ world.createRectangle({
     zIndex: -1
   }
 }).on("click", (e) => {
-  e.stopPropagation();
   const mx = e.clientX - window.innerWidth / 2;
   const my = window.innerHeight / 2 - e.clientY;
   addBox(mx, my);
