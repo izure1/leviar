@@ -1,0 +1,26 @@
+{
+  "name": "lve4",
+  "version": "1.0.0",
+  "description": "WebGL 2.5D rendering engine with parallax scrolling",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "./dist/lve4.js",
+  "module": "./dist/lve4.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/lve4.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "node ./build/build.mjs",
+    "dev": "node ./build/build.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.0.0"
+  }
+}

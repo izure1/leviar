@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lve4 - 테스트 페이지</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a14;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    #hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      line-height: 1.7;
+      pointer-events: none;
+      z-index: 100;
+    }
+    #hud strong { color: #7ec8e3; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <strong>Lve4</strong> - 패럴랙스 스크롤링 데모<br/>
+    마우스를 움직여 카메라를 이동하세요<br/>
+    스크롤로 z축 이동
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

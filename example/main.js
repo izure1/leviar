@@ -1,0 +1,711 @@
+// src/Loader.ts
+var Loader = class {
+  listeners = {};
+  assets = {};
+  on(event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
+    return this;
+  }
+  off(event, callback) {
+    const list = this.listeners[event];
+    if (!list) return this;
+    const idx = list.indexOf(callback);
+    if (idx !== -1) list.splice(idx, 1);
+    return this;
+  }
+  emit(event, payload) {
+    const list = this.listeners[event];
+    list?.forEach((cb) => cb(payload));
+  }
+  async load(assets) {
+    this.emit("load", { assets });
+    const entries = Object.entries(assets);
+    await Promise.all(
+      entries.map(([key, src]) => {
+        this.emit("loading", { key, src });
+        return this.loadAsset(key, src);
+      })
+    );
+    this.emit("complete", { assets: this.assets });
+    return this.assets;
+  }
+  loadAsset(key, src) {
+    return new Promise((resolve) => {
+      const ext = src.split(".").pop()?.toLowerCase() ?? "";
+      const isVideo = ["mp4", "webm", "ogg"].includes(ext);
+      if (isVideo) {
+        const video = document.createElement("video");
+        video.src = src;
+        video.onloadeddata = () => {
+          this.assets[key] = video;
+          this.emit("loaded", { key, asset: video });
+          resolve();
+        };
+        video.onerror = () => {
+          const error = new Error(`Failed to load video: ${src}`);
+          this.emit("error", { key, src, error });
+          resolve();
+        };
+      } else {
+        const image = new Image();
+        image.src = src;
+        image.onload = () => {
+          this.assets[key] = image;
+          this.emit("loaded", { key, asset: image });
+          resolve();
+        };
+        image.onerror = () => {
+          const error = new Error(`Failed to load image: ${src}`);
+          this.emit("error", { key, src, error });
+          resolve();
+        };
+      }
+    });
+  }
+};
+
+// src/utils/uuid.ts
+function v4() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = bytes[6] & 15 | 64;
+  bytes[8] = bytes[8] & 63 | 128;
+  const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0"));
+  return [
+    hex.slice(0, 4).join(""),
+    hex.slice(4, 6).join(""),
+    hex.slice(6, 8).join(""),
+    hex.slice(8, 10).join(""),
+    hex.slice(10, 16).join("")
+  ].join("-");
+}
+
+// src/LveObject.ts
+function makeVec3(partial) {
+  return {
+    x: partial?.x ?? 0,
+    y: partial?.y ?? 0,
+    z: partial?.z ?? 0
+  };
+}
+function makeStyle(partial) {
+  return {
+    color: partial?.color,
+    opacity: partial?.opacity ?? 1,
+    width: partial?.width,
+    height: partial?.height,
+    blur: partial?.blur,
+    borderColor: partial?.borderColor,
+    borderWidth: partial?.borderWidth,
+    fontSize: partial?.fontSize,
+    fontFamily: partial?.fontFamily,
+    fontWeight: partial?.fontWeight,
+    fontStyle: partial?.fontStyle ?? "normal",
+    textAlign: partial?.textAlign ?? "left",
+    lineHeight: partial?.lineHeight ?? 1,
+    display: partial?.display ?? "block",
+    pointerEvents: partial?.pointerEvents ?? true,
+    margin: partial?.margin,
+    shadowColor: partial?.shadowColor,
+    shadowBlur: partial?.shadowBlur,
+    shadowOffsetX: partial?.shadowOffsetX,
+    shadowOffsetY: partial?.shadowOffsetY,
+    zIndex: partial?.zIndex ?? 0,
+    blendMode: partial?.blendMode
+  };
+}
+var LveObject = class {
+  attribute;
+  dataset;
+  style;
+  transform;
+  constructor(type, options) {
+    this.attribute = {
+      type,
+      id: v4(),
+      name: options?.attribute?.name ?? "",
+      className: options?.attribute?.className ?? "",
+      src: options?.attribute?.src,
+      text: options?.attribute?.text,
+      loop: options?.attribute?.loop ?? false,
+      physics: options?.attribute?.physics ?? null,
+      density: options?.attribute?.density,
+      friction: options?.attribute?.friction,
+      restitution: options?.attribute?.restitution,
+      fixedRotation: options?.attribute?.fixedRotation,
+      gravityScale: options?.attribute?.gravityScale
+    };
+    this.dataset = Object.assign({}, options?.dataset);
+    this.style = makeStyle(options?.style);
+    this.transform = {
+      position: makeVec3(options?.transform?.position),
+      rotation: makeVec3(options?.transform?.rotation),
+      scale: {
+        x: options?.transform?.scale?.x ?? 1,
+        y: options?.transform?.scale?.y ?? 1,
+        z: options?.transform?.scale?.z ?? 1
+      }
+    };
+  }
+  setDataset(key, value) {
+    this.dataset[key] = value;
+  }
+  getDataset(key) {
+    return this.dataset[key];
+  }
+};
+
+// src/objects/Camera.ts
+var Camera = class extends LveObject {
+  constructor(options) {
+    super("camera", options);
+  }
+};
+
+// src/objects/Rectangle.ts
+var Rectangle = class extends LveObject {
+  borderRadius;
+  constructor(options) {
+    super("rectangle", options);
+    this.borderRadius = options?.style?.borderRadius ?? 0;
+  }
+};
+
+// src/objects/Ellipse.ts
+var Ellipse = class extends LveObject {
+  constructor(options) {
+    super("ellipse", options);
+  }
+};
+
+// src/objects/Text.ts
+var Text = class extends LveObject {
+  constructor(options) {
+    super("text", options);
+  }
+};
+
+// src/objects/LveImage.ts
+var LveImage = class extends LveObject {
+  constructor(options) {
+    super("image", options);
+  }
+};
+
+// src/objects/LveVideo.ts
+var LveVideo = class extends LveObject {
+  constructor(options) {
+    super("video", options);
+  }
+};
+
+// src/objects/Sprite.ts
+var Sprite = class extends LveObject {
+  constructor(options) {
+    super("sprite", options);
+  }
+};
+
+// src/objects/Particle.ts
+var Particle = class extends LveObject {
+  constructor(options) {
+    super("particle", options);
+  }
+};
+
+// src/utils/textMarkup.ts
+function parseAttrs(attrStr) {
+  const style = {};
+  const re = /(\w+)=["']([^"']*)["']/g;
+  let m;
+  while ((m = re.exec(attrStr)) !== null) {
+    const [, key, val] = m;
+    switch (key) {
+      case "fontSize":
+        style.fontSize = parseFloat(val);
+        break;
+      case "fontWeight":
+        style.fontWeight = val;
+        break;
+      case "fontStyle":
+        style.fontStyle = val;
+        break;
+      case "color":
+        style.color = val;
+        break;
+      case "borderColor":
+        style.borderColor = val;
+        break;
+      case "borderWidth":
+        style.borderWidth = parseFloat(val);
+        break;
+    }
+  }
+  return style;
+}
+var OPEN_RE = /<style([^>]*)>/;
+var CLOSE_RE = /<\/style>/;
+var TOKEN_RE = /(<style[^>]*>|<\/style>)/g;
+function parseTextMarkup(raw, baseStyle) {
+  const spans = [];
+  const stack = [baseStyle];
+  const tokens = raw.split(TOKEN_RE);
+  for (const token of tokens) {
+    if (!token) continue;
+    if (OPEN_RE.test(token)) {
+      const attrMatch = token.match(OPEN_RE);
+      const attrs = attrMatch ? parseAttrs(attrMatch[1]) : {};
+      const parent = stack[stack.length - 1];
+      stack.push({ ...parent, ...attrs });
+    } else if (CLOSE_RE.test(token)) {
+      if (stack.length > 1) stack.pop();
+    } else {
+      if (token) {
+        spans.push({ text: token, style: { ...stack[stack.length - 1] } });
+      }
+    }
+  }
+  return spans;
+}
+
+// src/Renderer.ts
+var Renderer = class {
+  canvas;
+  ctx;
+  constructor(canvas) {
+    this.canvas = canvas;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("[Renderer] Failed to get 2D context from canvas.");
+    this.ctx = ctx;
+  }
+  get width() {
+    return this.canvas.width;
+  }
+  get height() {
+    return this.canvas.height;
+  }
+  render(objects) {
+    const { ctx } = this;
+    ctx.clearRect(0, 0, this.width, this.height);
+    let camera = null;
+    for (const obj of objects) {
+      if (obj.attribute.type === "camera") {
+        camera = obj;
+        break;
+      }
+    }
+    const camX = camera?.transform.position.x ?? 0;
+    const camY = camera?.transform.position.y ?? 0;
+    const camZ = camera?.transform.position.z ?? 0;
+    const renderables = Array.from(objects).filter((o) => o.attribute.type !== "camera" && o.style.display !== "none").sort((a, b) => {
+      const zdiff = a.transform.position.z - b.transform.position.z;
+      return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex;
+    });
+    for (const obj of renderables) {
+      this.drawObject(ctx, obj, camX, camY, camZ);
+    }
+  }
+  drawObject(ctx, obj, camX, camY, camZ) {
+    const { style, transform } = obj;
+    const depth = transform.position.z - camZ;
+    if (depth <= 0) return;
+    const focalLength = 500;
+    const perspectiveScale = focalLength / depth;
+    const screenX = this.width / 2 + (transform.position.x - camX) * perspectiveScale * transform.scale.x;
+    const screenY = this.height / 2 + (transform.position.y - camY) * perspectiveScale * transform.scale.y;
+    const w = (style.width ?? 0) * perspectiveScale * transform.scale.x;
+    const h = (style.height ?? 0) * perspectiveScale * transform.scale.y;
+    ctx.save();
+    ctx.globalAlpha = style.opacity;
+    if (style.blendMode) ctx.globalCompositeOperation = style.blendMode;
+    if (transform.rotation.z !== 0) {
+      ctx.translate(screenX, screenY);
+      ctx.rotate(transform.rotation.z * Math.PI / 180);
+      ctx.translate(-screenX, -screenY);
+    }
+    if (style.shadowColor) {
+      ctx.shadowColor = style.shadowColor;
+      ctx.shadowBlur = style.shadowBlur ?? 0;
+      ctx.shadowOffsetX = style.shadowOffsetX ?? 0;
+      ctx.shadowOffsetY = style.shadowOffsetY ?? 0;
+    }
+    const type = obj.attribute.type;
+    if (type === "rectangle") {
+      this.drawRectangle(ctx, obj, screenX, screenY, w, h);
+    } else if (type === "ellipse") {
+      this.drawEllipse(ctx, obj, screenX, screenY, w, h);
+    } else if (type === "text") {
+      this.drawText(ctx, obj, screenX, screenY, perspectiveScale);
+    }
+    ctx.restore();
+  }
+  drawRectangle(ctx, obj, x, y, w, h) {
+    const { style } = obj;
+    const rx = x - w / 2;
+    const ry = y - h / 2;
+    const br = obj.borderRadius ?? 0;
+    ctx.beginPath();
+    if (br > 0 && ctx.roundRect) {
+      ctx.roundRect(rx, ry, w, h, br);
+    } else {
+      ctx.rect(rx, ry, w, h);
+    }
+    if (style.color) {
+      ctx.fillStyle = style.color;
+      ctx.fill();
+    }
+    if (style.blur && style.blur > 0) {
+      ctx.filter = `blur(${style.blur}px)`;
+    }
+    if (style.borderColor && style.borderWidth) {
+      ctx.strokeStyle = style.borderColor;
+      ctx.lineWidth = style.borderWidth;
+      ctx.stroke();
+    }
+  }
+  drawEllipse(ctx, obj, x, y, w, h) {
+    const { style } = obj;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
+    if (style.color) {
+      ctx.fillStyle = style.color;
+      ctx.fill();
+    }
+    if (style.borderColor && style.borderWidth) {
+      ctx.strokeStyle = style.borderColor;
+      ctx.lineWidth = style.borderWidth;
+      ctx.stroke();
+    }
+  }
+  drawText(ctx, obj, x, y, perspectiveScale) {
+    const { style, attribute } = obj;
+    const baseFontSize = (style.fontSize ?? 16) * perspectiveScale;
+    const fontFamily = style.fontFamily ?? "sans-serif";
+    const baseFontWeight = style.fontWeight ?? "normal";
+    const baseFontStyle = style.fontStyle ?? "normal";
+    const baseColor = style.color ?? "#000000";
+    const lineHeightMul = style.lineHeight ?? 1;
+    const textAlign = style.textAlign ?? "left";
+    const rawText = attribute.text ?? "";
+    const maxW = style.width == null ? null : style.width * perspectiveScale;
+    const maxH = style.height == null ? null : style.height * perspectiveScale;
+    const spans = parseTextMarkup(rawText, {
+      fontSize: baseFontSize,
+      fontWeight: baseFontWeight,
+      fontStyle: baseFontStyle,
+      color: baseColor
+    });
+    const renderLines = [];
+    const logicalLines = [[]];
+    for (const span of spans) {
+      const parts = span.text.split("\n");
+      parts.forEach((p, i) => {
+        if (i > 0) logicalLines.push([]);
+        if (p) logicalLines[logicalLines.length - 1].push({ text: p, span });
+      });
+    }
+    const spaceRe = /(\S+|\s+)/g;
+    for (const logLine of logicalLines) {
+      let curLine = [];
+      let curW = 0;
+      let curH = baseFontSize * lineHeightMul;
+      const flushLine = () => {
+        if (curLine.length > 0 || renderLines.length === 0) {
+          renderLines.push({ tokens: curLine, lineH: curH });
+        }
+        curLine = [];
+        curW = 0;
+        curH = baseFontSize * lineHeightMul;
+      };
+      if (logLine.length === 0) {
+        renderLines.push({ tokens: [], lineH: baseFontSize * lineHeightMul });
+        continue;
+      }
+      for (const token of logLine) {
+        const fs = token.span.style.fontSize ?? baseFontSize;
+        const fw = token.span.style.fontWeight ?? baseFontWeight;
+        const fi = token.span.style.fontStyle ?? baseFontStyle;
+        curH = Math.max(curH, fs * lineHeightMul);
+        ctx.font = `${fi} ${fw} ${fs}px ${fontFamily}`;
+        if (maxW === null) {
+          curLine.push(token);
+        } else {
+          const words = token.text.match(spaceRe) ?? [token.text];
+          for (const word of words) {
+            const wordW = ctx.measureText(word).width;
+            if (curW > 0 && curW + wordW > maxW) {
+              flushLine();
+            }
+            curLine.push({ text: word, span: token.span });
+            curW += wordW;
+          }
+        }
+      }
+      flushLine();
+    }
+    const measuredWidths = renderLines.map((rl) => {
+      let w = 0;
+      for (const tok of rl.tokens) {
+        const fs = tok.span.style.fontSize ?? baseFontSize;
+        const fw = tok.span.style.fontWeight ?? baseFontWeight;
+        const fi = tok.span.style.fontStyle ?? baseFontStyle;
+        ctx.font = `${fi} ${fw} ${fs}px ${fontFamily}`;
+        w += ctx.measureText(tok.text).width;
+      }
+      return w;
+    });
+    const containerW = maxW ?? Math.max(...measuredWidths, 0);
+    if (maxW !== null || maxH !== null) {
+      const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+      const clipW = maxW ?? containerW;
+      const clipH = maxH ?? totalH;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, clipW, clipH);
+      ctx.clip();
+    }
+    let curY = y;
+    for (let li = 0; li < renderLines.length; li++) {
+      const rl = renderLines[li];
+      const lineW = measuredWidths[li];
+      let lineStartX;
+      if (textAlign === "center") {
+        lineStartX = x + (containerW - lineW) / 2;
+      } else if (textAlign === "right") {
+        lineStartX = x + containerW - lineW;
+      } else {
+        lineStartX = x;
+      }
+      let penX = lineStartX;
+      const baseline = curY + rl.lineH * 0.8;
+      for (const tok of rl.tokens) {
+        const fs = tok.span.style.fontSize ?? baseFontSize;
+        const fw = tok.span.style.fontWeight ?? baseFontWeight;
+        const fi = tok.span.style.fontStyle ?? baseFontStyle;
+        const fc = tok.span.style.color ?? baseColor;
+        const bc = tok.span.style.borderColor;
+        const bw = tok.span.style.borderWidth ?? 1;
+        ctx.font = `${fi} ${fw} ${fs}px ${fontFamily}`;
+        ctx.fillStyle = fc;
+        ctx.fillText(tok.text, penX, baseline);
+        if (bc) {
+          ctx.strokeStyle = bc;
+          ctx.lineWidth = bw;
+          ctx.strokeText(tok.text, penX, baseline);
+        }
+        penX += ctx.measureText(tok.text).width;
+      }
+      curY += rl.lineH;
+    }
+    if (maxW !== null || maxH !== null) {
+      ctx.restore();
+    }
+  }
+};
+
+// src/World.ts
+var World = class {
+  renderer;
+  objects = /* @__PURE__ */ new Set();
+  rafId = null;
+  constructor(canvas) {
+    const canvasEl = canvas ?? this.createCanvas();
+    this.renderer = new Renderer(canvasEl);
+  }
+  createCanvas() {
+    const canvas = document.createElement("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;";
+    document.body.appendChild(canvas);
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+    return canvas;
+  }
+  createLoader() {
+    return new Loader();
+  }
+  createCamera(options) {
+    const cam = new Camera(options);
+    this.objects.add(cam);
+    return cam;
+  }
+  createRectangle(options) {
+    const rect = new Rectangle(options);
+    this.objects.add(rect);
+    return rect;
+  }
+  createEllipse(options) {
+    const el = new Ellipse(options);
+    this.objects.add(el);
+    return el;
+  }
+  createText(options) {
+    const text = new Text(options);
+    this.objects.add(text);
+    return text;
+  }
+  createImage(options) {
+    const img = new LveImage(options);
+    this.objects.add(img);
+    return img;
+  }
+  createVideo(options) {
+    const video = new LveVideo(options);
+    this.objects.add(video);
+    return video;
+  }
+  createSprite(options) {
+    const sprite = new Sprite(options);
+    this.objects.add(sprite);
+    return sprite;
+  }
+  createParticle(options) {
+    const particle = new Particle(options);
+    this.objects.add(particle);
+    return particle;
+  }
+  removeObject(obj) {
+    this.objects.delete(obj);
+  }
+  start() {
+    if (this.rafId !== null) return;
+    const loop = () => {
+      this.renderer.render(this.objects);
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+  stop() {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+};
+
+// example/main.ts
+var world = new World();
+world.createCamera();
+function label(text, x, y, z) {
+  world.createText({
+    attribute: { text },
+    style: {
+      color: "#aaaaaa",
+      fontSize: 13,
+      fontWeight: "400",
+      fontFamily: "monospace"
+    },
+    transform: { position: { x, y, z } }
+  });
+}
+label("\u2460 \uAE30\uBCF8 \uD14D\uC2A4\uD2B8 (auto size)", -550, -280, 300);
+world.createText({
+  attribute: {
+    text: "Hello, World!\nYou can use multiple lines."
+  },
+  style: {
+    color: "#ffffff",
+    fontSize: 22,
+    fontFamily: "sans-serif"
+  },
+  transform: { position: { x: -550, y: -250, z: 300 } }
+});
+label("\u2461 \uC778\uB77C\uC778 \uB9C8\uD06C\uC5C5 \uC2A4\uD0C0\uC77C", -550, -130, 300);
+world.createText({
+  attribute: {
+    text: 'Normal <style fontSize="28" fontWeight="bold" color="#7ec8e3">Bold Blue</style> and <style fontStyle="italic" color="#f4a261">Italic Orange</style> text.'
+  },
+  style: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontFamily: "sans-serif"
+  },
+  transform: { position: { x: -550, y: -100, z: 300 } }
+});
+label("\u2462 \uC911\uCCA9 \uB9C8\uD06C\uC5C5 (\uBD80\uBAA8 \uC0C1\uC18D)", -550, 30, 300);
+world.createText({
+  attribute: {
+    text: '<style color="#e76f51" fontSize="22">Outer <style fontSize="14" fontWeight="300" fontStyle="italic">inner-lighter</style> back-to-outer</style>'
+  },
+  style: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontFamily: "sans-serif"
+  },
+  transform: { position: { x: -550, y: 60, z: 300 } }
+});
+label("\u2463 borderColor / borderWidth", -550, 140, 300);
+world.createText({
+  attribute: {
+    text: '<style fontSize="36" fontWeight="bold" color="#0a0a14" borderColor="#c77dff" borderWidth="2">Outlined Text</style>'
+  },
+  style: {
+    fontSize: 36,
+    fontFamily: "sans-serif"
+  },
+  transform: { position: { x: -550, y: 170, z: 300 } }
+});
+label("\u2464 width + word-wrap + textAlign: center", 50, -280, 300);
+world.createRectangle({
+  style: { color: "#1a1a2e", width: 300, height: 150, borderColor: "#444", borderWidth: 1 },
+  transform: { position: { x: 200, y: -195, z: 299 } }
+});
+world.createText({
+  attribute: {
+    text: "This is a long sentence that should wrap inside the fixed width container."
+  },
+  style: {
+    color: "#e0e0e0",
+    fontSize: 18,
+    fontFamily: "sans-serif",
+    width: 300,
+    textAlign: "center"
+  },
+  transform: { position: { x: 50, y: -270, z: 300 } }
+});
+label("\u2465 width + height \u2192 \uD074\uB9AC\uD551", 50, 20, 300);
+world.createRectangle({
+  style: { color: "#1a1a2e", width: 300, height: 40, borderColor: "#e76f51", borderWidth: 1 },
+  transform: { position: { x: 200, y: 60, z: 299 } }
+});
+world.createText({
+  attribute: {
+    text: "Line 1: visible\nLine 2: visible\nLine 3: clipped out\nLine 4: also clipped"
+  },
+  style: {
+    color: "#90e0ef",
+    fontSize: 18,
+    fontFamily: "sans-serif",
+    width: 300,
+    height: 40
+  },
+  transform: { position: { x: 50, y: 40, z: 300 } }
+});
+label("\u2466 textAlign \uBE44\uAD50", 50, 180, 300);
+var aligns = ["left", "center", "right"];
+var alignColors = ["#f4a261", "#2ec4b6", "#e71d36"];
+aligns.forEach((align, i) => {
+  world.createRectangle({
+    style: { color: "#1a1a2e", width: 200, height: 50, borderColor: "#555", borderWidth: 1 },
+    transform: { position: { x: 150, y: 220 + i * 70, z: 299 } }
+  });
+  world.createText({
+    attribute: { text: `align: ${align}` },
+    style: {
+      color: alignColors[i],
+      fontSize: 18,
+      fontFamily: "sans-serif",
+      width: 200,
+      textAlign: align
+    },
+    transform: { position: { x: 50, y: 210 + i * 70, z: 300 } }
+  });
+});
+world.start();
+//# sourceMappingURL=main.js.map
