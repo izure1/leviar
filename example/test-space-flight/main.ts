@@ -13,7 +13,7 @@ await world.loader.load({
   'star': '../asset/image/star.png',
 })
 
-// 별 1500개를 랜덤한 3D 공간에 배치
+// 별 15000개를 랜덤한 3D 공간에 배치
 for (let i = 0; i < 15000; i++) {
   const x = (Math.random() - 0.5) * 8000
   const y = (Math.random() - 0.5) * 8000

@@ -875,15 +875,16 @@ export class Renderer {
     const ch = entry.canvas.height
     if (cw === 0 || ch === 0) return
 
-    // 실제 월드 크기 기록 (TEXT_RENDER_SCALE 역산, scale 반영)
+    // 실제 월드 크기 기록 (TEXT_RENDER_SCALE 역산)
+    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
     obj._renderedSize = {
-      w: (cw / TEXT_RENDER_SCALE) * obj.transform.scale.x,
-      h: (ch / TEXT_RENDER_SCALE) * obj.transform.scale.y,
+      w: cw / TEXT_RENDER_SCALE,
+      h: ch / TEXT_RENDER_SCALE,
     }
 
     // canvas는 TEXT_RENDER_SCALE 기준, 표시는 perspectiveScale 기준으로 보정
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale * obj.transform.scale.x, ch * displayScale * obj.transform.scale.y, style.opacity, false)
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity, false)
   }
 
   private _renderTextToCanvas(
@@ -1063,12 +1064,13 @@ export class Renderer {
     }
 
     // style.width/height 미지정 시 naturalSize에 perspectiveScale 적용
-    const drawW = w || asset.naturalWidth * perspectiveScale * obj.transform.scale.x
-    const drawH = h || asset.naturalHeight * perspectiveScale * obj.transform.scale.y
+    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
+    const drawW = w || asset.naturalWidth * perspectiveScale
+    const drawH = h || asset.naturalHeight * perspectiveScale
 
     obj._renderedSize = {
-      w: drawW / perspectiveScale / obj.transform.scale.x,
-      h: drawH / perspectiveScale / obj.transform.scale.y,
+      w: drawW / perspectiveScale,
+      h: drawH / perspectiveScale,
     }
 
     const texture = this._getOrCreateAssetTexture(src!, asset)
@@ -1109,12 +1111,13 @@ export class Renderer {
     }
 
     // style.width/height 미지정 시 videoSize에 perspectiveScale 적용
-    const drawW = w || asset.videoWidth * perspectiveScale * obj.transform.scale.x
-    const drawH = h || asset.videoHeight * perspectiveScale * obj.transform.scale.y
+    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
+    const drawW = w || asset.videoWidth * perspectiveScale
+    const drawH = h || asset.videoHeight * perspectiveScale
 
     obj._renderedSize = {
-      w: drawW / perspectiveScale / obj.transform.scale.x,
-      h: drawH / perspectiveScale / obj.transform.scale.y,
+      w: drawW / perspectiveScale,
+      h: drawH / perspectiveScale,
     }
 
     // 비디오 텍스처는 매 프레임 업데이트
@@ -1147,8 +1150,9 @@ export class Renderer {
     const texture = this._getOrCreateAssetTexture(src, asset)
 
     if (!clip) {
-      const drawW = w || asset.naturalWidth * perspectiveScale * sprite.transform.scale.x
-      const drawH = h || asset.naturalHeight * perspectiveScale * sprite.transform.scale.y
+      // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
+      const drawW = w || asset.naturalWidth * perspectiveScale
+      const drawH = h || asset.naturalHeight * perspectiveScale
       this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.style.opacity)
       return
     }
@@ -1163,8 +1167,9 @@ export class Renderer {
     const uvScaleX = frameWidth / asset.naturalWidth
     const uvScaleY = frameHeight / asset.naturalHeight
 
-    const drawW = w || frameWidth * perspectiveScale * sprite.transform.scale.x
-    const drawH = h || frameHeight * perspectiveScale * sprite.transform.scale.y
+    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
+    const drawW = w || frameWidth * perspectiveScale
+    const drawH = h || frameHeight * perspectiveScale
 
     this._drawTextureMesh(
       texture,
