@@ -8,12 +8,13 @@ world.camera = camera
 await world.loader.load({
   'transition_before': '../asset/image/transition_before.png',
   'transition_after': '../asset/image/transition_after.png',
+  'mummy': '../asset/image/mummy.png',
 })
 
 // 이미지 생성
 const image = world.createImage({
   transform: {
-    position: { x: -300, y: -100, z: 0 }
+    position: { x: 0, y: 0, z: 0 }
   }
 })
 
@@ -56,8 +57,8 @@ image.on('click', (e) => {
     console.log('이미지 전환 완료!')
   })
 
-  // 3초(3000ms) 동안 텍스트 그라데이션 타이핑 효과
-  textObj.transition(nextText, 3000).on('end', () => {
+  // 글자 단위로 50ms의 타이핑 속도를 적용해 텍스트 그라데이션 전환 효과
+  textObj.transition(nextText, 50).on('end', () => {
     console.log('텍스트 전환 완료!')
   })
 })

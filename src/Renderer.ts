@@ -775,22 +775,24 @@ export class Renderer {
     const { style } = obj
     if (!style.color && !style.borderColor && !style.outlineColor) return
 
+    const targetOpacity = style.opacity * obj._fadeOpacity
+
     // outline 먼저 (border 바깥)
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = (style.borderWidth ?? 0)
       const ow = style.outlineWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, targetOpacity)
     }
 
     // 테두리 (border)
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity)
     }
 
     // 본체
     if (style.color) {
-      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, style.opacity)
+      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity)
     }
   }
 
@@ -805,7 +807,7 @@ export class Renderer {
     const drawEllipse = (ew: number, eh: number, color: string) => {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
-      this.ellipseProgram.uniforms['uOpacity'].value = style.opacity
+      this.ellipseProgram.uniforms['uOpacity'].value = style.opacity * obj._fadeOpacity
       this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh)
       this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.ellipseMesh.draw({ camera: this.camera })
@@ -884,7 +886,7 @@ export class Renderer {
 
     // canvas는 TEXT_RENDER_SCALE 기준, 표시는 perspectiveScale 기준으로 보정
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity, false)
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj._fadeOpacity, false)
   }
 
   private _renderTextToCanvas(
@@ -1134,12 +1136,12 @@ export class Renderer {
 
     // 트랜지션 중이면 이전 이미지와 새 이미지를 모두 그린다
     if (oldSrc) {
-      drawAssetInner(oldSrc, obj.style.opacity * (1 - progress))
+      drawAssetInner(oldSrc, obj.style.opacity * obj._fadeOpacity * (1 - progress))
       if (src) {
-        drawAssetInner(src, obj.style.opacity * progress)
+        drawAssetInner(src, obj.style.opacity * obj._fadeOpacity * progress)
       }
     } else if (src) {
-      drawAssetInner(src, obj.style.opacity)
+      drawAssetInner(src, obj.style.opacity * obj._fadeOpacity)
     } else {
       this._drawPlaceholder(x, y, w || 60, h || 60)
     }
@@ -1196,7 +1198,7 @@ export class Renderer {
     tex.image = asset
     tex.needsUpdate = true
 
-    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity)
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity)
   }
 
   // ─── Sprite ─────────────────────────────────────────────────────────────
@@ -1220,7 +1222,7 @@ export class Renderer {
       // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
       const drawW = w || asset.naturalWidth * perspectiveScale
       const drawH = h || asset.naturalHeight * perspectiveScale
-      this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.style.opacity)
+      this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.style.opacity * sprite._fadeOpacity)
       return
     }
 
@@ -1241,7 +1243,7 @@ export class Renderer {
     this._drawTextureMesh(
       texture,
       x, y, drawW, drawH,
-      sprite.style.opacity,
+      sprite.style.opacity * sprite._fadeOpacity,
       false,
       [uvOffsetX, uvOffsetY],
       [uvScaleX, uvScaleY],
@@ -1298,7 +1300,7 @@ export class Renderer {
       this._drawTextureMesh(
         texture,
         ix, iy, iw, ih,
-        obj.style.opacity * opacity,
+        obj.style.opacity * obj._fadeOpacity * opacity,
         false, [0, 0], [1, 1],
         inst.z || 0
       )

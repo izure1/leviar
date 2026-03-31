@@ -3,6 +3,7 @@ import { Mat4, Vec3 as OglVec3 } from 'ogl'
 import type Matter from 'matter-js'
 import { animateObject } from './Animation.js'
 import type { Animation } from './Animation.js'
+import { FadeTransition } from './objects/FadeTransition.js'
 import { EventEmitter } from './EventEmitter.js'
 import {
   STYLE_DIRTY_MAP,
@@ -144,6 +145,11 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
    * 업데이트 후 0으로 리셋, 임계값 도달 시 강제 재확인합니다. (스로틀)
    */
   _physicsThrottleCount: number = 0
+
+  /**
+   * FadeTransition에 의해 제어되는 렌더링용 내부 투명도.
+   */
+  _fadeOpacity: number = 1
 
   /** 부모 객체 (계층 구조) */
   parent: LveObject | null = null
@@ -523,5 +529,27 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
       attribute: this.attribute,
     }
     return animateObject(source, normalized as any, duration, easing)
+  }
+
+  private _fadeTransition?: import('./objects/FadeTransition.js').FadeTransition
+
+  /**
+   * 객체를 부드럽게 나타나게 합니다 (display: block 이후 투명도 0 -> 1).
+   */
+  fadeIn(durationMs: number, easing?: EasingType) {
+    if (!this._fadeTransition) {
+      this._fadeTransition = new FadeTransition(this)
+    }
+    this._fadeTransition.start(durationMs, easing, 'in')
+  }
+
+  /**
+   * 객체를 부드럽게 사라지게 합니다 (투명도 1 -> 0 이후 display: none).
+   */
+  fadeOut(durationMs: number, easing?: EasingType) {
+    if (!this._fadeTransition) {
+      this._fadeTransition = new FadeTransition(this)
+    }
+    this._fadeTransition.start(durationMs, easing, 'out')
   }
 }

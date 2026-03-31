@@ -1,18 +1,13 @@
 import { Text } from './Text.js'
-import { Animation } from '../Animation.js'
+import { BaseTransition } from './BaseTransition.js'
 
-import { EventEmitter } from '../EventEmitter.js'
-import type { AnimationEvents } from '../types.js'
+export class TextTransition extends BaseTransition<Text> {
+  constructor(target: Text) { super(target) }
 
-export class TextTransition extends EventEmitter<AnimationEvents> {
-  private _anim: Animation | null = null
-
-  constructor(public target: Text) { super() }
-
-  start(newText: string, durationMs: number) {
+  start(newText: string, charDurationMs: number) {
     if (this._anim) this._anim.stop()
 
-    if (durationMs <= 0 || this.target.attribute.text === newText) {
+    if (charDurationMs <= 0 || this.target.attribute.text === newText) {
       this.target.attribute.text = newText
       this.target._transitionProgress = 1
       this.target._dirtyTexture = true
@@ -23,20 +18,19 @@ export class TextTransition extends EventEmitter<AnimationEvents> {
     this.target._transitionProgress = 0
     this.target._dirtyTexture = true
 
-    this.emit('start')
+    // 마크업 태그를 제외한 순수 글자 수 바탕으로 총 시간 계산
+    const pureTextLength = newText.replace(/<[^>]*>/g, '').length
+    const totalDurationMs = pureTextLength * charDurationMs
 
-    this._anim = new Animation({ progress: 1 })
-    this._anim.start((state) => {
-      this.target._transitionProgress = state.progress
-      this.target._dirtyTexture = true
-      this.emit('update', state)
-    }, durationMs, 'linear')
-
-    this._anim.on('end', () => {
-      this.target._transitionProgress = 1
-      this.target._dirtyTexture = true
-      this._anim = null
-      this.emit('end')
-    })
+    this._startTransition(totalDurationMs, 'linear',
+      (progress) => {
+        this.target._transitionProgress = progress
+        this.target._dirtyTexture = true
+      },
+      () => {
+        this.target._transitionProgress = 1
+        this.target._dirtyTexture = true
+      }
+    )
   }
 }

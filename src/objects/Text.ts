@@ -14,15 +14,15 @@ export class Text extends LveObject {
   }
 
   /**
-   * 지정된 시간에 걸쳐 텍스트가 서서히 나타나는 효과를 줍니다.
+   * 지정된 속도로 텍스트가 글자 단위로 타이핑되듯 서서히 나타나는 효과를 줍니다.
    * @param newText 변경할 새 텍스트
-   * @param durationMs 전환에 걸리는 시간(밀리초)
+   * @param charDurationMs 글자 1개당 나타나는데 걸리는 시간(밀리초)
    */
-  transition(newText: string, durationMs: number): TextTransition {
+  transition(newText: string, charDurationMs: number): TextTransition {
     if (!this._transitioner) {
       this._transitioner = new TextTransition(this)
     }
-    this._transitioner.start(newText, durationMs)
+    this._transitioner.start(newText, charDurationMs)
     return this._transitioner
   }
 }
