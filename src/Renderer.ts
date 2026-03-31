@@ -1237,9 +1237,9 @@ export class Renderer {
       const opacity = 1 - t
       if (opacity <= 0 || scale <= 0) continue
 
-      // 에미터 위치 + 인스턴스 상대 오프셋 (Y는 Canvas 2D → WebGL 반전)
+      // 에미터 위치 + 인스턴스 상대 오프셋
       const ix = emX + inst.x * perspectiveScale
-      const iy = emY - inst.y * perspectiveScale
+      const iy = emY + inst.y * perspectiveScale
 
       const iw = baseW * scale
       const ih = baseH * scale

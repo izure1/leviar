@@ -72,7 +72,7 @@ world.createParticle({
 // ② strict 모드 — 오른쪽 절반, matter-js 물리 기반
 // ────────────────────────────────────────────────────────
 
-world.setGravity({ x: 0, y: 1 })
+world.setGravity({ x: 0, y: -1 })
 
 world.particleManager.create({
   name: 'star-strict',
@@ -101,7 +101,7 @@ world.createParticle({
   strict: true,
   style: { width: 18, height: 18, blendMode: 'lighter' },
   transform: { position: { x: rightX, y: -60, z: Z } },
-  attribute: { restitution: 0.6, friction: 0.05, density: 0.002, gravityScale: 0.8 },
+  attribute: { restitution: 0.6, friction: 0.05, density: 0.002, gravityScale: 0.8, collisionCategory: 0x0001, collisionMask: 0x0002 },
 }).play('star-strict')
 
 // strict 에미터 ② — 오른쪽
@@ -109,13 +109,13 @@ world.createParticle({
   strict: true,
   style: { width: 12, height: 12, blendMode: 'lighter' },
   transform: { position: { x: rightX + 100, y: 30, z: Z } },
-  attribute: { restitution: 0.4, friction: 0.1, density: 0.001, gravityScale: 1.2 },
+  attribute: { restitution: 0.4, friction: 0.1, density: 0.001, gravityScale: 1.2, collisionCategory: 0x0001, collisionMask: 0x0002 },
 }).play('star-strict-fast')
 
 // static 바닥 (파티클 bounce)
 const floorY = -(H / 2 - 40)
 const floor = world.createRectangle({
-  attribute: { name: 'floor', physics: 'static' },
+  attribute: { name: 'floor', physics: 'static', collisionCategory: 0x0002 },
   style: { width: 600, height: 20, color: '#fff' },
   transform: { position: { x: rightX, y: floorY, z: Z } },
 })
