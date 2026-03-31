@@ -289,6 +289,29 @@ export abstract class LveObject extends EventEmitter<LveObjectEvents> {
   }
 
   /**
+   * 객체를 월드에서 제거합니다. 물리 효과 관리와 자식 객체 제거가 함께 수행됩니다.
+   * 자신을 쫓아오던(follower) 객체들은 제거되지 않고 추적만 해제됩니다.
+   */
+  remove(): this {
+    const childrenToDrop = Array.from(this.children)
+    for (const child of childrenToDrop) {
+      child.remove()
+    }
+
+    this.removeFromParent()
+
+    const followersToKick = Array.from(this._followers)
+    for (const follower of followersToKick) {
+      this.kick(follower)
+    }
+
+    // 월드/물리엔진이 이 이벤트를 수신하여 제거 처리를 할 수 있도록 이벤트를 방출합니다.
+    this.emit('remove', this)
+
+    return this
+  }
+
+  /**
    * 객체의 로컬 트랜스폼 및 피벗을 이용해 월드 매트릭스를 재귀적으로 계산 및 갱신합니다.
    * World.ts 의 렌더 루프 전에 루트 노드로부터 호출되어야 합니다.
    */

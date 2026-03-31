@@ -33,6 +33,12 @@ export interface WorldOptions {
    * @default 100
    */
   focalLength?: number
+  /**
+   * 브라우저 기본 우클릭 메뉴를 막을지 여부.
+   * true로 설정해도 LveObject의 'contextmenu' 이벤트는 정상적으로 수신됩니다.
+   * @default true
+   */
+  disableContextMenu?: boolean
 }
 
 /**
@@ -62,6 +68,8 @@ export class World extends EventEmitter<WorldEvents> {
   private _mouseOver: Set<string> = new Set()
   /** 원근 투영 초점 거리 */
   readonly focalLength: number
+  /** 브라우저 기본 컨텍스트 메뉴 비활성화 여부 */
+  public disableContextMenu: boolean
 
   /** 스프라이트 애니메이션 클립 매니저 */
   readonly spriteManager: SpriteManager = new SpriteManager()
@@ -88,6 +96,7 @@ export class World extends EventEmitter<WorldEvents> {
     }
 
     this.focalLength = options.focalLength ?? 100
+    this.disableContextMenu = options.disableContextMenu ?? true
     this._canvas = canvasEl
     this.renderer = new Renderer(canvasEl, this.focalLength)
     this.loader = new Loader()
@@ -129,7 +138,12 @@ export class World extends EventEmitter<WorldEvents> {
 
     canvas.addEventListener('click', (e) => dispatch('click', e))
     canvas.addEventListener('dblclick', (e) => dispatch('dblclick', e))
-    canvas.addEventListener('contextmenu', (e) => dispatch('contextmenu', e))
+    canvas.addEventListener('contextmenu', (e) => {
+      if (this.disableContextMenu) {
+        e.preventDefault()
+      }
+      dispatch('contextmenu', e)
+    })
     canvas.addEventListener('mousedown', (e) => dispatch('mousedown', e))
     canvas.addEventListener('mouseup', (e) => dispatch('mouseup', e))
 
@@ -472,6 +486,15 @@ export class World extends EventEmitter<WorldEvents> {
     return value / scale
   }
 
+  // ─── Object 등록 ─────────────────────────────────────────
+
+  private _registerObject(obj: LveObject) {
+    this.objects.add(obj)
+    obj.on('remove', (target: LveObject) => {
+      this.removeObject(target)
+    })
+  }
+
   // ─── Object 생성 ─────────────────────────────────────────
 
   createCamera(options?: LveObjectOptions): Camera {
@@ -479,7 +502,7 @@ export class World extends EventEmitter<WorldEvents> {
     if (options?.transform?.position?.z === undefined) {
       cam.transform.position.z = -this.focalLength
     }
-    this.objects.add(cam)
+    this._registerObject(cam)
     this._tryAddPhysics(cam)
     this.renderer.markSortDirty()
     return cam
@@ -487,7 +510,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createRectangle(options?: RectangleOptions): Rectangle {
     const rect = new Rectangle(options)
-    this.objects.add(rect)
+    this._registerObject(rect)
     this._tryAddPhysics(rect, options?.style?.width, options?.style?.height)
     this._trackSortDirty(rect)
     this.renderer.markSortDirty()
@@ -496,7 +519,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createEllipse(options?: LveObjectOptions): Ellipse {
     const el = new Ellipse(options)
-    this.objects.add(el)
+    this._registerObject(el)
     this._tryAddPhysics(el, options?.style?.width, options?.style?.height)
     this._trackSortDirty(el)
     this.renderer.markSortDirty()
@@ -505,7 +528,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createText(options?: LveObjectOptions): Text {
     const text = new Text(options)
-    this.objects.add(text)
+    this._registerObject(text)
     this._trackSortDirty(text)
     this.renderer.markSortDirty()
     return text
@@ -513,7 +536,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createImage(options?: LveObjectOptions): LveImage {
     const img = new LveImage(options)
-    this.objects.add(img)
+    this._registerObject(img)
     this._trackSortDirty(img)
     this.renderer.markSortDirty()
     return img
@@ -522,7 +545,7 @@ export class World extends EventEmitter<WorldEvents> {
   createVideo(options?: LveObjectOptions): LveVideo {
     const video = new LveVideo(options)
     video.setManager(this.videoManager)
-    this.objects.add(video)
+    this._registerObject(video)
     this._trackSortDirty(video)
     this.renderer.markSortDirty()
     return video
@@ -531,7 +554,7 @@ export class World extends EventEmitter<WorldEvents> {
   createSprite(options?: LveObjectOptions): Sprite {
     const sprite = new Sprite(options)
     sprite.setManager(this.spriteManager)
-    this.objects.add(sprite)
+    this._registerObject(sprite)
     this._trackSortDirty(sprite)
     this.renderer.markSortDirty()
     return sprite
@@ -541,7 +564,7 @@ export class World extends EventEmitter<WorldEvents> {
     const particle = new Particle(options)
     particle.setPhysics(this.physics)
     particle.setManager(this.particleManager)
-    this.objects.add(particle)
+    this._registerObject(particle)
     this._trackSortDirty(particle)
     this.renderer.markSortDirty()
     return particle
