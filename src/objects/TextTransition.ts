@@ -1,0 +1,35 @@
+import { Text } from './Text.js'
+import { Animation } from '../Animation.js'
+
+export class TextTransition {
+  private _anim: Animation | null = null
+
+  constructor(public target: Text) { }
+
+  start(newText: string, durationMs: number) {
+    if (this._anim) this._anim.stop()
+
+    if (durationMs <= 0 || this.target.attribute.text === newText) {
+      this.target.attribute.text = newText
+      this.target._transitionProgress = 1
+      this.target._dirtyTexture = true
+      return
+    }
+
+    this.target.attribute.text = newText
+    this.target._transitionProgress = 0
+    this.target._dirtyTexture = true
+
+    this._anim = new Animation({ progress: 1 })
+    this._anim.start((state) => {
+      this.target._transitionProgress = state.progress
+      this.target._dirtyTexture = true
+    }, durationMs, 'linear')
+
+    this._anim.on('end', () => {
+      this.target._transitionProgress = 1
+      this.target._dirtyTexture = true
+      this._anim = null
+    })
+  }
+}

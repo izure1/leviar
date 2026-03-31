@@ -10,13 +10,6 @@ await world.loader.load({
   'transition_after': '../asset/image/transition_after.png',
 })
 
-// 안내 텍스트
-world.createText({
-  attribute: { text: '이미지를 클릭하면 크로스페이드가 실행됩니다.' },
-  style: { color: '#ffffff', fontSize: 20, textAlign: 'center' },
-  transform: { position: { x: -200, y: -180, z: 0 } },
-})
-
 // 이미지 생성
 const image = world.createImage({
   transform: {
@@ -24,7 +17,13 @@ const image = world.createImage({
   }
 })
 
-image.play('transition_before')
+const textObj = world.createText({
+  attribute: { text: '이미지 클릭!' },
+  style: { color: '#ffffff', fontSize: 40, textAlign: 'center', borderColor: '#ae00ffff', borderWidth: 5, lineHeight: 1.5 },
+  transform: { position: { y: -250 } },
+})
+
+image.play('transition_before').addChild(textObj)
 
 // 회전 및 스케일 애니메이션 추가 (반복)
 function startPulse() {
@@ -50,9 +49,13 @@ image.on('click', (e) => {
   e.stopImmediatePropagation()
   isToggled = !isToggled
   const nextSrc = isToggled ? 'transition_after' : 'transition_before'
+  const nextText = isToggled ? '새로운 텍스트가 여러 줄로\n서서히 등장해야 합니다.\n<style color="yellow">스타일 태그</style>도 가능!' : '이미지 클릭!'
 
   // 1초(1000ms) 동안 크로스페이드
   image.transition(nextSrc, 1000)
+
+  // 3초(3000ms) 동안 텍스트 그라데이션 타이핑 효과
+  textObj.transition(nextText, 3000)
 })
 
 world.start()

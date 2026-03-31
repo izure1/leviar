@@ -15,7 +15,7 @@ await world.loader.load({
   'star': '../asset/image/star.png',
 })
 
-world.setGravity({ x: 0, y: -1 })
+world.setGravity({ x: 0, y: 1 })
 
 const blendModes: any[] = [
   'source-over', 'lighter', 'multiply', 'screen',
@@ -98,7 +98,7 @@ blendModes.forEach((mode, i) => {
 
   btn.on('mousedown', () => {
     src.style.blendMode = mode;
-    currentModeLabel.attribute.text = `Current: ${mode}`;
+    currentModeLabel.attribute.text = `Current: <style fontSize="32" color="rgba(255, 136, 0, 1)" fontWeight="400">${mode}</style>`;
   })
 })
 

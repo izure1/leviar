@@ -865,7 +865,7 @@ export class Renderer {
     }
 
     if (needRender) {
-      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH)
+      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, (obj as any)._transitionProgress ?? 1)
       obj._dirtyTexture = false
       obj._textureIdleCount = 0
       obj._textureThrottleCount = 0  // 렌더 후 양쪽 리셋
@@ -894,6 +894,7 @@ export class Renderer {
     baseFontSize: number,
     maxW: number | null,
     maxH: number | null,
+    transitionProgress: number = 1,
   ) {
     const { canvas, ctx } = entry
     const fontFamily = style.fontFamily ?? 'sans-serif'
@@ -994,8 +995,15 @@ export class Renderer {
     const containerW = maxW ?? Math.max(...measuredWidths, 0)
     const totalH = renderLines.reduce((s, r) => s + r.lineH, 0)
 
-    const canvasW = Math.ceil(maxW ?? containerW) + shadowBlur * 2 + Math.abs(shadowOffsetX)
-    const canvasH = Math.ceil(maxH ?? totalH) + shadowBlur * 2 + Math.abs(shadowOffsetY)
+    let maxBorderWidth = 0
+    for (const span of spans) {
+      if (span.style.borderColor) {
+        maxBorderWidth = Math.max(maxBorderWidth, (span.style.borderWidth ?? 1) * TEXT_RENDER_SCALE)
+      }
+    }
+
+    const canvasW = Math.ceil(maxW ?? containerW) + shadowBlur * 2 + Math.abs(shadowOffsetX) + maxBorderWidth * 2
+    const canvasH = Math.ceil(maxH ?? totalH) + shadowBlur * 2 + Math.abs(shadowOffsetY) + maxBorderWidth * 2
 
     canvas.width = canvasW
     canvas.height = canvasH
@@ -1008,8 +1016,8 @@ export class Renderer {
       ctx.shadowOffsetY = shadowOffsetY
     }
 
-    const originX = shadowBlur + Math.max(0, shadowOffsetX) / 2
-    const originY = shadowBlur + Math.max(0, shadowOffsetY) / 2
+    const originX = shadowBlur + Math.max(0, shadowOffsetX) / 2 + maxBorderWidth
+    const originY = shadowBlur + Math.max(0, shadowOffsetY) / 2 + maxBorderWidth
 
     let curY = originY
     for (let li = 0; li < renderLines.length; li++) {
@@ -1046,6 +1054,42 @@ export class Renderer {
         penX += ctx.measureText(tok.text).width
       }
       curY += rl.lineH
+    }
+
+    if (transitionProgress < 1) {
+      ctx.globalCompositeOperation = 'destination-out'
+      const totalLines = renderLines.length
+      let lineTopY = 0
+
+      for (let li = 0; li < renderLines.length; li++) {
+        const rl = renderLines[li]
+        // 마지막 줄이면 남은 캔버스 높이까지 모두 포괄
+        const lineBottomY = (li === totalLines - 1) ? canvasH : lineTopY + rl.lineH
+
+        // 이 줄의 로컬 진행도 (0 ~ 1)
+        const lineProgress = Math.min(1, Math.max(0, transitionProgress * totalLines - li))
+
+        if (lineProgress === 0) {
+          // 시작도 안 함: 이 줄 영역을 완전히 지움
+          ctx.fillStyle = 'rgba(0,0,0,1)'
+          ctx.fillRect(0, lineTopY, canvasW, lineBottomY - lineTopY)
+        } else if (lineProgress < 1) {
+          // 절반쯤 진행 중: 진행도에 따라 우측 영역을 부드럽게 지우기 (그라데이션)
+          const gradLineW = canvasW * 0.3
+          const revealX = (canvasW + gradLineW) * lineProgress - gradLineW
+
+          const grad = ctx.createLinearGradient(revealX, 0, revealX + gradLineW, 0)
+          grad.addColorStop(0, 'rgba(0,0,0,0)') // 왼쪽(이미 드러난 부분)은 지우지 않음
+          grad.addColorStop(1, 'rgba(0,0,0,1)') // 오른쪽(아직 안 드러난 부분)은 완전히 지움
+
+          ctx.fillStyle = grad
+          ctx.fillRect(0, lineTopY, canvasW, lineBottomY - lineTopY)
+        }
+
+        lineTopY += rl.lineH
+      }
+
+      ctx.globalCompositeOperation = 'source-over'
     }
 
     // Texture 업데이트
