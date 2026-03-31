@@ -173,6 +173,20 @@ export class Renderer {
   // 비디오 텍스처 캐시 (src → Texture) — 매 프레임 업데이트 필요
   private videoTextureCache = new Map<string, Texture>()
 
+  // --- Auto-Batching State ---
+  private _batchMaxSize = 30000;
+  private _batchMat0 = new Float32Array(this._batchMaxSize * 4);
+  private _batchMat1 = new Float32Array(this._batchMaxSize * 4);
+  private _batchMat2 = new Float32Array(this._batchMaxSize * 4);
+  private _batchMat3 = new Float32Array(this._batchMaxSize * 4);
+  private _batchOpacityFlip = new Float32Array(this._batchMaxSize * 2);
+  private _batchUVParams = new Float32Array(this._batchMaxSize * 4);
+  private _batchCount = 0;
+  private _batchTexture: Texture | null = null;
+  private _batchBlendMode: string = 'source-over';
+  private _instancedGeo!: Geometry;
+  private _instancedMesh!: Mesh;
+
   /** 원근 투영 초점 거리. 카메라 기본 Z는 -focalLength 로 설정됩니다. */
   readonly focalLength: number
 
@@ -277,14 +291,25 @@ export class Renderer {
       fragment: instancedFragment,
       uniforms: {
         uTexture: { value: null },
-        uOpacity: { value: 1 },
         uProjectionMatrix: { value: new Float32Array(16) },
-        uViewMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
       depthTest: false,
       depthWrite: false,
     })
+
+    this._instancedGeo = new Geometry(gl, {
+      position: { size: 2, data: new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]) },
+      uv: { size: 2, data: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]) },
+      index: { data: new Uint16Array([0, 1, 2, 0, 2, 3]) },
+      instanceMat0: { instanced: 1, size: 4, data: this._batchMat0 },
+      instanceMat1: { instanced: 1, size: 4, data: this._batchMat1 },
+      instanceMat2: { instanced: 1, size: 4, data: this._batchMat2 },
+      instanceMat3: { instanced: 1, size: 4, data: this._batchMat3 },
+      instanceOpacityFlip: { instanced: 1, size: 2, data: this._batchOpacityFlip },
+      instanceUVParams: { instanced: 1, size: 4, data: this._batchUVParams },
+    });
+    this._instancedMesh = new Mesh(gl, { geometry: this._instancedGeo, program: this.instancedProgram });
 
     // placeholder: 분홍 반투명
     this.placeholderProgram = new Program(gl, {
@@ -401,6 +426,7 @@ export class Renderer {
     for (const item of renderables) {
       this._drawObject(item.obj, item.dx, item.dy, item.dz, camRotX, camRotY, camRotZ, assets, timestamp)
     }
+    this._flushBatch();
   }
 
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
@@ -506,11 +532,45 @@ export class Renderer {
 
   // ─── Program uniform 드로우 헬퍼 ─────────────────────────────────────────
 
+  private _flushBatch() {
+    if (this._batchCount === 0 || !this._batchTexture) return;
+
+    this.instancedProgram.uniforms['uTexture'].value = this._batchTexture;
+    this.instancedProgram.uniforms['uProjectionMatrix'].value = this._projMatrix();
+
+    if (this._batchBlendMode === 'lighter') {
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
+    }
+
+    const geo = this._instancedGeo;
+    geo.instancedCount = this._batchCount;
+
+    geo.attributes.instanceMat0.needsUpdate = true;
+    geo.attributes.instanceMat1.needsUpdate = true;
+    geo.attributes.instanceMat2.needsUpdate = true;
+    geo.attributes.instanceMat3.needsUpdate = true;
+    geo.attributes.instanceOpacityFlip.needsUpdate = true;
+    geo.attributes.instanceUVParams.needsUpdate = true;
+
+    this._instancedMesh.draw({ camera: this.camera });
+
+    if (this._batchBlendMode === 'lighter') {
+      this.gl.blendFuncSeparate(
+        this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA,
+        this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA
+      );
+    }
+
+    this._batchCount = 0;
+    this._batchTexture = null;
+  }
+
   private _drawColorMesh(
     program: Program,
     x: number, y: number, w: number, h: number,
     color: string, opacity: number,
   ) {
+    this._flushBatch();
     const [r, g, b, a] = parseCSSColor(color)
     program.uniforms['uColor'].value = [r, g, b, a]
     program.uniforms['uOpacity'].value = opacity
@@ -528,16 +588,34 @@ export class Renderer {
     uvOffset: [number, number] = [0, 0],
     uvScale: [number, number] = [1, 1],
   ) {
-    const prog = this.textureProgram
-    prog.uniforms['uTexture'].value = texture
-    prog.uniforms['uOpacity'].value = opacity
-    prog.uniforms['uFlipY'].value = flipY ? 1 : 0
-    prog.uniforms['uUVOffset'].value = uvOffset
-    prog.uniforms['uUVScale'].value = uvScale
-    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
-    prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
+    const blendMode = this._activeObj?.style?.blendMode ?? 'source-over';
 
-    this.textureMesh.draw({ camera: this.camera })
+    if (this._batchTexture !== texture || this._batchBlendMode !== blendMode || this._batchCount >= this._batchMaxSize) {
+      this._flushBatch();
+    }
+
+    this._batchTexture = texture;
+    this._batchBlendMode = blendMode;
+
+    const m = this._makeModelMatrix(x, y, w, h);
+    const idx = this._batchCount;
+    const idx4 = idx * 4;
+    const idx2 = idx * 2;
+
+    this._batchMat0[idx4] = m[0]; this._batchMat0[idx4 + 1] = m[1]; this._batchMat0[idx4 + 2] = m[2]; this._batchMat0[idx4 + 3] = m[3];
+    this._batchMat1[idx4] = m[4]; this._batchMat1[idx4 + 1] = m[5]; this._batchMat1[idx4 + 2] = m[6]; this._batchMat1[idx4 + 3] = m[7];
+    this._batchMat2[idx4] = m[8]; this._batchMat2[idx4 + 1] = m[9]; this._batchMat2[idx4 + 2] = m[10]; this._batchMat2[idx4 + 3] = m[11];
+    this._batchMat3[idx4] = m[12]; this._batchMat3[idx4 + 1] = m[13]; this._batchMat3[idx4 + 2] = m[14]; this._batchMat3[idx4 + 3] = m[15];
+
+    this._batchOpacityFlip[idx2] = opacity;
+    this._batchOpacityFlip[idx2 + 1] = flipY ? 1 : 0;
+
+    this._batchUVParams[idx4] = uvOffset[0];
+    this._batchUVParams[idx4 + 1] = uvOffset[1];
+    this._batchUVParams[idx4 + 2] = uvScale[0];
+    this._batchUVParams[idx4 + 3] = uvScale[1];
+
+    this._batchCount++;
   }
 
   // ─── Rectangle ──────────────────────────────────────────────────────────
@@ -568,6 +646,7 @@ export class Renderer {
   // ─── Ellipse ────────────────────────────────────────────────────────────
 
   private _drawEllipse(obj: LveObject, x: number, y: number, w: number, h: number) {
+    this._flushBatch();
     const { style } = obj
     if (!style.color && !style.borderColor && !style.outlineColor) return
 
@@ -972,12 +1051,7 @@ export class Renderer {
 
     const texture = this._getOrCreateAssetTexture(clip.src, asset)
 
-    // 블렌드 모드 설정
-    const blendMode = obj.style.blendMode ?? 'lighter'
-    if (blendMode === 'lighter') {
-      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE)
-    }
-
+    // 블렌드 모드 설정은 _drawTextureMesh 배칭에서 자동으로 처리됨
     for (const inst of instances) {
       const age = timestamp - inst.born
       const t = Math.min(age / inst.lifespan, 1)
@@ -999,16 +1073,12 @@ export class Renderer {
       )
     }
 
-    // 블렌드 복원
-    this.gl.blendFuncSeparate(
-      this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA,
-      this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,
-    )
   }
 
   // ─── Placeholder ────────────────────────────────────────────────────────
 
   private _drawPlaceholder(x: number, y: number, w: number, h: number) {
+    this._flushBatch();
     this.placeholderProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
     this.placeholderProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
     this.placeholderMesh.draw({ camera: this.camera })
