@@ -8,7 +8,7 @@ world.camera = camera
 function label(text: string, x: number, y: number, z: number) {
   world.createText({
     attribute: { text },
-    style: { color: '#aaaaaa', fontSize: 13, fontFamily: 'sans-serif, monospace' },
+    style: { color: '#aaaaaa', fontSize: 16, fontFamily: 'sans-serif, monospace' },
     transform: { position: { x, y, z } },
   })
 }

@@ -526,7 +526,6 @@ export class Renderer {
     const baseH = obj._renderedSize?.h ?? style.height ?? 0
     const w = baseW * perspectiveScale * transform.scale.x
     const h = baseH * perspectiveScale * transform.scale.y
-    const rotation = 0 // 더 이상 _drawXXX 헬퍼로 직접 전달하지 않고 ModelMatrix 내부에서 처리
 
     // 현재 렌더링 상태 저장 (Model Matrix 계산용)
     this._activeObj = obj
