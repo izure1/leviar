@@ -534,9 +534,9 @@ export class Renderer {
     // 1. 객체의 _worldMatrix를 기반으로 시작합니다. (계층 회전, 이동, 크기 완벽 포함)
     this._modelMat.copy(obj._worldMatrix)
 
-    // 2. 파티클 등 로컬단에서 발생하는 개별 렌더 뎁스 추가
-    if (zOffset !== 0) {
-      this._tmpVec[0] = 0; this._tmpVec[1] = 0; this._tmpVec[2] = -zOffset;
+    // 2. 파티클 등 로컬단에서 발생하는 개별 위치 및 렌더 뎁스 추가
+    if (x !== 0 || y !== 0 || zOffset !== 0) {
+      this._tmpVec[0] = x; this._tmpVec[1] = y; this._tmpVec[2] = -zOffset;
       this._modelMat.translate(this._tmpVec)
     }
 
