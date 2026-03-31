@@ -18,6 +18,7 @@ export const instancedVertex = /* glsl */ `
   // x: uvOffsetX, y: uvOffsetY, z: uvScaleX, w: uvScaleY
   attribute vec4 instanceUVParams;
 
+  uniform mat4 uViewMatrix;
   uniform mat4 uProjectionMatrix;
 
   varying vec2 vUV;
@@ -42,7 +43,7 @@ export const instancedVertex = /* glsl */ `
     );
 
     vec4 worldPos = modelMat * vec4(position, 0.0, 1.0);
-    gl_Position = uProjectionMatrix * worldPos;
+    gl_Position = uProjectionMatrix * uViewMatrix * worldPos;
   }
 `
 

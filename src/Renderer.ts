@@ -148,12 +148,11 @@ export class Renderer {
   private textureMesh!: Mesh
   private placeholderMesh!: Mesh
 
-  // 상태 보존용 렌더 변수 (Model 매트릭스 계산용)
+  // 상태 보존용 렌더 변수 (Model/View 매트릭스 계산용)
   private _modelMat = new Mat4()
+  private _viewMat = new Mat4()
+  private _tmpVec = new OglVec3()
   private _activeObj!: LveObject
-  private _activeCamRotX = 0
-  private _activeCamRotY = 0
-  private _activeCamRotZ = 0
   private _activeRenderW = 0
   private _activeRenderH = 0
 
@@ -222,17 +221,19 @@ export class Renderer {
     })
     this.gl = this.ogl.gl
 
-    // 직교 투영 카메라: 화면 픽셀 좌표계 (0,0 = center)
+    // 원근 투영 카메라: focalLength → FOV 변환
+    // fov = 2 * atan(h/2 / focalLength)
+    const fov = 2 * Math.atan(canvas.height / 2 / focalLength)
     this.camera = new Camera(this.gl, {
-      left: -canvas.width / 2,
-      right: canvas.width / 2,
-      bottom: -canvas.height / 2,
-      top: canvas.height / 2,
-      near: -1000,
-      far: 1000,
+      fov: fov * 180 / Math.PI,
+      aspect: canvas.width / canvas.height,
+      near: 0.1,
+      far: 100000,
     })
-    this.camera.position.z = 1
-    this.camera.lookAt([0, 0, 0])
+    // OGL 기본 카메라: -Z 방향을 바라봄 (OpenGL 규칙)
+    // 구 시스템과 일치: obj.z > cam.z = 앞에 있음
+    // camera.position.z = 0, lookAt 없음 → 기본 -Z 바라봄
+    this.camera.position.z = 0
 
     this.scene = new Transform()
 
@@ -253,13 +254,14 @@ export class Renderer {
 
   setSize(w: number, h: number) {
     this.ogl.setSize(w, h)
-    // 직교 카메라 재설정
-    const cam = this.camera as any
-    cam.left = -w / 2
-    cam.right = w / 2
-    cam.bottom = -h / 2
-    cam.top = h / 2
-    this.camera.orthographic({ left: -w / 2, right: w / 2, bottom: -h / 2, top: h / 2, near: -1000, far: 1000 })
+    // 원근 카메라 aspect 재설정
+    const fov = 2 * Math.atan(h / 2 / this.focalLength)
+    this.camera.perspective({
+      fov: fov * 180 / Math.PI,
+      aspect: w / h,
+      near: 0.1,
+      far: 100000,
+    })
   }
 
   // ─── 프로그램 초기화 ─────────────────────────────────────────────────────
@@ -276,6 +278,7 @@ export class Renderer {
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
         uModelMatrix: { value: new Float32Array(16) },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -290,6 +293,7 @@ export class Renderer {
         uColor: { value: [1, 1, 1, 1] },
         uOpacity: { value: 1 },
         uModelMatrix: { value: new Float32Array(16) },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -307,6 +311,7 @@ export class Renderer {
         uUVOffset: { value: [0, 0] },
         uUVScale: { value: [1, 1] },
         uModelMatrix: { value: new Float32Array(16) },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -319,6 +324,7 @@ export class Renderer {
       fragment: instancedFragment,
       uniforms: {
         uTexture: { value: null },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -349,6 +355,7 @@ export class Renderer {
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
         uModelMatrix: { value: new Float32Array(16) },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -361,41 +368,6 @@ export class Renderer {
     this.ellipseMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.ellipseProgram })
     this.textureMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.textureProgram })
     this.placeholderMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.placeholderProgram })
-  }
-
-  /**
-   * 객체를 카메라 기준으로 변환합니다.
-   * @param obj 렌더링할 객체
-   * @param cam 카메라 객체
-   * @returns 변환된 객체의 좌표
-   */
-  private getCamTransformed(obj: LveObject, cam: LveObject): { dx: number, dy: number, dz: number } {
-    let dx = obj.transform.position.x - cam.transform.position.x
-    let dy = obj.transform.position.y - cam.transform.position.y
-    let dz = obj.transform.position.z - cam.transform.position.z
-
-    if (cam.transform.rotation.y !== 0) {
-      const radY = -cam.transform.rotation.y * Math.PI / 180
-      const cosY = Math.cos(radY), sinY = Math.sin(radY)
-      const nx = dx * cosY + dz * sinY
-      const nz = -dx * sinY + dz * cosY
-      dx = nx; dz = nz
-    }
-    if (cam.transform.rotation.x !== 0) {
-      const radX = -cam.transform.rotation.x * Math.PI / 180
-      const cosX = Math.cos(radX), sinX = Math.sin(radX)
-      const ny = dy * cosX - dz * sinX
-      const nz = dy * sinX + dz * cosX
-      dy = ny; dz = nz
-    }
-    if (cam.transform.rotation.z !== 0) {
-      const radZ = -cam.transform.rotation.z * Math.PI / 180
-      const cosZ = Math.cos(radZ), sinZ = Math.sin(radZ)
-      const nx = dx * cosZ - dy * sinZ
-      const ny = dx * sinZ + dy * cosZ
-      dx = nx; dy = ny
-    }
-    return { dx, dy, dz }
   }
 
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
@@ -433,9 +405,13 @@ export class Renderer {
     const camRotX = activeCamera.transform.rotation.x || 0
     const camRotY = activeCamera.transform.rotation.y || 0
     const camRotZ = activeCamera.transform.rotation.z || 0
+    const camZ = activeCamera.transform.position.z
+
+    // ─── View Matrix 빌드 (1회/프레임) ─────────────────────────
+    this._buildViewMatrix(activeCamera)
 
     // ─── Z-Sort: Dirty-Flag 기반 캐시 ────────────────────
-    // 카메라 이동만으로는 객체 간 dz 차이가 바뀌지 않으므로(cam 위치 항이 소거됨)
+    // 카메라 이동만으로는 객체 간 dz 차이가 바뀌지 않으므로(cam 위치 항 소거됨)
     // 카메라 회전 or 객체 수 변화 or 외부 markSortDirty() 시에만 재정렬합니다.
     const rotChanged = camRotX !== this._lastCamRotX
       || camRotY !== this._lastCamRotY
@@ -449,48 +425,22 @@ export class Renderer {
       this._lastObjCount = objects.size
       this._sortDirty = false
 
-      // 카메라 회전이 없으면 절대 Z 좌표 기준으로 정렬할 수 있습니다. (cam.z 항 소거)
-      // 카메라 회전이 있으면 현재 프레임의 실제 dz를 구해 정렬합니다.
-      const useAbsoluteZ = (camRotX === 0 && camRotY === 0 && camRotZ === 0)
-
-      if (useAbsoluteZ) {
-        const sortedObjects: LveObject[] = []
-        for (const o of objects) {
-          if (
-            o.attribute.type === 'camera' ||
-            o.style.display === 'none'
-          ) {
-            continue
-          }
-          sortedObjects.push(o)
+      // 직접 Z 좌표 기준 정렬 (GPU View 연산으로 지처리)
+      const sortedObjects: LveObject[] = []
+      for (const o of objects) {
+        if (
+          o.attribute.type === 'camera' ||
+          o.style.display === 'none'
+        ) {
+          continue
         }
-        sortedObjects.sort((a, b) => {
-          const zdiff = b.transform.position.z - a.transform.position.z
-          return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
-        })
-        this._sortedObjects = sortedObjects
-      } else {
-        // 회전이 있으면 실제 dz 계산 후 정렬
-        const temp: Array<{ o: LveObject; dz: number }> = []
-        for (const o of objects) {
-          if (
-            o.attribute.type === 'camera' ||
-            o.style.display === 'none'
-          ) {
-            continue
-          }
-          temp.push({ o, dz: this.getCamTransformed(o, activeCamera).dz })
-        }
-        temp.sort((a, b) => {
-          const zdiff = b.dz - a.dz
-          return zdiff !== 0 ? zdiff : a.o.style.zIndex - b.o.style.zIndex
-        })
-        const sortedObjects: LveObject[] = []
-        for (let i = 0, len = temp.length; i < len; i++) {
-          sortedObjects.push(temp[i].o)
-        }
-        this._sortedObjects = sortedObjects
+        sortedObjects.push(o)
       }
+      sortedObjects.sort((a, b) => {
+        const zdiff = b.transform.position.z - a.transform.position.z
+        return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
+      })
+      this._sortedObjects = sortedObjects
     }
 
     // 화면 클리어
@@ -502,79 +452,61 @@ export class Renderer {
       this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,
     )
 
-    // 캐시된 순서로 렌더링 (정렬 없음, dz 계산만)
+    // 캐시된 순서로 렌더링
+    // obj.z > camZ 인 것만 (카메라 앞에 있는 것)
     for (let i = 0, len = this._sortedObjects.length; i < len; i++) {
       const obj = this._sortedObjects[i]
-      const { dx, dy, dz } = this.getCamTransformed(obj, activeCamera)
-      if (dz >= 0) {
-        this._drawObject(obj, dx, dy, dz, camRotX, camRotY, camRotZ, assets, timestamp)
-      }
+      if (obj.transform.position.z <= camZ) continue
+      this._drawObject(obj, assets, timestamp)
     }
-    this._flushBatch();
+    this._flushBatch()
   }
 
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
 
   private _drawObject(
     obj: LveObject,
-    dx: number,
-    dy: number,
-    dz: number,
-    camRotX: number,
-    camRotY: number,
-    camRotZ: number,
     assets: LoadedAssets,
     timestamp: number,
   ) {
     const { style, transform } = obj
 
-    // rawDepth = 카메라로부터의 부호 있는 변환된 거리. 음수 = 카메라 뒤 → 숨김
-    const rawDepth = dz
-    if (rawDepth < 0) return
-
-    const focalLength = this.focalLength
-    // depth=0이면 1:1 스케일, focalLength만큼 떨어졌을 때 1:1 스케일
-    const perspectiveScale = rawDepth === 0 ? 1 : focalLength / rawDepth
-
-    const screenX = dx * perspectiveScale
-    const screenY = dy * perspectiveScale
-
     const baseW = obj._renderedSize?.w ?? style.width ?? 0
     const baseH = obj._renderedSize?.h ?? style.height ?? 0
-    const w = baseW * perspectiveScale * transform.scale.x
-    const h = baseH * perspectiveScale * transform.scale.y
+    const w = baseW * transform.scale.x
+    const h = baseH * transform.scale.y
 
     // 현재 렌더링 상태 저장 (Model Matrix 계산용)
     this._activeObj = obj
-    this._activeCamRotX = camRotX
-    this._activeCamRotY = camRotY
-    this._activeCamRotZ = camRotZ
     this._activeRenderW = w
     this._activeRenderH = h
+
+    const px = transform.position.x
+    const py = transform.position.y
 
     const type = obj.attribute.type
 
     switch (type) {
       case 'rectangle':
-        this._drawRectangle(obj, screenX, screenY, w, h)
+        this._drawRectangle(obj, px, py, w, h)
         break
       case 'ellipse':
-        this._drawEllipse(obj, screenX, screenY, w, h)
+        this._drawEllipse(obj, px, py, w, h)
         break
       case 'text':
-        this._drawText(obj, screenX, screenY, perspectiveScale, timestamp)
+        this._drawText(obj, px, py, 1, timestamp)
         break
       case 'image':
-        this._drawAsset(obj as LveImage, screenX, screenY, w, h, perspectiveScale, assets)
+        this._drawAsset(obj as LveImage, px, py, w, h, 1, assets)
         break
       case 'video':
-        this._drawVideo(obj as LveVideo, screenX, screenY, w, h, perspectiveScale, assets)
+        this._drawVideo(obj as LveVideo, px, py, w, h, 1, assets)
         break
       case 'sprite':
-        this._drawSprite(obj as Sprite, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
+        this._drawSprite(obj as Sprite, px, py, w, h, 1, assets, timestamp)
         break
       case 'particle':
-        this._drawParticle(obj as Particle, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
+        this._drawParticle(obj as Particle, px, py, w, h, 1, assets, timestamp)
         break
       default:
         break
@@ -584,38 +516,68 @@ export class Renderer {
   // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
 
   /**
-   * 3D 회전과 Pivot이 반영된 모델 행렬을 반환합니다.
-   * column-major 순서 (WebGL 표준)
+   * 객체의 고유 TRS(Translation, Rotation, Scale, Pivot)만으로 Model Matrix를 생성합니다.
+   * 카메라 정보는 View Matrix에서 처리됩니다.
    */
   private _makeModelMatrix(x: number, y: number, w: number, h: number): Float32Array {
+    const obj = this._activeObj
+    const rot = obj.transform.rotation
+    const pivot = obj.transform.pivot
+
     this._modelMat.identity()
-    // 1. 카메라 투영 위치로 이동
-    this._modelMat.translate(new OglVec3(x, y, 0))
+    // 1. 월드 좌표로 이동 (Z는 네게이트: OGL -Z=앞, 구 시스템 +Z=앞)
+    this._tmpVec[0] = x; this._tmpVec[1] = y; this._tmpVec[2] = -obj.transform.position.z
+    this._modelMat.translate(this._tmpVec)
 
-    // 2. 화면 평면 기준 역카메라 회전 (카메라가 기울면 월드가 반대로 기우는 효과)
-    if (this._activeCamRotY) this._modelMat.rotate(-this._activeCamRotY * Math.PI / 180, AXIS_Y)
-    if (this._activeCamRotX) this._modelMat.rotate(-this._activeCamRotX * Math.PI / 180, AXIS_X)
-    if (this._activeCamRotZ) this._modelMat.rotate(-this._activeCamRotZ * Math.PI / 180, AXIS_Z)
-
-    // 3. 객체의 고유 회전 적용
-    const rot = this._activeObj.transform.rotation
+    // 2. 객체의 고유 회전 적용
     if (rot.z) this._modelMat.rotate(rot.z * Math.PI / 180, AXIS_Z)
     if (rot.y) this._modelMat.rotate(rot.y * Math.PI / 180, AXIS_Y)
     if (rot.x) this._modelMat.rotate(rot.x * Math.PI / 180, AXIS_X)
 
-    // 4. Pivot을 기준으로 기하학적 중심선 이동 (크기 w, h는 스케일, _activeRenderW는 베이스)
-    // Canvas 좌표계(Y-down) 특성상 pivotY=0이 Top이 되도록 Y 오프셋은 음수 적용
-    const pivot = this._activeObj.transform.pivot
-    this._modelMat.translate(new OglVec3(
-      (0.5 - pivot.x) * this._activeRenderW,
-      -(0.5 - pivot.y) * this._activeRenderH,
-      0
-    ))
+    // 3. Pivot 오프셋
+    this._tmpVec[0] = (0.5 - pivot.x) * this._activeRenderW
+    this._tmpVec[1] = -(0.5 - pivot.y) * this._activeRenderH
+    this._tmpVec[2] = 0
+    this._modelMat.translate(this._tmpVec)
 
-    // 5. 최종 쿼드 스케일링
-    this._modelMat.scale(new OglVec3(w, h, 1))
+    // 4. 쿼드 스케일링
+    this._tmpVec[0] = w; this._tmpVec[1] = h; this._tmpVec[2] = 1
+    this._modelMat.scale(this._tmpVec)
 
     return this._modelMat as unknown as Float32Array
+  }
+
+  /**
+   * View Matrix를 직접 계산하여 모든 Program에 업로드합니다.
+   * OGL camera.viewMatrix에 의존하지 않고 _viewMat에 직접 구성합니다.
+   *
+   * 좌표계: obj.z > cam.z = 카메라 앞 (구 시스템과 동일)
+   * 모델 z = -obj.z 이므로, 카메라 역변환 z = +camZ
+   */
+  private _buildViewMatrix(cam: LveObject) {
+    const pos = cam.transform.position
+    const rot = cam.transform.rotation
+
+    this._viewMat.identity()
+
+    // 1. 카메라 회전 역변환
+    if (rot.y) this._viewMat.rotate(-rot.y * Math.PI / 180, AXIS_Y)
+    if (rot.x) this._viewMat.rotate(-rot.x * Math.PI / 180, AXIS_X)
+    if (rot.z) this._viewMat.rotate(-rot.z * Math.PI / 180, AXIS_Z)
+
+    // 2. 카메라 위치 역변환
+    // 카메라 world z = -camZ (네게이트된 공간), 역변환 z = +camZ
+    this._tmpVec[0] = -pos.x
+    this._tmpVec[1] = -pos.y
+    this._tmpVec[2] = pos.z
+    this._viewMat.translate(this._tmpVec)
+
+    const vm = this._viewMat as unknown as Float32Array
+    this.colorProgram.uniforms['uViewMatrix'].value = vm
+    this.ellipseProgram.uniforms['uViewMatrix'].value = vm
+    this.textureProgram.uniforms['uViewMatrix'].value = vm
+    this.instancedProgram.uniforms['uViewMatrix'].value = vm
+    this.placeholderProgram.uniforms['uViewMatrix'].value = vm
   }
 
   /** ogl 카메라의 projectionMatrix를 Float32Array로 반환 */

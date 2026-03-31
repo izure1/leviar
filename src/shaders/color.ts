@@ -6,10 +6,11 @@
 export const colorVertex = /* glsl */ `
   attribute vec2 position;
   uniform mat4 uModelMatrix;
+  uniform mat4 uViewMatrix;
   uniform mat4 uProjectionMatrix;
 
   void main() {
-    gl_Position = uProjectionMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
   }
 `
 
@@ -36,12 +37,13 @@ export const ellipseVertex = /* glsl */ `
   attribute vec2 position;
   attribute vec2 uv;
   uniform mat4 uModelMatrix;
+  uniform mat4 uViewMatrix;
   uniform mat4 uProjectionMatrix;
   varying vec2 vUV;
 
   void main() {
     vUV = uv;
-    gl_Position = uProjectionMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
   }
 `
 

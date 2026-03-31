@@ -7,6 +7,7 @@ export const textureVertex = /* glsl */ `
   attribute vec2 position;
   attribute vec2 uv;
   uniform mat4 uModelMatrix;
+  uniform mat4 uViewMatrix;
   uniform mat4 uProjectionMatrix;
   uniform float uFlipY;
   uniform vec2 uUVOffset;
@@ -16,7 +17,7 @@ export const textureVertex = /* glsl */ `
   void main() {
     float y = uFlipY > 0.5 ? 1.0 - uv.y : uv.y;
     vUV = uUVOffset + vec2(uv.x, y) * uUVScale;
-    gl_Position = uProjectionMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
   }
 `
 
