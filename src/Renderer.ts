@@ -21,7 +21,6 @@ import { parseTextMarkup } from './utils/textMarkup.js'
 import { TEXTURE_THROTTLE_FRAMES, TEXTURE_DEBOUNCE_FRAMES } from './dirty.js'
 
 import type { LveObject } from './LveObject.js'
-import type { Camera as LveCamera } from './objects/Camera.js'
 import type { Sprite } from './objects/Sprite.js'
 import type { LveImage } from './objects/LveImage.js'
 import type { LveVideo } from './objects/LveVideo.js'
@@ -364,6 +363,41 @@ export class Renderer {
     this.placeholderMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.placeholderProgram })
   }
 
+  /**
+   * 객체를 카메라 기준으로 변환합니다.
+   * @param obj 렌더링할 객체
+   * @param cam 카메라 객체
+   * @returns 변환된 객체의 좌표
+   */
+  private getCamTransformed(obj: LveObject, cam: LveObject): { dx: number, dy: number, dz: number } {
+    let dx = obj.transform.position.x - cam.transform.position.x
+    let dy = obj.transform.position.y - cam.transform.position.y
+    let dz = obj.transform.position.z - cam.transform.position.z
+
+    if (cam.transform.rotation.y !== 0) {
+      const radY = -cam.transform.rotation.y * Math.PI / 180
+      const cosY = Math.cos(radY), sinY = Math.sin(radY)
+      const nx = dx * cosY + dz * sinY
+      const nz = -dx * sinY + dz * cosY
+      dx = nx; dz = nz
+    }
+    if (cam.transform.rotation.x !== 0) {
+      const radX = -cam.transform.rotation.x * Math.PI / 180
+      const cosX = Math.cos(radX), sinX = Math.sin(radX)
+      const ny = dy * cosX - dz * sinX
+      const nz = dy * sinX + dz * cosX
+      dy = ny; dz = nz
+    }
+    if (cam.transform.rotation.z !== 0) {
+      const radZ = -cam.transform.rotation.z * Math.PI / 180
+      const cosZ = Math.cos(radZ), sinZ = Math.sin(radZ)
+      const nx = dx * cosZ - dy * sinZ
+      const ny = dx * sinZ + dy * cosZ
+      dx = nx; dy = ny
+    }
+    return { dx, dy, dz }
+  }
+
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
 
   render(objects: Set<LveObject>, assets: LoadedAssets = {}, timestamp: number = 0, activeCamera: LveObject | null = null) {
@@ -396,43 +430,9 @@ export class Renderer {
       return
     }
 
-    const camX = activeCamera.transform.position.x
-    const camY = activeCamera.transform.position.y
-    const camZ = activeCamera.transform.position.z
     const camRotX = activeCamera.transform.rotation.x || 0
     const camRotY = activeCamera.transform.rotation.y || 0
     const camRotZ = activeCamera.transform.rotation.z || 0
-
-    // 카메라의 회전 역변환 헬퍼 (위치 역산용)
-    const radX = -camRotX * Math.PI / 180
-    const radY = -camRotY * Math.PI / 180
-    const radZ = -camRotZ * Math.PI / 180
-
-    const getCamTransformed = (obj: LveObject) => {
-      let dx = obj.transform.position.x - camX
-      let dy = obj.transform.position.y - camY
-      let dz = obj.transform.position.z - camZ
-
-      if (radY !== 0) {
-        const cosY = Math.cos(radY), sinY = Math.sin(radY)
-        const nx = dx * cosY + dz * sinY
-        const nz = -dx * sinY + dz * cosY
-        dx = nx; dz = nz
-      }
-      if (radX !== 0) {
-        const cosX = Math.cos(radX), sinX = Math.sin(radX)
-        const ny = dy * cosX - dz * sinX
-        const nz = dy * sinX + dz * cosX
-        dy = ny; dz = nz
-      }
-      if (radZ !== 0) {
-        const cosZ = Math.cos(radZ), sinZ = Math.sin(radZ)
-        const nx = dx * cosZ - dy * sinZ
-        const ny = dx * sinZ + dy * cosZ
-        dx = nx; dy = ny
-      }
-      return { dx, dy, dz }
-    }
 
     // ─── Z-Sort: Dirty-Flag 기반 캐시 ────────────────────
     // 카메라 이동만으로는 객체 간 dz 차이가 바뀌지 않으므로(cam 위치 항이 소거됨)
@@ -454,31 +454,43 @@ export class Renderer {
       const useAbsoluteZ = (camRotX === 0 && camRotY === 0 && camRotZ === 0)
 
       if (useAbsoluteZ) {
-        this._sortedObjects = Array.from(objects)
-          .filter(o => o.attribute.type !== 'camera')
-          .sort((a, b) => {
-            const zdiff = b.transform.position.z - a.transform.position.z
-            return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
-          })
+        const sortedObjects: LveObject[] = []
+        for (const o of objects) {
+          if (
+            o.attribute.type === 'camera' ||
+            o.style.display === 'none'
+          ) {
+            continue
+          }
+          sortedObjects.push(o)
+        }
+        sortedObjects.sort((a, b) => {
+          const zdiff = b.transform.position.z - a.transform.position.z
+          return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
+        })
+        this._sortedObjects = sortedObjects
       } else {
         // 회전이 있으면 실제 dz 계산 후 정렬
-        this._sortedObjects = Array.from(objects)
-          .filter(o => o.attribute.type !== 'camera')
-          .map(o => ({ o, dz: getCamTransformed(o).dz }))
-          .sort((a, b) => {
-            const zdiff = b.dz - a.dz
-            return zdiff !== 0 ? zdiff : a.o.style.zIndex - b.o.style.zIndex
-          })
-          .map(x => x.o)
+        const temp: Array<{ o: LveObject; dz: number }> = []
+        for (const o of objects) {
+          if (
+            o.attribute.type === 'camera' ||
+            o.style.display === 'none'
+          ) {
+            continue
+          }
+          temp.push({ o, dz: this.getCamTransformed(o, activeCamera).dz })
+        }
+        temp.sort((a, b) => {
+          const zdiff = b.dz - a.dz
+          return zdiff !== 0 ? zdiff : a.o.style.zIndex - b.o.style.zIndex
+        })
+        const sortedObjects: LveObject[] = []
+        for (let i = 0, len = temp.length; i < len; i++) {
+          sortedObjects.push(temp[i].o)
+        }
+        this._sortedObjects = sortedObjects
       }
-    }
-
-    // 캐시된 순서로 renderables 구성 (정렬 없음, dz 계산만)
-    const renderables: Array<{ obj: LveObject; dx: number; dy: number; dz: number }> = []
-    for (const obj of this._sortedObjects) {
-      if (obj.style.display === 'none') continue
-      const { dx, dy, dz } = getCamTransformed(obj)
-      if (dz >= 0) renderables.push({ obj, dx, dy, dz })
     }
 
     // 화면 클리어
@@ -490,8 +502,13 @@ export class Renderer {
       this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA,
     )
 
-    for (const item of renderables) {
-      this._drawObject(item.obj, item.dx, item.dy, item.dz, camRotX, camRotY, camRotZ, assets, timestamp)
+    // 캐시된 순서로 렌더링 (정렬 없음, dz 계산만)
+    for (let i = 0, len = this._sortedObjects.length; i < len; i++) {
+      const obj = this._sortedObjects[i]
+      const { dx, dy, dz } = this.getCamTransformed(obj, activeCamera)
+      if (dz >= 0) {
+        this._drawObject(obj, dx, dy, dz, camRotX, camRotY, camRotZ, assets, timestamp)
+      }
     }
     this._flushBatch();
   }
@@ -537,20 +554,30 @@ export class Renderer {
 
     const type = obj.attribute.type
 
-    if (type === 'rectangle') {
-      this._drawRectangle(obj, screenX, screenY, w, h)
-    } else if (type === 'ellipse') {
-      this._drawEllipse(obj, screenX, screenY, w, h)
-    } else if (type === 'text') {
-      this._drawText(obj, screenX, screenY, perspectiveScale, timestamp)
-    } else if (type === 'image') {
-      this._drawAsset(obj as LveImage, screenX, screenY, w, h, perspectiveScale, assets)
-    } else if (type === 'video') {
-      this._drawVideo(obj as LveVideo, screenX, screenY, w, h, perspectiveScale, assets)
-    } else if (type === 'sprite') {
-      this._drawSprite(obj as Sprite, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
-    } else if (type === 'particle') {
-      this._drawParticle(obj as Particle, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
+    switch (type) {
+      case 'rectangle':
+        this._drawRectangle(obj, screenX, screenY, w, h)
+        break
+      case 'ellipse':
+        this._drawEllipse(obj, screenX, screenY, w, h)
+        break
+      case 'text':
+        this._drawText(obj, screenX, screenY, perspectiveScale, timestamp)
+        break
+      case 'image':
+        this._drawAsset(obj as LveImage, screenX, screenY, w, h, perspectiveScale, assets)
+        break
+      case 'video':
+        this._drawVideo(obj as LveVideo, screenX, screenY, w, h, perspectiveScale, assets)
+        break
+      case 'sprite':
+        this._drawSprite(obj as Sprite, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
+        break
+      case 'particle':
+        this._drawParticle(obj as Particle, screenX, screenY, w, h, perspectiveScale, assets, timestamp)
+        break
+      default:
+        break
     }
   }
 
