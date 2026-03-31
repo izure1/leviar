@@ -1,7 +1,13 @@
 import { World } from '../../src/index.js'
 
 const world = new World()
-const camera = world.createCamera()
+const camera = world.createCamera({
+  transform: {
+    position: {
+      z: -60
+    }
+  }
+})
 world.camera = camera
 
 await world.loader.load({
@@ -9,7 +15,7 @@ await world.loader.load({
   'star': '../asset/image/star.png',
 })
 
-world.setGravity({ x: 0, y: -0.1 })
+world.setGravity({ x: 0, y: -1 })
 
 const blendModes: any[] = [
   'source-over', 'lighter', 'multiply', 'screen',
@@ -34,24 +40,24 @@ world.particleManager.create({
   name: 'star-anti-gravity',
   src: 'star',
   loop: true,
-  lifespan: 6000,
-  interval: 500,
+  lifespan: 20000,
+  interval: 150,
   rate: 1,
   impulse: 0,
-  spawnX: 400,
+  spawnX: 500,
   spawnY: 20,
   spawnZ: 100,
   size: {
-    start: { min: 0.5, max: 1.5 },
-    end: { min: 1, max: 1.5 }
+    start: { min: 1, max: 1.5 },
+    end: { min: 0.5, max: 1 }
   }
 })
 
 const src = world.createParticle({
   strict: true,
-  attribute: { gravityScale: 0, friction: 0.005, density: 0.001 },
+  attribute: { gravityScale: 0.15, friction: 0.005, density: 0.001 },
   style: { blendMode: 'source-over', zIndex: 1 },
-  transform: { position: { x: 0, y: -150, z: 0 } }
+  transform: { position: { x: 0, y: -500, z: 0 } }
 }).play('star-anti-gravity')
 
 // 하단에 버튼 라벨 13개 배치

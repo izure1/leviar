@@ -75,10 +75,16 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('wheel', (e) => {
   if (!world.camera) return
-  world.camera.transform.position.z = Math.min(
-    Math.max(world.camera.transform.position.z + e.deltaY * 0.1, -200),
-    200
-  )
+  world.camera.animate({
+    transform: {
+      position: {
+        z: Math.min(
+          Math.max(world.camera.transform.position.z + e.deltaY, -200),
+          200
+        )
+      }
+    }
+  }, 100, 'easeOut')
 }, { passive: true })
 
 world.start()

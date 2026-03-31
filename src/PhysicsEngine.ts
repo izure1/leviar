@@ -50,7 +50,7 @@ export class PhysicsEngine {
     // 해당 차이만큼의 추가 힘을 매번 업데이트 전 적용합니다.
     Matter.Events.on(this.engine, 'beforeUpdate', () => {
       const gravity = this.engine.gravity
-      for (const body of this.bodyMap.values()) {
+      for (const body of Matter.Composite.allBodies(this.engine.world)) {
         const scale = (body as any).gravityScale
         if (scale !== undefined && scale !== 1 && !body.isStatic) {
           const m = body.mass
