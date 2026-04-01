@@ -5,9 +5,12 @@ const world = new World({ canvas })
 const camera = world.createCamera()
 world.camera = camera
 
+world.setGravity({ x: 0, y: -1 })
+
 // 더미 백그라운드 이미지 로드 (없다면 빈 화면이 나옴)
 await world.loader.load({
-  'bg': '../asset/image/background.jpg'
+  'bg': '../asset/image/background.jpg',
+  'star': '../asset/image/star.png'
 })
 
 // 카메라 z 위치
@@ -41,12 +44,12 @@ const talkBox = world.createRectangle({
     width: talkBoxW,
     height: talkBoxH,
     // 위에서 아래로 투명도 변화
-    gradient: '180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%',
-    zIndex: 10
+    gradient: '180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 50%',
+    zIndex: 1
   },
   transform: {
     pivot: { x: 0, y: 1 },
-    position: { x: -talkBoxW / 2, y: talkBoxPos.y }
+    position: { x: -talkBoxW / 2, y: talkBoxPos.y, z: 100 }
   }
 })
 
@@ -65,7 +68,7 @@ const dialogue = world.createText({
   style: {
     width: textWidth,
     height: textHeight,
-    zIndex: 20
+    zIndex: 2
   },
   transform: {
     pivot: { x: 0, y: 1 },
@@ -73,6 +76,78 @@ const dialogue = world.createText({
   }
 })
 
+world.particleManager.create({
+  name: 'mouse-particle',
+  src: 'star',
+  impulse: 0.15,
+  rate: 1,
+  lifespan: 1000,
+  interval: 100,
+  loop: true,
+})
+
+world.particleManager.create({
+  name: 'dust-particle',
+  src: 'star',
+  impulse: 0.15,
+  rate: 1,
+  lifespan: 10000,
+  interval: 250,
+  size: {
+    start: {
+      min: 0.5,
+      max: 1,
+    },
+    end: {
+      min: 0,
+      max: 0.5,
+    }
+  },
+  spawnX: canvas.width,
+  spawnY: canvas.height,
+  spawnZ: 100,
+  loop: true,
+})
+
+const mouseParticle = world.createParticle({
+  strict: true,
+  attribute: {
+    physics: 'dynamic',
+    gravityScale: 0.1,
+  },
+  style: {
+    width: 15,
+    height: 15,
+    zIndex: 3,
+    blendMode: 'lighter',
+  },
+  transform: {
+    position: { x: 0, y: 0, z: 100 }
+  }
+}).play('mouse-particle')
+
+const dustParticle = world.createParticle({
+  strict: true,
+  attribute: {
+    physics: 'dynamic',
+    density: 0.00001,
+    friction: 0.001,
+    gravityScale: 0,
+  },
+  style: {
+    width: 2,
+    height: 2,
+    zIndex: 3,
+    blendMode: 'lighter',
+  },
+  transform: {
+    position: { x: 0, y: 0, z: 100 }
+  }
+}).play('dust-particle')
+
+camera.addChild(talkBox)
+camera.addChild(mouseParticle)
+camera.addChild(dustParticle)
 talkBox.addChild(dialogue)
 
 // 창 크기가 변경될 때 비율 다시 맞추기 (선택)
@@ -96,6 +171,12 @@ window.addEventListener('resize', () => {
 
 world.on('click', () => {
   console.log(dialogue.transition(dialogText, 35))
+})
+
+world.on('mousemove', (obj, e) => {
+  const pos = world.canvasToWorld(e.offsetX, e.offsetY)
+  mouseParticle.transform.position.x = pos.x
+  mouseParticle.transform.position.y = pos.y
 })
 
 world.start()
