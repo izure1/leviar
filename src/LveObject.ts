@@ -65,6 +65,8 @@ function makeStyle(partial?: Partial<Style>): Style {
     zIndex: partial?.zIndex ?? 0,
     blendMode: partial?.blendMode,
     letterSpacing: partial?.letterSpacing ?? 0,
+    gradient: partial?.gradient,
+    gradientType: partial?.gradientType,
   }
 }
 

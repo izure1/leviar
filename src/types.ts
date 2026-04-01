@@ -60,6 +60,8 @@ export interface Style {
   zIndex: number
   blendMode?: GlobalCompositeOperation
   letterSpacing?: number
+  gradient?: string
+  gradientType?: 'linear' | 'circular'
 }
 
 // ============================================================

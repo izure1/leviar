@@ -108,6 +108,29 @@ function parseCSSColor(color: string): [number, number, number, number] {
   return [1, 1, 1, 1]
 }
 
+// ─── 그라디언트 stops 파서 ────────────────────────────────────────────────────
+// '45deg, rgb(255,255,255) 0%, rgb(255,0,0) 50%' → { direction: 45, stops: [...] }
+interface GradientParsed {
+  direction: number
+  stops: { offset: number; color: string }[]
+}
+
+function parseGradientStops(gradient: string): GradientParsed {
+  // 선택적 방향각 파싱: '45deg,' 또는 '-90deg,'
+  let direction = 0
+  const degMatch = gradient.match(/^\s*(-?[\d.]+)deg\s*,\s*/)
+  const stopsStr = degMatch ? gradient.slice(degMatch[0].length) : gradient
+  if (degMatch) direction = parseFloat(degMatch[1])
+
+  const stops: { offset: number; color: string }[] = []
+  const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+([\d.]+)%/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(stopsStr)) !== null) {
+    stops.push({ offset: parseFloat(m[2]) / 100, color: m[1] })
+  }
+  return { direction, stops }
+}
+
 // ─── 텍스처 캐시 키 ──────────────────────────────────────────────────────────
 
 // 텍스트 오브젝트의 Offscreen Canvas → Texture 캐시
@@ -158,6 +181,9 @@ export class Renderer {
 
   // 오브젝트별 Mesh 캐시
   private meshCache = new Map<string, Mesh>()
+
+  // 그라디언트 텍스처 캐시 (gradient 키 → Texture)
+  private _gradientTextureCache = new Map<string, Texture>()
 
   // 텍스트 텍스처 캐시 (id → TextTextureEntry)
   private textCache = new Map<string, TextTextureEntry>()
@@ -813,7 +839,7 @@ export class Renderer {
 
   private _drawRectangle(obj: LveObject, x: number, y: number, w: number, h: number) {
     const { style } = obj
-    if (!style.color && !style.borderColor && !style.outlineColor) return
+    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
 
     const targetOpacity = style.opacity * obj._fadeOpacity
 
@@ -830,9 +856,15 @@ export class Renderer {
       this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity)
     }
 
-    // 본체
+    // 본체 color
     if (style.color) {
       this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity)
+    }
+
+    // 그라디언트 레이어 (color 위에 덮어씬움)
+    if (style.gradient && w > 0 && h > 0) {
+      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', false)
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, targetOpacity)
     }
   }
 
@@ -842,7 +874,7 @@ export class Renderer {
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over');
     const { style } = obj
-    if (!style.color && !style.borderColor && !style.outlineColor) return
+    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
 
     const drawEllipse = (ew: number, eh: number, color: string) => {
       const [r, g, b, a] = parseCSSColor(color)
@@ -866,9 +898,15 @@ export class Renderer {
       drawEllipse(w + bw * 2, h + bw * 2, style.borderColor)
     }
 
-    // 본체
+    // 본체 color
     if (style.color) {
       drawEllipse(w, h, style.color)
+    }
+
+    // 그라디언트 레이어 — ellipse 형태에 맞게 원형 클리핑 포함
+    if (style.gradient && w > 0 && h > 0) {
+      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', true)
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj._fadeOpacity)
     }
   }
 
@@ -1398,6 +1436,71 @@ export class Renderer {
       )
     }
 
+  }
+
+  // ─── Gradient Texture ────────────────────────────────────────────────────
+
+  /**
+   * gradient stops 문자열로부터 Offscreen Canvas 텍스처를 생성합니다.
+   * @param ellipseClip true이면 ellipse SDF 원형 클리핑을 Canvas 내에서 적용합니다.
+   */
+  private _makeGradientTexture(
+    w: number,
+    h: number,
+    gradient: string,
+    type: 'linear' | 'circular',
+    ellipseClip: boolean,
+  ): Texture | null {
+    const cacheKey = `${Math.round(w)}|${Math.round(h)}|${gradient}|${type}|${ellipseClip}`
+    let tex = this._gradientTextureCache.get(cacheKey)
+    if (tex) return tex
+
+    const { direction, stops } = parseGradientStops(gradient)
+    if (stops.length === 0) return null
+
+    const pw = Math.max(1, Math.round(w))
+    const ph = Math.max(1, Math.round(h))
+    const canvas = document.createElement('canvas')
+    canvas.width = pw
+    canvas.height = ph
+    const ctx = canvas.getContext('2d')!
+
+    // ellipse 클리핑: 원형 영역 외부를 투명으로 유지
+    if (ellipseClip) {
+      ctx.beginPath()
+      ctx.ellipse(pw / 2, ph / 2, pw / 2, ph / 2, 0, 0, Math.PI * 2)
+      ctx.clip()
+    }
+
+    let grad: CanvasGradient
+    if (type === 'circular') {
+      const cx = pw / 2
+      const cy = ph / 2
+      const r = Math.max(pw, ph) / 2
+      grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+    } else {
+      // linear: direction(deg) 기준 시작→끝 좌표 계산
+      const rad = (direction - 90) * Math.PI / 180
+      const cx = pw / 2
+      const cy = ph / 2
+      const halfLen = Math.sqrt(pw * pw + ph * ph) / 2
+      const x0 = cx - Math.cos(rad) * halfLen
+      const y0 = cy - Math.sin(rad) * halfLen
+      const x1 = cx + Math.cos(rad) * halfLen
+      const y1 = cy + Math.sin(rad) * halfLen
+      grad = ctx.createLinearGradient(x0, y0, x1, y1)
+    }
+
+    for (const stop of stops) {
+      grad.addColorStop(stop.offset, stop.color)
+    }
+
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, pw, ph)
+
+    tex = new Texture(this.gl, { image: canvas, generateMipmaps: false })
+    this._gradientTextureCache.set(cacheKey, tex)
+    return tex
   }
 
   // ─── Placeholder ────────────────────────────────────────────────────────
