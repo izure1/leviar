@@ -46,10 +46,10 @@ const img1 = world.createImage({
 })
 img1.play('logo')
 
-// ② LveImage — logo.png (지정 크기 200×200)
-label('② LveImage — logo.png (200×200)', -500, 20, 0)
+// ② LveImage — logo.png (지정 크기 200×auto)
+label('② LveImage — logo.png (200×auto)', -500, 20, 0)
 const img2 = world.createImage({
-  style: { width: 200, height: 200 },
+  style: { width: 200 },
   transform: { position: { x: -400, y: 120, z: 0 } },
 })
 img2.play('logo')
@@ -62,9 +62,9 @@ world.createImage({
 })
 
 // ④ Sprite — sprite.png, 10fps
-label('④ Sprite — sprite.png (10fps, 44×40)', 80, -250, 0)
+label('④ Sprite — sprite.png (132×auto)', 80, -250, 0)
 const spr = world.createSprite({
-  style: { width: 132, height: 120 },
+  style: { width: 132 },
   transform: { position: { x: 180, y: -160, z: 0 } },
 })
 spr.play('play')
@@ -78,9 +78,9 @@ const sprFar = world.createSprite({
 sprFar.play('play')
 
 // ⑥ LveVideo — sample.mp4
-label('⑥ LveVideo — sample.mp4', -200, -250, 0)
+label('⑥ LveVideo — sample.mp4 (200×auto)', -200, -250, 0)
 const vid = world.createVideo({
-  style: { width: 200, height: 120 },
+  style: { width: 200 },
   transform: { position: { x: -120, y: -160, z: 0 } },
 })
 vid.play('sample')

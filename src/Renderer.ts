@@ -1252,8 +1252,17 @@ export class Renderer {
         return
       }
 
-      const drawW = w || asset.naturalWidth * perspectiveScale
-      const drawH = h || asset.naturalHeight * perspectiveScale
+      let drawW: number, drawH: number;
+      if (w && !h) {
+        drawW = w;
+        drawH = w * (asset.naturalHeight / asset.naturalWidth);
+      } else if (!w && h) {
+        drawW = h * (asset.naturalWidth / asset.naturalHeight);
+        drawH = h;
+      } else {
+        drawW = w || asset.naturalWidth * perspectiveScale;
+        drawH = h || asset.naturalHeight * perspectiveScale;
+      }
 
       obj._renderedSize = {
         w: drawW / perspectiveScale,
@@ -1311,8 +1320,17 @@ export class Renderer {
 
     // style.width/height 미지정 시 videoSize에 perspectiveScale 적용
     // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
-    const drawW = w || asset.videoWidth * perspectiveScale
-    const drawH = h || asset.videoHeight * perspectiveScale
+    let drawW: number, drawH: number;
+    if (w && !h) {
+      drawW = w;
+      drawH = w * (asset.videoHeight / asset.videoWidth);
+    } else if (!w && h) {
+      drawW = h * (asset.videoWidth / asset.videoHeight);
+      drawH = h;
+    } else {
+      drawW = w || asset.videoWidth * perspectiveScale;
+      drawH = h || asset.videoHeight * perspectiveScale;
+    }
 
     obj._renderedSize = {
       w: drawW / perspectiveScale,
@@ -1350,8 +1368,17 @@ export class Renderer {
 
     if (!clip) {
       // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
-      const drawW = w || asset.naturalWidth * perspectiveScale
-      const drawH = h || asset.naturalHeight * perspectiveScale
+      let drawW: number, drawH: number;
+      if (w && !h) {
+        drawW = w;
+        drawH = w * (asset.naturalHeight / asset.naturalWidth);
+      } else if (!w && h) {
+        drawW = h * (asset.naturalWidth / asset.naturalHeight);
+        drawH = h;
+      } else {
+        drawW = w || asset.naturalWidth * perspectiveScale;
+        drawH = h || asset.naturalHeight * perspectiveScale;
+      }
       this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.style.opacity * sprite._fadeOpacity)
       return
     }
@@ -1367,8 +1394,17 @@ export class Renderer {
     const uvOffsetY = 1.0 - (row + 1) * uvScaleY
 
     // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
-    const drawW = w || frameWidth * perspectiveScale
-    const drawH = h || frameHeight * perspectiveScale
+    let drawW: number, drawH: number;
+    if (w && !h) {
+      drawW = w;
+      drawH = w * (frameHeight / frameWidth);
+    } else if (!w && h) {
+      drawW = h * (frameWidth / frameHeight);
+      drawH = h;
+    } else {
+      drawW = w || frameWidth * perspectiveScale;
+      drawH = h || frameHeight * perspectiveScale;
+    }
 
     this._drawTextureMesh(
       texture,
@@ -1407,8 +1443,17 @@ export class Renderer {
     const natW = asset.naturalWidth
     const natH = asset.naturalHeight
     // w/h는 이미 perspectiveScale이 반영된 픽셀 크기
-    const baseW = w || natW
-    const baseH = h || natH
+    let baseW: number, baseH: number;
+    if (w && !h) {
+      baseW = w;
+      baseH = w * (natH / natW);
+    } else if (!w && h) {
+      baseW = h * (natW / natH);
+      baseH = h;
+    } else {
+      baseW = w || natW;
+      baseH = h || natH;
+    }
 
     const texture = this._getOrCreateAssetTexture(clip.src, asset)
 
