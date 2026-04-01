@@ -119,7 +119,7 @@ function snapshotNumbers(source: Record<string, any>, target: DeepRecord): Recor
   for (const key of Object.keys(target)) {
     const tVal = (target as any)[key]
     const sVal = (source as any)?.[key]
-    if (tVal !== null && typeof tVal === 'object' && !Array.isArray(tVal)) {
+    if (tVal != null && typeof tVal === 'object' && !Array.isArray(tVal)) {
       snapshot[key] = snapshotNumbers(sVal ?? {}, tVal)
     } else if (typeof tVal === 'number' || typeof tVal === 'string') {
       snapshot[key] = typeof sVal === 'number' ? sVal : 0
@@ -140,7 +140,7 @@ function interpolate(
     const toVal = (to as any)[key]
     const fromVal = (from as any)?.[key]
     const raw = (rawTarget as any)[key]
-    if (toVal !== null && typeof toVal === 'object' && !Array.isArray(toVal)) {
+    if (toVal != null && typeof toVal === 'object' && !Array.isArray(toVal)) {
       result[key] = interpolate(fromVal ?? {}, toVal, t, raw)
     } else if (typeof toVal === 'number' && typeof fromVal === 'number') {
       result[key] = fromVal + (toVal - fromVal) * t
@@ -155,7 +155,7 @@ function resolveAllTargets(current: Record<string, any>, raw: DeepRecord): Recor
   for (const key of Object.keys(raw)) {
     const rVal = (raw as any)[key]
     const cVal = (current as any)?.[key]
-    if (rVal !== null && typeof rVal === 'object' && !Array.isArray(rVal)) {
+    if (rVal != null && typeof rVal === 'object' && !Array.isArray(rVal)) {
       resolved[key] = resolveAllTargets(cVal ?? {}, rVal)
     } else if (typeof rVal === 'number' || typeof rVal === 'string') {
       resolved[key] = resolveTarget(typeof cVal === 'number' ? cVal : 0, rVal)
@@ -214,7 +214,7 @@ export class Animation extends EventEmitter<AnimationEvents> {
     if (this._isPaused || this._startTime === null) return this
     this._isPaused = true
     this._pausedElapsed += performance.now() - this._startTime
-    if (this._rafId !== null) {
+    if (this._rafId != null) {
       cancelAnimationFrame(this._rafId)
       this._rafId = null
     }
@@ -232,7 +232,7 @@ export class Animation extends EventEmitter<AnimationEvents> {
   }
 
   stop(): this {
-    if (this._rafId !== null) {
+    if (this._rafId != null) {
       cancelAnimationFrame(this._rafId)
       this._rafId = null
       this.emit('stop')
@@ -328,7 +328,7 @@ function applyInterpolated(
   for (const key of Object.keys(to)) {
     const toVal = (to as any)[key]
     const fromVal = (from as any)?.[key]
-    if (toVal !== null && typeof toVal === 'object' && !Array.isArray(toVal)) {
+    if (toVal != null && typeof toVal === 'object' && !Array.isArray(toVal)) {
       if (source[key] === undefined || source[key] === null) source[key] = {}
       applyInterpolated(source[key], fromVal ?? {}, toVal, t, (raw as any)[key])
     } else if (typeof toVal === 'number' && typeof fromVal === 'number') {

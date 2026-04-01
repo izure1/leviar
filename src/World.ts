@@ -367,7 +367,7 @@ export class World extends EventEmitter<WorldEvents> {
    * `null`을 할당하면 기본 동작으로 돌아갑니다.
    */
   set camera(camera: LveObject | null) {
-    if (camera !== null && camera.attribute.type !== 'camera') {
+    if (camera != null && camera.attribute.type !== 'camera') {
       throw new Error('The assigned object must be of camera type.');
     }
     this._activeCamera = camera
@@ -578,7 +578,7 @@ export class World extends EventEmitter<WorldEvents> {
   }
 
   start() {
-    if (this.rafId !== null) return
+    if (this.rafId != null) return
     let prevTime = 0
 
     const loop = (timestamp: number) => {
@@ -605,7 +605,7 @@ export class World extends EventEmitter<WorldEvents> {
   }
 
   stop() {
-    if (this.rafId !== null) {
+    if (this.rafId != null) {
       cancelAnimationFrame(this.rafId)
       this.rafId = null
     }

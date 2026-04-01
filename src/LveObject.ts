@@ -390,6 +390,19 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
   }
 
   /**
+   * 객체가 주어진 클래스들을 모두 포함하고 있는지 확인합니다. (공백으로 구분)
+   * 전달된 모든 클래스가 존재할 때만 true를 반환합니다.
+   */
+  hasClass(classNames: string): boolean {
+    if (!classNames || !this.attribute.className) return false
+    const currentClasses = this.attribute.className.split(/\s+/).filter(Boolean)
+    const requiredClasses = classNames.split(/\s+/).filter(Boolean)
+
+    if (requiredClasses.length === 0) return false
+    return requiredClasses.every(cls => currentClasses.includes(cls))
+  }
+
+  /**
    * 객체에 하나 이상의 클래스를 추가합니다. (공백으로 구분)
    * 이미 존재하는 클래스는 무시됩니다.
    */
@@ -486,9 +499,6 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
   private _followTarget?: LveObject
   private _followOffset?: { x?: number; y?: number; z?: number }
   private _followListener?: (axis: string, val: number) => void
-
-
-
   private _followers: Set<LveObject> = new Set()
 
   /**
@@ -504,8 +514,6 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
   get followers(): LveObject[] {
     return Array.from(this._followers)
   }
-
-
 
   /**
    * 다른 LveObject를 일정 거리를 두고 따라다닙니다.

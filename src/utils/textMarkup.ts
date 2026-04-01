@@ -26,7 +26,7 @@ function parseAttrs(attrStr: string): TextSpanStyle {
   const style: TextSpanStyle = {}
   const re = /(\w+)=["']([^"']*)["']/g
   let m: RegExpExecArray | null
-  while ((m = re.exec(attrStr)) !== null) {
+  while ((m = re.exec(attrStr)) != null) {
     const [, key, val] = m
     switch (key) {
       case 'fontSize': style.fontSize = parseFloat(val); break

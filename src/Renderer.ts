@@ -125,7 +125,7 @@ function parseGradientStops(gradient: string): GradientParsed {
   const stops: { offset: number; color: string }[] = []
   const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+([\d.]+)%/g
   let m: RegExpExecArray | null
-  while ((m = re.exec(stopsStr)) !== null) {
+  while ((m = re.exec(stopsStr)) != null) {
     stops.push({ offset: parseFloat(m[2]) / 100, color: m[1] })
   }
   return { direction, stops }
@@ -1315,12 +1315,12 @@ export class Renderer {
     }
 
     // 사용자 명시적 seek — clip.start보다 뒤에 적용하여 항상 우선
-    if (obj._pendingSeek !== null) {
+    if (obj._pendingSeek != null) {
       asset.currentTime = obj._pendingSeek
       obj._pendingSeek = null
     }
 
-    if (clip?.end != null && asset.currentTime >= clip.end / 1000) {
+    if (clip && clip.end != null && asset.currentTime >= clip.end / 1000) {
       if (clip.loop) {
         asset.currentTime = (clip.start ?? 0) / 1000
         obj._onRepeat()

@@ -10,8 +10,9 @@
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/lve4.js",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/lve4.js"
     }
   },
   "scripts": {

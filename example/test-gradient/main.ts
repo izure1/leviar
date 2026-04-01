@@ -8,7 +8,7 @@ world.camera = camera
 
 // ── 레이블 헬퍼 ──────────────────────────────────────────────────────────────
 const label = (text: string, x: number, y: number) => world.createText({
-  attribute: { text },
+  attribute: { text, className: 'label' },
   style: { color: '#aabbcc', fontSize: 14, textAlign: 'center' },
   transform: { position: { x, y, z: 0 } }
 })
@@ -78,9 +78,9 @@ label('ellipse linear', -260, 150)
 // ── 6. Ellipse - circular ────────────────────────────────────────────────────
 shapes.push(world.createEllipse({
   style: {
-    width: 160,
+    width: 100,
     height: 100,
-    gradient: 'rgb(255, 255, 255) 0%, rgb(20, 200, 100) 50%, rgb(0, 50, 130) 100%',
+    gradient: 'rgb(255, 255, 255) 0%, rgb(20, 200, 100) 50%, rgba(0, 50, 130, 0) 100%',
     gradientType: 'circular',
   },
   transform: { position: { x: -80, y: 80, z: 0 } }
