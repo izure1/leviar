@@ -27,11 +27,16 @@ world.on('click', (obj, e: MouseEvent) => {
     attribute: { physics: 'dynamic' },
     style: { width: 50, height: 50, color: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff' },
     transform: { position: { x: pos.x, y: pos.y, z: targetDepth }, rotation: { z: Math.random() * 360 } }
-  }).addChild(world.createText({
-    attribute: { text: 'Delete to\nRight Click' },
-    style: { color: '#fff', fontSize: 11, fontFamily: 'sans-serif, monospace', textAlign: 'center', borderWidth: 1, borderColor: '#000' },
-    transform: { position: { x: 0, y: 0, z: 0 } },
-  }))
+  })
+    // .addChild(world.createEllipse({
+    //   style: { width: 30, height: 30, color: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff' },
+    //   transform: { position: { x: 0, y: 0, z: 0 } }
+    // }))
+    .addChild(world.createText({
+      attribute: { text: 'Delete to\nRight Click' },
+      style: { color: '#fff', fontSize: 11, fontFamily: 'sans-serif, monospace', textAlign: 'center', borderWidth: 1, borderColor: '#000' },
+      transform: { position: { x: 0, y: 0, z: 0 } },
+    }))
 
   // 생성된 큐브에 우클릭 시 삭제 이벤트 등록
   box.on('contextmenu', (eBox) => {

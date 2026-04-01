@@ -162,6 +162,13 @@ export class Renderer {
   // 텍스트 텍스처 캐시 (id → TextTextureEntry)
   private textCache = new Map<string, TextTextureEntry>()
 
+  // 텍스트 내용 기반 공유 캐시 (contentKey → TextTextureEntry)
+  // 동일한 텍스트·스타일을 가진 객체끼리 Canvas/Texture를 공유하여 flush 횟수 감소
+  private textContentCache = new Map<string, TextTextureEntry>()
+
+  // 공유 텍스처 참조 카운트 (contentKey → 참조 중인 객체 수)
+  private textContentRefCount = new Map<string, number>()
+
   // 카메라 미지정 시 렌더링할 텍스트 오브젝트 모의 객체
   private _noCameraText: any
 
@@ -698,15 +705,27 @@ export class Renderer {
 
     this._setBlendMode(this._batchBlendMode);
 
+    const gl = this.gl
     const geo = this._instancedGeo;
     geo.instancedCount = this._batchCount;
 
-    geo.attributes.instanceMat0.needsUpdate = true;
-    geo.attributes.instanceMat1.needsUpdate = true;
-    geo.attributes.instanceMat2.needsUpdate = true;
-    geo.attributes.instanceMat3.needsUpdate = true;
-    geo.attributes.instanceOpacityFlip.needsUpdate = true;
-    geo.attributes.instanceUVParams.needsUpdate = true;
+    // OGL의 needsUpdate는 attr.data 전체(최대 30000개분)를 bufferSubData로 업로드합니다.
+    // bufferSubData의 srcOffset, length 인자로 실제 batchCount 범위만 GPU에 전송합니다.
+    const n = this._batchCount
+    const uploadSubData = (attr: any, data: Float32Array, stride: number) => {
+      // attr.buffer는 OGL의 addAttribute 시점에 이미 생성·등록되어 있음
+      gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer)
+        // OGL의 state 캐시와 동기화 (직접 bindBuffer 호출을 OGL이 인지하도록)
+        ; (gl as any).renderer.state.boundBuffer = attr.buffer
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * stride)
+    }
+
+    uploadSubData(geo.attributes.instanceMat0, this._batchMat0, 4)
+    uploadSubData(geo.attributes.instanceMat1, this._batchMat1, 4)
+    uploadSubData(geo.attributes.instanceMat2, this._batchMat2, 4)
+    uploadSubData(geo.attributes.instanceMat3, this._batchMat3, 4)
+    uploadSubData(geo.attributes.instanceOpacityFlip, this._batchOpacityFlip, 2)
+    uploadSubData(geo.attributes.instanceUVParams, this._batchUVParams, 4)
 
     this._instancedMesh.draw({ camera: this.camera });
 
@@ -844,6 +863,9 @@ export class Renderer {
     const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : null
     const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null
 
+    // content 기반 캐시 키 — 렌더링 결과가 동일한 조건들을 조합
+    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ''}|${style.fontWeight ?? ''}|${style.fontStyle ?? ''}|${style.color ?? ''}|${style.borderColor ?? ''}|${style.borderWidth ?? 0}|${style.textAlign ?? ''}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ''}|${maxH ?? ''}|${style.shadowColor ?? ''}|${style.shadowBlur ?? 0}|${style.shadowOffsetX ?? 0}|${style.shadowOffsetY ?? 0}`
+
     let entry = this.textCache.get(id)
 
     // 스로틄: 마지막 렌더 이후 프레임 카운터 증가
@@ -858,16 +880,42 @@ export class Renderer {
       ))
 
     if (!entry) {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')!
-      const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false })
-      const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram })
-      entry = { texture, canvas, ctx, lastText: '', mesh }
-      this.textCache.set(id, entry)
+      // content 캐시 히트: 동일 내용의 기존 entry 공유
+      const shared = this.textContentCache.get(contentKey)
+      if (shared) {
+        entry = shared
+        this.textCache.set(id, entry)
+        obj._dirtyTexture = false
+        obj._textureIdleCount = 0
+        obj._textureThrottleCount = 0
+      } else {
+        // 새 Canvas/Texture 생성
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')!
+        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false })
+        const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram })
+        entry = { texture, canvas, ctx, lastText: '', mesh }
+        this.textCache.set(id, entry)
+        this.textContentCache.set(contentKey, entry)
+      }
     }
 
     if (needRender) {
+      // 스타일이 변경된 경우 기존 contentKey로의 공유를 무효화하고 새 entry 생성
+      const prevContentKey = (entry as any)._contentKey as string | undefined
+      if (prevContentKey && prevContentKey !== contentKey) {
+        // 이 entry를 다른 객체도 공유 중일 수 있으므로 새 entry를 만들어 교체
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')!
+        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false })
+        const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram })
+        entry = { texture, canvas, ctx, lastText: '', mesh }
+        this.textCache.set(id, entry)
+      }
+      ; (entry as any)._contentKey = contentKey
       this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, (obj as any)._transitionProgress ?? 1)
+      // content 캐시도 최신화
+      this.textContentCache.set(contentKey, entry)
       obj._dirtyTexture = false
       obj._textureIdleCount = 0
       obj._textureThrottleCount = 0  // 렌더 후 양쪽 리셋
