@@ -13,8 +13,10 @@ const label = (text: string, x: number, y: number) => world.createText({
   transform: { position: { x, y, z: 0 } }
 })
 
+const shapes: any[] = []
+
 // ── 1. Rectangle - linear (0deg 생략, 위→아래) ────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -22,11 +24,11 @@ world.createRectangle({
     gradientType: 'linear',
   },
   transform: { position: { x: -260, y: -120, z: 0 } }
-})
+}))
 label('linear (0deg\n생략)', -260, -50)
 
 // ── 2. Rectangle - linear (90deg, 좌→우) ─────────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -34,11 +36,11 @@ world.createRectangle({
     gradientType: 'linear',
   },
   transform: { position: { x: -80, y: -120, z: 0 } }
-})
+}))
 label('linear 90deg', -80, -50)
 
 // ── 3. Rectangle - linear (45deg, 대각선) ────────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -46,11 +48,11 @@ world.createRectangle({
     gradientType: 'linear',
   },
   transform: { position: { x: 100, y: -120, z: 0 } }
-})
+}))
 label('linear 45deg', 100, -50)
 
 // ── 4. Rectangle - circular ──────────────────────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -58,11 +60,11 @@ world.createRectangle({
     gradientType: 'circular',
   },
   transform: { position: { x: 280, y: -120, z: 0 } }
-})
+}))
 label('circular', 280, -50)
 
 // ── 5. Ellipse - linear ──────────────────────────────────────────────────────
-world.createEllipse({
+shapes.push(world.createEllipse({
   style: {
     width: 160,
     height: 100,
@@ -70,11 +72,11 @@ world.createEllipse({
     gradientType: 'linear',
   },
   transform: { position: { x: -260, y: 80, z: 0 } }
-})
+}))
 label('ellipse linear', -260, 150)
 
 // ── 6. Ellipse - circular ────────────────────────────────────────────────────
-world.createEllipse({
+shapes.push(world.createEllipse({
   style: {
     width: 160,
     height: 100,
@@ -82,11 +84,11 @@ world.createEllipse({
     gradientType: 'circular',
   },
   transform: { position: { x: -80, y: 80, z: 0 } }
-})
+}))
 label('ellipse circular', -80, 150)
 
 // ── 7. color + gradient 동시 사용 ────────────────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -95,11 +97,11 @@ world.createRectangle({
     gradientType: 'linear',
   },
   transform: { position: { x: 100, y: 80, z: 0 } }
-})
+}))
 label('color + gradient', 100, 150)
 
 // ── 8. 다중 stops ────────────────────────────────────────────────────────────
-world.createRectangle({
+shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
@@ -107,7 +109,18 @@ world.createRectangle({
     gradientType: 'linear',
   },
   transform: { position: { x: 280, y: 80, z: 0 } }
-})
+}))
 label('multi-stop\nrainbow', 280, 150)
+
+world.on('update', (time) => {
+  const scale = 1 + Math.sin(time * 0.002) * 0.2
+  shapes.forEach((obj) => {
+    if (obj) {
+      obj.transform.rotation.z += 0.5
+      obj.transform.scale.x = scale
+      obj.transform.scale.y = scale
+    }
+  })
+})
 
 world.start()
