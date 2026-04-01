@@ -1323,10 +1323,10 @@ export class Renderer {
     const frameIdx = sprite._currentFrame
     const col = frameIdx % sheetCols
     const row = Math.floor(frameIdx / sheetCols)
-    const uvOffsetX = (col * frameWidth) / asset.naturalWidth
-    const uvOffsetY = (row * frameHeight) / asset.naturalHeight
     const uvScaleX = frameWidth / asset.naturalWidth
     const uvScaleY = frameHeight / asset.naturalHeight
+    const uvOffsetX = col * uvScaleX
+    const uvOffsetY = 1.0 - (row + 1) * uvScaleY
 
     // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
     const drawW = w || frameWidth * perspectiveScale

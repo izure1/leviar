@@ -9,18 +9,18 @@ world.camera = camera
 await world.loader.load({
   'logo': '../asset/image/logo.png',
   'video': '../asset/video/sample.mp4',
-  'sprite': '../asset/image/sprite.png',
+  'sprite': '../asset/image/mummy.png',
 })
 
 world.spriteManager.create({
-  name: 'play',
+  name: 'mummy',
   src: 'sprite',
-  frameWidth: 44,
-  frameHeight: 40,
-  frameRate: 10,
+  frameWidth: 256,
+  frameHeight: 256,
+  frameRate: 18,
   loop: true,
   start: 0,
-  end: 10,
+  end: 18,
 })
 
 world.videoManager.create({
@@ -84,7 +84,7 @@ const spr = world.createSprite({
   style: { width: 132, height: 120 },
   transform: { position: getPos(0.2, 0.7), pivot: { x: 0.5, y: 0.5 } }
 })
-spr.play('play')
+spr.play('mummy')
 
 world.createText({
   attribute: { text: 'Sprite (Flip X)' },
