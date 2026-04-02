@@ -101,14 +101,14 @@ world.particleManager.create({
   impulse: 0.15,
   rate: 1,
   lifespan: 1000,
-  interval: 100,
+  interval: 50,
   loop: true,
 })
 
 world.particleManager.create({
   name: 'dust-particle',
   src: 'star',
-  impulse: 0.05,
+  impulse: 0.01,
   rate: 5,
   lifespan: 10000,
   interval: 250,
@@ -122,28 +122,27 @@ world.particleManager.create({
       max: 0.5,
     }
   },
-  spawnX: canvas.width,
-  spawnY: canvas.height,
+  spawnX: canvas.width * 2,
+  spawnY: canvas.height * 2,
   spawnZ: 100,
   loop: true,
 })
 
 const mouseParticle = world.createParticle({
-  strict: true,
   attribute: {
     physics: 'dynamic',
-    gravityScale: 0.1,
+    gravityScale: 3,
   },
   style: {
-    width: 15,
-    height: 15,
+    width: 35,
+    height: 35,
     zIndex: 3,
     blendMode: 'lighter',
   },
   transform: {
     position: { x: 0, y: 0, z: 100 }
   }
-})//.play('mouse-particle')
+}).play('mouse-particle')
 
 const dustParticle = world.createParticle({
   strict: true,
@@ -151,11 +150,12 @@ const dustParticle = world.createParticle({
     physics: 'dynamic',
     density: 1,
     friction: 0,
+    frictionAir: 0,
     gravityScale: 0,
   },
   style: {
-    width: 2,
-    height: 2,
+    width: 5,
+    height: 5,
     zIndex: 3,
     blendMode: 'lighter',
   },

@@ -254,7 +254,7 @@ export class Particle extends LveObject<ParticleAttribute> {
           density: attr.density ?? 0.001,
           friction: attr.friction ?? 0,
           restitution: attr.restitution ?? 0.3,
-          frictionAir: 0.03,
+          frictionAir: attr.frictionAir ?? 0.03,
           collisionFilter: {
             group: attr.collisionGroup ?? -1,
             mask: attr.collisionMask ?? 0xFFFFFFFF,

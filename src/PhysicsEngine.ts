@@ -94,7 +94,7 @@ export class PhysicsEngine {
       density: attr.density ?? 0.001,
       friction: attr.friction ?? 0.1,
       restitution: attr.restitution ?? 0,
-      frictionAir: 0.01,
+      frictionAir: attr.frictionAir ?? 0.01,
       collisionFilter: {
         group: attr.collisionGroup ?? 0,
         mask: attr.collisionMask ?? 0xFFFFFFFF,

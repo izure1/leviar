@@ -47,6 +47,7 @@ export const ATTR_DIRTY_MAP: Readonly<Record<string, DirtyKind[]>> = {
   physics: ['physics'],
   density: ['physics'],
   friction: ['physics'],
+  frictionAir: ['physics'],
   restitution: ['physics'],
   fixedRotation: ['physics'],
   gravityScale: ['physics'],

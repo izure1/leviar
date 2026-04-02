@@ -11,6 +11,7 @@ export interface Attribute {
   physics?: 'dynamic' | 'static' | null
   density?: number
   friction?: number
+  frictionAir?: number
   restitution?: number
   fixedRotation?: boolean
   gravityScale?: number
