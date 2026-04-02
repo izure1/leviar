@@ -34,6 +34,24 @@ export interface Dataset {
 // Style
 // ============================================================
 
+export type BlendMode =
+  | 'source-over'
+  | 'source-in'
+  | 'source-out'
+  | 'source-atop'
+  | 'destination-over'
+  | 'destination-in'
+  | 'destination-out'
+  | 'lighter'
+  | 'copy'
+  | 'xor'
+  | 'multiply'
+  | 'screen'
+  | 'lighten'
+  | 'darken'
+  | 'exclusion'
+  | 'difference'
+
 export interface Style {
   color?: string
   opacity: number
@@ -63,7 +81,7 @@ export interface Style {
   boxShadowOffsetX?: number
   boxShadowOffsetY?: number
   zIndex: number
-  blendMode?: GlobalCompositeOperation
+  blendMode?: BlendMode
   letterSpacing?: number
   gradient?: string
   gradientType?: 'linear' | 'circular'

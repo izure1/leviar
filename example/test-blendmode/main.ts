@@ -1,4 +1,5 @@
 import { World } from '../../src/index.js'
+import type { BlendMode } from '../../src/types.js'
 
 const world = new World()
 const camera = world.createCamera({
@@ -17,10 +18,11 @@ await world.loader.load({
 
 world.setGravity({ x: 0, y: 1 })
 
-const blendModes: any[] = [
-  'source-over', 'lighter', 'multiply', 'screen',
-  'overlay', 'darken', 'lighten', 'color-dodge',
-  'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion'
+const blendModes: BlendMode[] = [
+  'source-over', 'source-in', 'source-out', 'source-atop',
+  'destination-over', 'destination-in', 'destination-out',
+  'lighter', 'copy', 'xor', 'multiply', 'screen',
+  'lighten', 'darken', 'difference', 'exclusion'
 ]
 
 // 중앙 디스플레이 상태 텍스트
@@ -60,18 +62,18 @@ const src = world.createParticle({
   transform: { position: { x: 0, y: -500, z: 0 } }
 }).play('star-anti-gravity')
 
-// 하단에 버튼 라벨 13개 배치
-const cols = 7;
+// 하단에 버튼 라벨 16개 배치
+const cols = 8;
 const xSpace = 150;
 const ySpace = 60;
-const startX = -450;
+const startX = -525;
 const startY = 200;
 
 blendModes.forEach((mode, i) => {
   const col = i % cols;
   const row = Math.floor(i / cols);
   const cx = startX + col * xSpace;
-  const cy = startY + row * ySpace + (col === 3 && row === 1 ? 0 : 0); // 가운데 정렬 맞춤용
+  const cy = startY + row * ySpace;
 
   const btn = world.createText({
     attribute: { text: mode },

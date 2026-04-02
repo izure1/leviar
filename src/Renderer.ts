@@ -755,20 +755,10 @@ export class Renderer {
         srcA = gl.ONE; dstA = gl.ONE;
         break;
       }
-      case 'overlay':
-      case 'color-dodge':
-      case 'color-burn':
-      case 'hard-light':
-      case 'soft-light':
       case 'difference':
       case 'exclusion':
-        if (mode === 'exclusion' || mode === 'difference') {
-          src = gl.ONE_MINUS_DST_COLOR; dst = gl.ONE_MINUS_SRC_COLOR;
-          srcA = gl.ONE_MINUS_DST_COLOR; dstA = gl.ONE_MINUS_SRC_COLOR;
-        } else {
-          src = gl.SRC_ALPHA; dst = gl.ONE_MINUS_SRC_ALPHA;
-          srcA = gl.ONE; dstA = gl.ONE_MINUS_SRC_ALPHA;
-        }
+        src = gl.ONE_MINUS_DST_COLOR; dst = gl.ONE_MINUS_SRC_COLOR;
+        srcA = gl.ONE_MINUS_DST_COLOR; dstA = gl.ONE_MINUS_SRC_COLOR;
         break;
       default:
         break;

@@ -25,6 +25,7 @@ export { Particle } from './objects/Particle.js'
 // Types
 export type {
   Attribute,
+  BlendMode,
   AnimateTarget,
   Dataset,
   DatasetValue,
