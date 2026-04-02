@@ -52,10 +52,10 @@ export interface Style {
   display: 'block' | 'none'
   pointerEvents: boolean
   margin?: string
-  shadowColor?: string
-  shadowBlur?: number
-  shadowOffsetX?: number
-  shadowOffsetY?: number
+  textShadowColor?: string
+  textShadowBlur?: number
+  textShadowOffsetX?: number
+  textShadowOffsetY?: number
   zIndex: number
   blendMode?: GlobalCompositeOperation
   letterSpacing?: number

@@ -18,7 +18,7 @@ window.addEventListener('wheel', (e) => {
 
 // 1. 태양 (최상위 부모)
 const sun = world.createEllipse({
-  style: { color: '#ffcc00', width: 100, height: 100, shadowColor: '#ffcc00', shadowBlur: 30 },
+  style: { color: '#ffcc00', width: 100, height: 100, textShadowColor: '#ffcc00', textShadowBlur: 30 },
   transform: { position: { x: 0, y: 0, z: 0 } }
 }).addChild(
   world.createText({

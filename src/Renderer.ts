@@ -927,7 +927,7 @@ export class Renderer {
     const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null
 
     // content 기반 캐시 키 — 렌더링 결과가 동일한 조건들을 조합
-    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ''}|${style.fontWeight ?? ''}|${style.fontStyle ?? ''}|${style.color ?? ''}|${style.borderColor ?? ''}|${style.borderWidth ?? 0}|${style.textAlign ?? ''}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ''}|${maxH ?? ''}|${style.shadowColor ?? ''}|${style.shadowBlur ?? 0}|${style.shadowOffsetX ?? 0}|${style.shadowOffsetY ?? 0}`
+    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ''}|${style.fontWeight ?? ''}|${style.fontStyle ?? ''}|${style.color ?? ''}|${style.borderColor ?? ''}|${style.borderWidth ?? 0}|${style.textAlign ?? ''}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ''}|${maxH ?? ''}|${style.textShadowColor ?? ''}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`
 
     let entry = this.textCache.get(id)
 
@@ -1052,10 +1052,10 @@ export class Renderer {
     })
 
     // shadow 지원: Canvas 2D에서 그대로 구현
-    const shadowColor = style.shadowColor
-    const shadowBlur = (style.shadowBlur ?? 0) * TEXT_RENDER_SCALE
-    const shadowOffsetX = (style.shadowOffsetX ?? 0) * TEXT_RENDER_SCALE
-    const shadowOffsetY = (style.shadowOffsetY ?? 0) * TEXT_RENDER_SCALE
+    const shadowColor = style.textShadowColor
+    const shadowBlur = (style.textShadowBlur ?? 0) * TEXT_RENDER_SCALE
+    const shadowOffsetX = (style.textShadowOffsetX ?? 0) * TEXT_RENDER_SCALE
+    const shadowOffsetY = (style.textShadowOffsetY ?? 0) * TEXT_RENDER_SCALE
 
     // ── 논리 줄 → word-wrap 렌더 줄 계산 ─────────────────────────────
     interface RenderToken { text: string; span: ReturnType<typeof parseTextMarkup>[number] }

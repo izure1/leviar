@@ -8,7 +8,7 @@ world.camera = camera
 // 1. LveObject.animate() 테스트
 const text = world.createText({
   attribute: { text: 'Move and Fade' },
-  style: { color: '#7ec8e3', zIndex: 1, fontSize: 36, opacity: 0.2, shadowBlur: 10, shadowColor: 'red', shadowOffsetX: 10, shadowOffsetY: 10 },
+  style: { color: '#7ec8e3', zIndex: 1, fontSize: 36, opacity: 0.2, textShadowBlur: 10, textShadowColor: 'red', textShadowOffsetX: 10, textShadowOffsetY: 10 },
   transform: { position: { x: 0, y: 0, z: -100 } },
 })
 
