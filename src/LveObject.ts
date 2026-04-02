@@ -64,6 +64,7 @@ function makeStyle(partial?: Partial<Style>): Style {
     textShadowOffsetY: partial?.textShadowOffsetY,
     boxShadowColor: partial?.boxShadowColor,
     boxShadowBlur: partial?.boxShadowBlur,
+    boxShadowSpread: partial?.boxShadowSpread,
     boxShadowOffsetX: partial?.boxShadowOffsetX,
     boxShadowOffsetY: partial?.boxShadowOffsetY,
     zIndex: partial?.zIndex ?? 0,

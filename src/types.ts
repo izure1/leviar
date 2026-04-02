@@ -58,6 +58,7 @@ export interface Style {
   textShadowOffsetY?: number
   boxShadowColor?: string
   boxShadowBlur?: number
+  boxShadowSpread?: number
   boxShadowOffsetX?: number
   boxShadowOffsetY?: number
   zIndex: number

@@ -27,6 +27,7 @@ world.createRectangle({
 function addBox(x: number, y: number) {
   const pivotX = Math.random()
   const pivotY = Math.random()
+  const color = `hsl(${Math.random() * 360}, 80%, 60%)`
   const box = world.createRectangle({
     attribute: {
       className: 'physics-object box',
@@ -38,10 +39,10 @@ function addBox(x: number, y: number) {
     style: {
       width: 50,
       height: 50,
-      color: `hsl(${Math.random() * 360}, 80%, 60%)`,
-      opacity: 0.9,
-      outlineColor: 'rgb(255, 0, 0)',
-      outlineWidth: 0,
+      color: color,
+      boxShadowColor: color,
+      boxShadowBlur: 0,
+      boxShadowSpread: 0,
     },
     transform: {
       position: { x, y, z: 0 },
@@ -50,11 +51,11 @@ function addBox(x: number, y: number) {
   });
 
   box.on('mouseover', () => {
-    box.animate({ style: { opacity: 1, outlineWidth: 3 } }, 150);
+    box.animate({ style: { boxShadowSpread: 1, boxShadowBlur: 10 } }, 150);
   });
 
   box.on('mouseout', () => {
-    box.animate({ style: { opacity: 0.9, outlineWidth: 0 } }, 150);
+    box.animate({ style: { boxShadowSpread: 0, boxShadowBlur: 0 } }, 150);
   });
 
   box.on('click', (e) => {

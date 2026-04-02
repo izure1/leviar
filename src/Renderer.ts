@@ -430,6 +430,7 @@ export class Renderer {
         uSize: { value: [1, 1] },
         uBoxSize: { value: [1, 1] },
         uBlur: { value: 0 },
+        uSpread: { value: 0 },
         uIsEllipse: { value: 0 },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
@@ -875,12 +876,13 @@ export class Renderer {
     if (!style.boxShadowColor) return
 
     const blur = style.boxShadowBlur ?? 0
+    const spread = style.boxShadowSpread ?? 0
     const offsetX = style.boxShadowOffsetX ?? 0
     const offsetY = style.boxShadowOffsetY ?? 0
     
-    // Quad size should generously contain the blur and origin
-    const quadW = w + blur * 3 + Math.abs(offsetX)
-    const quadH = h + blur * 3 + Math.abs(offsetY)
+    // Quad size should generously contain the blur, spread and origin
+    const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX)
+    const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY)
 
     this._flushBatch()
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
@@ -891,6 +893,7 @@ export class Renderer {
     this.shadowProgram.uniforms['uSize'].value = [quadW, quadH]
     this.shadowProgram.uniforms['uBoxSize'].value = [w, h]
     this.shadowProgram.uniforms['uBlur'].value = blur
+    this.shadowProgram.uniforms['uSpread'].value = spread
     this.shadowProgram.uniforms['uIsEllipse'].value = isEllipse ? 1 : 0
     
     this.shadowProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x + offsetX, y + offsetY, quadW, quadH, 0, baseW ?? w, baseH ?? h)

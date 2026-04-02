@@ -23,6 +23,7 @@ export const shadowFragment = /* glsl */ `
   uniform vec2 uSize;      // Quad size (includes blur padding)
   uniform vec2 uBoxSize;   // Actual object size (w, h)
   uniform float uBlur;
+  uniform float uSpread;
   uniform float uIsEllipse;
   varying vec2 vUV;
 
@@ -48,6 +49,9 @@ export const shadowFragment = /* glsl */ `
     } else {
       d = sdBox(p, radius);
     }
+
+    // Apply shadow spread
+    d -= uSpread;
 
     float alpha = 1.0;
     if (uBlur > 0.0) {
