@@ -68,17 +68,17 @@ export class LveVideo extends LveObject<VideoAttribute> {
   /**
    * VideoManager를 연결합니다.
    */
-  setManager(manager: VideoManager) {
+  __setManager(manager: VideoManager): this {
     this._manager = manager
+    return this
   }
 
   /**
    * 지정한 이름의 비디오 클립을 재생합니다.
-   * setManager()를 먼저 호출해야 합니다.
    */
   play(name: string): this {
     if (!this._manager) {
-      console.warn('[LveVideo] VideoManager가 설정되지 않았습니다. setManager()를 먼저 호출하십시오.')
+      console.warn('[LveVideo] __setManager()를 먼저 호출하십시오.')
       return this
     }
     const clip = this._manager.get(name)

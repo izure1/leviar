@@ -8,7 +8,7 @@ const libOptions = {
   entryPoints: ['src/index.ts'],
   bundle: true,
   format: /** @type {'esm'} */ ('esm'),
-  outfile: 'dist/lve4.js',
+  outfile: 'dist/index.js',
   sourcemap: true,
   target: 'esnext',
   platform: 'browser',
@@ -50,5 +50,5 @@ if (watch) {
     console.error('[lve4] build failed')
     process.exit(1)
   }
-  console.log('[lve4] build complete -> dist/lve4.js')
+  console.log('[lve4] build complete -> dist/index.js')
 }

@@ -78,15 +78,17 @@ export class Particle extends LveObject<ParticleAttribute> {
   /**
    * ParticleManager를 연결합니다.
    */
-  setManager(manager: ParticleManager) {
+  __setManager(manager: ParticleManager): this {
     this._manager = manager
+    return this
   }
 
   /**
    * PhysicsEngine을 연결합니다. strict=true 시 필요합니다.
    */
-  setPhysics(physics: PhysicsEngine) {
+  __setPhysics(physics: PhysicsEngine): this {
     this._physics = physics
+    return this
   }
 
   /**
@@ -94,7 +96,7 @@ export class Particle extends LveObject<ParticleAttribute> {
    */
   play(name: string): this {
     if (!this._manager) {
-      console.warn('[Particle] setManager()를 먼저 호출하십시오.')
+      console.warn('[Particle] __setManager()를 먼저 호출하십시오.')
       return this
     }
     const clip = this._manager.get(name)

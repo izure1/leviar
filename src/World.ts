@@ -457,7 +457,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createVideo(options?: LveObjectOptions): LveVideo {
     const video = new LveVideo(options)
-    video.setManager(this.videoManager)
+    video.__setManager(this.videoManager)
     this._registerObject(video)
     this._trackSortDirty(video)
     this.renderer.markSortDirty()
@@ -466,7 +466,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createSprite(options?: LveObjectOptions): Sprite {
     const sprite = new Sprite(options)
-    sprite.setManager(this.spriteManager)
+    sprite.__setManager(this.spriteManager)
     this._registerObject(sprite)
     this._trackSortDirty(sprite)
     this.renderer.markSortDirty()
@@ -475,8 +475,8 @@ export class World extends EventEmitter<WorldEvents> {
 
   createParticle(options?: ParticleOptions): Particle {
     const particle = new Particle(options)
-    particle.setPhysics(this.physics)
-    particle.setManager(this.particleManager)
+    particle.__setPhysics(this.physics)
+    particle.__setManager(this.particleManager)
     this._registerObject(particle)
     this._trackSortDirty(particle)
     this.renderer.markSortDirty()
@@ -490,8 +490,8 @@ export class World extends EventEmitter<WorldEvents> {
     this.renderer.markSortDirty()
   }
 
-  start() {
-    if (this.rafId != null) return
+  start(): this {
+    if (this.rafId != null) return this
     let prevTime = 0
 
     const loop = (timestamp: number) => {
@@ -503,7 +503,7 @@ export class World extends EventEmitter<WorldEvents> {
       // 렌더링 전 모든 루트 객체(부모 없는 객체)와 카메라의 월드 매트릭스를 계층 구조에 맞게 최신화
       for (const obj of this.objects) {
         if (!obj.parent) {
-          obj.updateMatrixWorld()
+          obj.__updateMatrixWorld()
         }
       }
 
@@ -515,13 +515,15 @@ export class World extends EventEmitter<WorldEvents> {
     }
 
     this.rafId = requestAnimationFrame(loop)
+    return this
   }
 
-  stop() {
+  stop(): this {
     if (this.rafId != null) {
       cancelAnimationFrame(this.rafId)
       this.rafId = null
     }
+    return this
   }
 
   /**

@@ -1,75 +1,111 @@
-# Lve4
+# levia
 
-해당 프로젝트는 WebGL을 이용한 2.5D 렌더링 엔진을 구현하는 프로젝트입니다.
+반갑습니다! **levia**는 WebGL 기술을 활용해 놀라운 시각적 효과를 만들어내는 고성능 2.5D 렌더링 엔진입니다. 복잡한 그래픽 지식이 없어도 누구나 입체감 있는 화면과 살아 움직이는 듯한 물리 효과를 손쉽게 구현할 수 있도록 돕습니다.
 
-패럴랙스 스크롤링을 구현하기 위해 카메라가 있고, 2D 이미지를 3D로 렌더링하는 것이 목표입니다.
+---
 
-카메라는 2D 평면을 바라보지만, 3D 공간에 떠 있는 2D 이미지들을 렌더링합니다.
+## 🎨 핵심 개념 알아보기
 
-카메라의 이동에 따라 2D 이미지들이 3D 공간에서 이동하며, 이를 통해 패럴랙스 스크롤링 효과를 구현합니다.
+levia의 모든 객체(`LveObject`)는 4가지 핵심 모델을 통해 관리됩니다. 각 모델이 어떤 역할을 하는지 함께 살펴볼까요?
 
-## 간단한 사용 방법
+### 1. Attribute (속성)
+객체의 **이름표와 물리적 성격**을 정해줍니다.
+-  **식별**: `id`, `type`, `name`, `className`
+-  **물리**: `physics`, `density`, `friction`, `frictionAir`, `restitution`, `fixedRotation`, `gravityScale`
+-  **충돌**: `collisionGroup`, `collisionMask`, `collisionCategory`
+-  **[상세 설명](docs/attribute.md)**
+
+### 2. Dataset (데이터셋)
+사용자가 직접 정의하는 **똑똑한 데이터 저장소**입니다.
+-  객체마다 필요한 고유 정보를 저장하고, 애니메이션(`animate()`)과 연동해 수치가 자연스럽게 변하도록 만들 수 있습니다.
+-  **[상세 설명](docs/dataset.md)**
+
+### 3. Style (스타일)
+객체의 **매력적인 외형**을 결정합니다.
+-  이미 알고 있는 CSS 방식처럼 `color`, `opacity`, `borderRadius`, `boxShadow` 등을 자유롭게 설정해 보세요.
+-  **[상세 설명](docs/style.md)**
+
+### 4. Transform (변형)
+객체가 **어느 위치에, 어떤 모습으로 놓일지** 결정합니다.
+-  3차원 좌표(`position`), 회전(`rotation`), 크기(`scale`) 및 기준점(`pivot`)을 관리합니다.
+-  Z축 깊이 조절을 통해 멀리 있는 물체는 작게, 가까이 있는 물체는 크게 보여주는 원근감을 지원합니다.
+-  **[상세 설명](docs/transform.md)**
+
+### 5. Method (메서드)
+객체가 수행할 수 있는 **구체적인 행동**을 명령합니다.
+-  **공용**: `animate`, `follow`, `addChild`, `remove`, `applyForce`
+-  **전용**: `canvasToWorld` (Camera), `play` (Video/Sprite)
+-  **[상세 설명](docs/method.md)**
+
+### 6. Event (이벤트)
+월드 안에서 일어나는 **다양한 사건**을 감지합니다.
+-  **사건**: `click`, `mouseover`, `mousedown`, `ended`
+-  **변경**: `cssmodified`, `attrmodified`, `datamodified`
+-  **[상세 설명](docs/event.md)**
+
+---
+
+## 🚀 강력한 기능들
+
+### 🎥 카메라와 원근감
+초점 거리(Focal Length)를 이용해 실제 세상처럼 입체감 있는 월드를 구현합니다.
+-  거리에 따른 자동 크기 변화로 깊이감을 느껴보세요.
+-  화면 클릭 위치를 실제 월드 좌표로 바꾸는 편리한 기능도 제공합니다.
+-  **[상세 설명](docs/camera.md)**
+
+### ⚖️ 물리 시뮬레이션
+간단한 설정만으로 현실적인 물리 반응을 추가할 수 있습니다.
+-  부딪히고 튕겨 나가는 효과를 코드 한 줄로 만들어 보세요.
+-  깊이에 따라 충돌 레이어를 자동으로 나누어주는 똑똑한 시스템이 포함되어 있습니다.
+-  **[상세 설명](docs/physics.md)**
+
+### 🏃 애니메이션 엔진
+객체의 모든 수치를 부드럽게 변화시켜 생동감을 불어넣습니다.
+-  다양한 움직임 효과(Easing)를 골라보세요.
+-  나만의 부드러운 전환 효과를 손쉽게 완성할 수 있습니다.
+-  **[상세 설명](docs/animation.md)**
+
+---
+
+## 🛠️ 바로 시작하기 (Quick Start)
+
+levia를 사용하는 가장 쉬운 방법을 소개합니다.
 
 ```typescript
-import { World } from 'lve4'
+import { World } from 'levia'
 
 const world = new World()
-const loader = world.createLoader()
-
-// load, loading, loaded, error, complete 이벤트가 있습니다.
-// load: 로드 시작
-// loading: 개별 에셋 로드 시작
-// loaded: 개별 에셋 로드 완료
-// error: 개별 에셋 로드 실패
-// complete: 모든 로드가 완료되었을 때
-loader.on('loaded', (assets) => {
-  console.log(assets)
-})
-
-await loader.load({
-  'my-image': 'https://example.com/image.png',
-  'my-video': 'https://example.com/video.mp4',
-  'my-sprite': 'https://example.com/sprite.png',
-  'my-particle': 'https://example.com/particle.png',
-})
-
-// 각 요소는 3D 공간에 배치됩니다.
 const camera = world.createCamera()
-const image = world.createImage({
-  src: 'my-image',
+world.camera = camera
+
+const box = world.createRectangle({
+  attribute: {
+    id: 'main_box',
+    physics: 'dynamic',
+    friction: 0.1
+  },
+  style: {
+    color: '#3498db',
+    width: 100,
+    height: 100,
+    borderRadius: 20
+  },
+  transform: {
+    position: { x: 0, y: 0, z: 0 }
+  }
 })
 
-image.transform.position.x = 100
-image.transform.position.y = 100
-image.transform.position.z = 100
+// 특정 객체를 선택해 멋진 회전 애니메이션을 적용해 보세요!
+const selected = world.select('#main_box')[0]
+selected.animate({
+  style: { opacity: 0.5 },
+  transform: { rotation: { z: '+=360' } }
+}, 1000, 'easeInOutQuad')
 
 world.start()
 ```
 
-## 렌더링 요소
+---
 
-다음 [문서](./docs/object.md)를 확인하십시오.
-
-## 텍스트 요소
-
-다음 [문서](./docs/text.md)를 확인하십시오.
-
-## 스프라이트 요소
-
-다음 [문서](./docs/sprite.md)를 확인하십시오.
-
-## 파티클 요소
-
-다음 [문서](./docs/particle.md)를 확인하십시오.
-
-## 물리엔진
-
-다음 [문서](./docs/physics.md)를 확인하십시오.
-
-## 빌드
-
-빌드는 esbuild를 활용합니다.
-
-## 개발 환경
-
-현재는 canvas2d를 활용하여 개발되고 있으나, 향후 webgl로 변경될 예정입니다. 이를 고려하여 개발하십시오.
+## 📜 라이선스
+MIT License

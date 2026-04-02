@@ -903,14 +903,14 @@ export class Renderer {
     const spread = style.boxShadowSpread ?? 0
     const offsetX = style.boxShadowOffsetX ?? 0
     const offsetY = style.boxShadowOffsetY ?? 0
-    
+
     // Quad size should generously contain the blur, spread and origin
     const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX)
     const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY)
 
     this._flushBatch()
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
-    
+
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor)
     this.shadowProgram.uniforms['uColor'].value = [r, g, b, a]
     this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj._fadeOpacity
@@ -924,7 +924,7 @@ export class Renderer {
     this.shadowProgram.uniforms['uBlur'].value = blur
     this.shadowProgram.uniforms['uSpread'].value = spread
     this.shadowProgram.uniforms['uIsEllipse'].value = isEllipse ? 1 : 0
-    
+
     this.shadowProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x + offsetX, y + offsetY, quadW, quadH, 0, baseW ?? w, baseH ?? h)
     this.shadowProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
@@ -981,7 +981,7 @@ export class Renderer {
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over');
     const { style } = obj
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
-    
+
     this._drawShadow(obj, x, y, w, h, undefined, undefined, true)
 
     const drawEllipse = (ew: number, eh: number, color: string) => {
@@ -1293,7 +1293,7 @@ export class Renderer {
         const bc = tok.span.style.borderColor
         const bw = (tok.span.style.borderWidth ?? 1) * TEXT_RENDER_SCALE
         const ls = (tok.span.style.letterSpacing ?? style.letterSpacing ?? 0) * TEXT_RENDER_SCALE
-        
+
         const tsc = tok.span.style.textShadowColor ?? shadowColor
         const tsb = (tok.span.style.textShadowBlur ?? style.textShadowBlur ?? 0) * TEXT_RENDER_SCALE
         const tsx = (tok.span.style.textShadowOffsetX ?? style.textShadowOffsetX ?? 0) * TEXT_RENDER_SCALE
@@ -1301,7 +1301,7 @@ export class Renderer {
 
         ctx.font = `${fi} ${fw} ${fs}px ${fontFamily}`
         ctx.letterSpacing = `${ls}px`
-        
+
         if (tsc) {
           ctx.shadowColor = tsc
           ctx.shadowBlur = tsb
@@ -1503,7 +1503,7 @@ export class Renderer {
   // ─── Sprite ─────────────────────────────────────────────────────────────
 
   private _drawSprite(sprite: Sprite, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets, timestamp: number) {
-    sprite.tick(timestamp)
+    sprite.__tick(timestamp)
 
     const clip = sprite._clip
     const src = clip?.src
@@ -1688,7 +1688,7 @@ export class Renderer {
     } else if (borderRadius && borderRadius.some(r => r > 0)) {
       ctx.beginPath()
       if (typeof (ctx as any).roundRect === 'function') {
-        ;(ctx as any).roundRect(0, 0, pw, ph, borderRadius)
+        ; (ctx as any).roundRect(0, 0, pw, ph, borderRadius)
       } else {
         // Fallback for older browsers
         const [tl, tr, br, bl] = borderRadius

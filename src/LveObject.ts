@@ -366,7 +366,7 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
    * 객체의 로컬 트랜스폼 및 피벗을 이용해 월드 매트릭스를 재귀적으로 계산 및 갱신합니다.
    * World.ts 의 렌더 루프 전에 루트 노드로부터 호출되어야 합니다.
    */
-  updateMatrixWorld(force: boolean = false) {
+  __updateMatrixWorld(force: boolean = false) {
     const pos = this.transform.position
     const rot = this.transform.rotation
     const scale = this.transform.scale
@@ -391,12 +391,13 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
 
     // 3. 하위 자식 목록에 대해 재귀 갱신 (preserve-3d 구조)
     for (const child of this.children) {
-      child.updateMatrixWorld(force)
+      child.__updateMatrixWorld(force)
     }
   }
 
-  setDataset(key: string, value: DatasetValue) {
+  setDataset(key: string, value: DatasetValue): this {
     this.dataset[key] = value
+    return this
   }
 
   getDataset(key: string): DatasetValue | undefined {
@@ -420,8 +421,8 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
    * 객체에 하나 이상의 클래스를 추가합니다. (공백으로 구분)
    * 이미 존재하는 클래스는 무시됩니다.
    */
-  addClass(classNames: string) {
-    if (!classNames) return
+  addClass(classNames: string): this {
+    if (!classNames) return this
     const currentClasses = (this.attribute.className || '').split(/\s+/).filter(Boolean)
     const newClasses = classNames.split(/\s+/).filter(Boolean)
 
@@ -436,14 +437,15 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
     if (changed) {
       this.attribute.className = currentClasses.join(' ')
     }
+    return this
   }
 
   /**
    * 객체에서 하나 이상의 클래스를 제거합니다. (공백으로 구분)
    * 존재하지 않는 클래스는 무시됩니다.
    */
-  removeClass(classNames: string) {
-    if (!classNames || !this.attribute.className) return
+  removeClass(classNames: string): this {
+    if (!classNames || !this.attribute.className) return this
     const currentClasses = this.attribute.className.split(/\s+/).filter(Boolean)
     const removeClasses = classNames.split(/\s+/).filter(Boolean)
 
@@ -452,49 +454,53 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
     if (currentClasses.length !== newClasses.length) {
       this.attribute.className = newClasses.join(' ')
     }
+    return this
   }
 
   /**
    * 물리 바디에 힘을 적용합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
-  applyForce(force: { x?: number; y?: number }) {
+  applyForce(force: { x?: number; y?: number }): this {
     if (!this._body) {
       console.warn('[LveObject] applyForce: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
-      return
+      return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
       Matter.Body.applyForce(this._body, this._body.position, { x: force.x ?? 0, y: force.y ?? 0 })
     }
+    return this
   }
 
   /**
    * 물리 바디의 속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
-  setVelocity(velocity: { x?: number; y?: number }) {
+  setVelocity(velocity: { x?: number; y?: number }): this {
     if (!this._body) {
       console.warn('[LveObject] setVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
-      return
+      return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
       Matter.Body.setVelocity(this._body, { x: velocity.x ?? this._body.velocity.x, y: velocity.y ?? this._body.velocity.y })
     }
+    return this
   }
 
   /**
    * 물리 바디의 각속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
    * @param angularVelocity 각속도 (라디안/초)
    */
-  setAngularVelocity(angularVelocity: number) {
+  setAngularVelocity(angularVelocity: number): this {
     if (!this._body) {
       console.warn('[LveObject] setAngularVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
-      return
+      return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
       Matter.Body.setAngularVelocity(this._body, angularVelocity)
     }
+    return this
   }
 
   /**
@@ -502,12 +508,13 @@ export abstract class LveObject<T extends Record<string, any> = Record<string, a
    * Matter.js는 매 스텝마다 torque를 소비하므로, 매 프레임 호출하면 지속적인 회전력이 됩니다.
    * @param torque 토크 값 (양수: 시계 방향, 음수: 반시계 방향)
    */
-  applyTorque(torque: number) {
+  applyTorque(torque: number): this {
     if (!this._body) {
       console.warn('[LveObject] applyTorque: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
-      return
+      return this
     }
     this._body.torque += torque
+    return this
   }
 
   private _followTarget?: LveObject

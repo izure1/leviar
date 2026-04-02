@@ -1,33 +1,33 @@
 {
-  "name": "lve4",
-  "version": "1.0.0",
+  "name": "levia",
+  "version": "0.0.1",
   "description": "WebGL 2.5D rendering engine with parallax scrolling",
-  "license": "ISC",
-  "author": "",
+  "license": "MIT",
+  "author": {
+    "email": "admin@izure.org",
+    "name": "izure",
+    "url": "https://izure.org"
+  },
   "type": "module",
-  "main": "./dist/lve4.js",
-  "module": "./dist/lve4.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/lve4.js",
-      "require": "./dist/lve4.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "node ./build/build.mjs",
+    "build": "node ./build/build.mjs && tsc",
     "dev": "node ./build/build.mjs --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
     "@types/matter-js": "^0.20.2",
-    "esbuild": "^0.25.0",
-    "jest": "^30.3.0",
-    "ts-jest": "^29.4.9",
-    "typescript": "^5.0.0"
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "matter-js": "^0.20.0",

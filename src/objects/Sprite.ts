@@ -57,17 +57,17 @@ export class Sprite extends LveObject<SpriteAttribute> {
   /**
    * SpriteManager를 연결합니다.
    */
-  setManager(manager: SpriteManager) {
+  __setManager(manager: SpriteManager): this {
     this._manager = manager
+    return this
   }
 
   /**
    * 지정한 이름의 애니메이션 클립을 재생합니다.
-   * setManager()를 먼저 호출해야 합니다.
    */
   play(name: string): this {
     if (!this._manager) {
-      console.warn('[Sprite] SpriteManager가 설정되지 않았습니다. setManager()를 먼저 호출하십시오.')
+      console.warn('[Sprite] __setManager()를 먼저 호출하십시오.')
       return this
     }
     const clip = this._manager.get(name)
@@ -113,7 +113,7 @@ export class Sprite extends LveObject<SpriteAttribute> {
   /**
    * Renderer에서 매 프레임 호출하여 현재 프레임 인덱스를 업데이트합니다.
    */
-  tick(timestamp: number) {
+  __tick(timestamp: number) {
     if (!this._playing || this._paused || !this._clip) return
 
     const { frameRate, start, end, loop } = this._clip
