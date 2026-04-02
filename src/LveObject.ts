@@ -72,6 +72,7 @@ function makeStyle(partial?: Partial<Style>): Style {
     letterSpacing: partial?.letterSpacing ?? 0,
     gradient: partial?.gradient,
     gradientType: partial?.gradientType,
+    borderRadius: partial?.borderRadius,
   }
 }
 

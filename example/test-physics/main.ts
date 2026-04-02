@@ -43,6 +43,7 @@ function addBox(x: number, y: number) {
       boxShadowColor: color,
       boxShadowBlur: 0,
       boxShadowSpread: 0,
+      borderRadius: '10%',
     },
     transform: {
       position: { x, y, z: 0 },

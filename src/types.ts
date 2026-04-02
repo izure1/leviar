@@ -85,6 +85,7 @@ export interface Style {
   letterSpacing?: number
   gradient?: string
   gradientType?: 'linear' | 'circular'
+  borderRadius?: string | number
 }
 
 // ============================================================

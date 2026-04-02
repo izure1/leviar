@@ -25,11 +25,14 @@ export const shadowFragment = /* glsl */ `
   uniform float uBlur;
   uniform float uSpread;
   uniform float uIsEllipse;
+  uniform vec4 uBorderRadius; // [TR, BR, TL, BL]
   varying vec2 vUV;
 
-  float sdBox(vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+  float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
+    r.xy = (p.x > 0.0) ? r.xy : r.zw;
+    r.x  = (p.y > 0.0) ? r.x  : r.y;
+    vec2 q = abs(p) - b + r.x;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
   }
 
   void main() {
@@ -47,7 +50,7 @@ export const shadowFragment = /* glsl */ `
       vec2 scaledP = p / radius; // Distance to ellipse scaled boundary
       d = (length(scaledP) - 1.0) * min(radius.x, radius.y);
     } else {
-      d = sdBox(p, radius);
+      d = sdRoundedBox(p, radius, uBorderRadius);
     }
 
     // Apply shadow spread

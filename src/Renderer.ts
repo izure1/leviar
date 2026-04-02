@@ -19,6 +19,7 @@ import { textureVertex, textureFragment } from './shaders/texture.js'
 import { instancedVertex, instancedFragment } from './shaders/instanced.js'
 import { shadowVertex, shadowFragment } from './shaders/shadow.js'
 import { parseTextMarkup } from './utils/textMarkup.js'
+import { parseBorderRadius } from './utils/styleUtils.js'
 import { TEXTURE_THROTTLE_FRAMES, TEXTURE_DEBOUNCE_FRAMES } from './dirty.js'
 
 import type { LveObject } from './LveObject.js'
@@ -330,6 +331,7 @@ export class Renderer {
         uColor: { value: [1, 1, 1, 1] },
         uOpacity: { value: 1 },
         uRadius: { value: 0 },
+        uBorderRadius: { value: [0, 0, 0, 0] },
         uSize: { value: [1, 1] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
@@ -428,6 +430,7 @@ export class Renderer {
         uBlur: { value: 0 },
         uSpread: { value: 0 },
         uIsEllipse: { value: 0 },
+        uBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
@@ -810,13 +813,18 @@ export class Renderer {
     program: Program,
     x: number, y: number, w: number, h: number,
     color: string, opacity: number,
-    baseW?: number, baseH?: number
+    baseW?: number, baseH?: number,
+    borderRadius: [number, number, number, number] | null = null
   ) {
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over');
     const [r, g, b, a] = parseCSSColor(color)
     program.uniforms['uColor'].value = [r, g, b, a]
     program.uniforms['uOpacity'].value = opacity
+    if (program.uniforms['uSize']) program.uniforms['uSize'].value = [w, h]
+    if (program.uniforms['uBorderRadius'] && borderRadius) {
+      program.uniforms['uBorderRadius'].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]]
+    }
     program.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, 0, baseW, baseH)
     program.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
@@ -868,7 +876,8 @@ export class Renderer {
     obj: LveObject,
     x: number, y: number, w: number, h: number,
     baseW?: number, baseH?: number,
-    isEllipse: boolean = false
+    isEllipse: boolean = false,
+    borderRadius: [number, number, number, number] | null = null
   ) {
     const { style } = obj
     if (!style.boxShadowColor) return
@@ -890,6 +899,11 @@ export class Renderer {
     this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj._fadeOpacity
     this.shadowProgram.uniforms['uSize'].value = [quadW, quadH]
     this.shadowProgram.uniforms['uBoxSize'].value = [w, h]
+    if (this.shadowProgram.uniforms['uBorderRadius'] && borderRadius && !isEllipse) {
+      this.shadowProgram.uniforms['uBorderRadius'].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]]
+    } else if (this.shadowProgram.uniforms['uBorderRadius']) {
+      this.shadowProgram.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
+    }
     this.shadowProgram.uniforms['uBlur'].value = blur
     this.shadowProgram.uniforms['uSpread'].value = spread
     this.shadowProgram.uniforms['uIsEllipse'].value = isEllipse ? 1 : 0
@@ -907,30 +921,33 @@ export class Renderer {
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
 
     const targetOpacity = style.opacity * obj._fadeOpacity
+    const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0)
 
-    this._drawShadow(obj, x, y, w, h)
+    this._drawShadow(obj, x, y, w, h, undefined, undefined, false, baseRadius)
 
     // outline 먼저 (border 바깥)
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = (style.borderWidth ?? 0)
       const ow = style.outlineWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, targetOpacity, w, h)
+      const rOut = parseBorderRadius(style.borderRadius, w, h, bw + ow)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, targetOpacity, w, h, rOut)
     }
 
     // 테두리 (border)
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth!
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity, w, h)
+      const rBorder = parseBorderRadius(style.borderRadius, w, h, bw)
+      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity, w, h, rBorder)
     }
 
     // 본체 color
     if (style.color) {
-      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h)
+      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius)
     }
 
     // 그라디언트 레이어 (color 위에 덮어씬움)
     if (style.gradient && w > 0 && h > 0) {
-      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', false)
+      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', false, baseRadius)
       if (tex) this._drawTextureMesh(tex, x, y, w, h, targetOpacity)
     }
   }
@@ -1603,8 +1620,10 @@ export class Renderer {
     gradient: string,
     type: 'linear' | 'circular',
     ellipseClip: boolean,
+    borderRadius: [number, number, number, number] | null = null
   ): Texture | null {
-    const cacheKey = `${Math.round(w)}|${Math.round(h)}|${gradient}|${type}|${ellipseClip}`
+    const radiusKey = borderRadius ? borderRadius.join(',') : ''
+    const cacheKey = `${Math.round(w)}|${Math.round(h)}|${gradient}|${type}|${ellipseClip}|${radiusKey}`
     let tex = this._gradientTextureCache.get(cacheKey)
     if (tex) return tex
 
@@ -1622,6 +1641,24 @@ export class Renderer {
     if (ellipseClip) {
       ctx.beginPath()
       ctx.ellipse(pw / 2, ph / 2, pw / 2, ph / 2, 0, 0, Math.PI * 2)
+      ctx.clip()
+    } else if (borderRadius && borderRadius.some(r => r > 0)) {
+      ctx.beginPath()
+      if (typeof (ctx as any).roundRect === 'function') {
+        ;(ctx as any).roundRect(0, 0, pw, ph, borderRadius)
+      } else {
+        // Fallback for older browsers
+        const [tl, tr, br, bl] = borderRadius
+        ctx.moveTo(tl, 0)
+        ctx.lineTo(pw - tr, 0)
+        ctx.quadraticCurveTo(pw, 0, pw, tr)
+        ctx.lineTo(pw, ph - br)
+        ctx.quadraticCurveTo(pw, ph, pw - br, ph)
+        ctx.lineTo(bl, ph)
+        ctx.quadraticCurveTo(0, ph, 0, ph - bl)
+        ctx.lineTo(0, tl)
+        ctx.quadraticCurveTo(0, 0, tl, 0)
+      }
       ctx.clip()
     }
 

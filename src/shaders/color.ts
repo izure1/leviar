@@ -5,11 +5,14 @@
  */
 export const colorVertex = /* glsl */ `
   attribute vec2 position;
+  attribute vec2 uv;
   uniform mat4 uModelMatrix;
   uniform mat4 uViewMatrix;
   uniform mat4 uProjectionMatrix;
+  varying vec2 vUV;
 
   void main() {
+    vUV = uv;
     gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(position, 0.0, 1.0);
   }
 `
@@ -18,15 +21,25 @@ export const colorFragment = /* glsl */ `
   precision highp float;
   uniform vec4 uColor;
   uniform float uOpacity;
-  uniform float uRadius;    // 0 = rectangle, 1 = ellipse (SDF)
+  uniform float uRadius;    // 0 = rectangle, 1 = ellipse (SDF) -- kept for legacy fallback or direct ellipse mapping
+  uniform vec4 uBorderRadius; // [TR, BR, TL, BL]
   uniform vec2 uSize;       // 도형 픽셀 크기 (w, h)
+  varying vec2 vUV;
+
+  float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
+    r.xy = (p.x > 0.0) ? r.xy : r.zw;
+    r.x  = (p.y > 0.0) ? r.x  : r.y;
+    vec2 q = abs(p) - b + r.x;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+  }
 
   void main() {
-    // ellipse: SDF 기반 원형 클리핑
+    vec2 p = (vUV - 0.5) * uSize;
     if (uRadius > 0.5) {
-      // fragment 좌표는 uv로 대신 계산
-      // (fragment 좌표를 NDC → [-0.5, 0.5] 로 매핑하기 위해 vUV 사용)
-      // ellipse 는 별도 uv 기반 SDF 사용 — ellipseVertex/ellipseFragment 에서 처리
+      // 타원은 ellipseFragment 에서 별도로 처리되나 혹시 모를 폴백 대비
+    } else {
+      float d = sdRoundedBox(p, uSize * 0.5, uBorderRadius);
+      if (d > 0.0) discard;
     }
     gl_FragColor = vec4(uColor.rgb, uColor.a * uOpacity);
   }
