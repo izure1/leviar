@@ -60,15 +60,16 @@ const padding = 20
 const textWidth = talkBoxW - (padding * 2)
 const textHeight = talkBoxH - padding
 
-const dialogText = `<style color="#ffb570ff" borderWidth="1" borderColor="#ffffffff" fontSize="24" fontWeight="600">주인공</style>\n\n<style color="#dddddd" fontSize="16" lineHeight="1.5">이곳은 대사창입니다.\ncalcDepthRatio를 사용해 캔버스를 꽉 채우고,\ngradient를 주어 비주얼 노벨 느낌을 구현했습니다.</style>`
+const dialogText = `<style color="#ffb570ff" borderWidth="1" fontSize="20" fontWeight="600" letterSpacing="3">주인공</style>\n\n<style color="#dddddd" fontSize="16" lineHeight="1.5">이곳은 대사창입니다.\n<style color="#ffb570ff" fontSize="16" letterSpacing="1">calcDepthRatio</style>를 사용해 캔버스를 꽉 채우고,\ngradient를 주어 비주얼 노벨 느낌을 구현했습니다.</style>`
 const dialogue = world.createText({
   attribute: {
     text: dialogText
   },
   style: {
+    fontFamily: 'sans-serif, arial',
     width: textWidth,
     height: textHeight,
-    zIndex: 2
+    zIndex: 2,
   },
   transform: {
     pivot: { x: 0, y: 1 },

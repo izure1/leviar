@@ -71,12 +71,6 @@ world.createText({
   transform: { position: { x: -100, y: 60, z: 200 } },
 })
 
-camera.addChild(world.createText({
-  attribute: { text: 'Test' },
-  style: { color: '#ffffffff', opacity: 1, fontSize: 54, fontFamily: 'Segoe UI, sans-serif', borderWidth: 5, borderColor: 'rgba(17, 0, 255, 1)', textAlign: 'center' },
-  transform: { position: { x: 0, y: 0, z: 100 } },
-}))
-
 window.addEventListener('mousemove', (e) => {
   if (!world.camera) return
   const cx = window.innerWidth / 2

@@ -25,6 +25,8 @@ world.createRectangle({
 })
 
 function addBox(x: number, y: number) {
+  const pivotX = Math.random()
+  const pivotY = Math.random()
   const box = world.createRectangle({
     attribute: {
       className: 'physics-object box',
@@ -42,7 +44,8 @@ function addBox(x: number, y: number) {
       outlineWidth: 0,
     },
     transform: {
-      position: { x, y, z: 0 }
+      position: { x, y, z: 0 },
+      pivot: { x: pivotX, y: pivotY },
     }
   });
 
