@@ -9503,8 +9503,6 @@ var DELEGATED_SETTERS4 = {
 };
 var GRAVITY = 15e-5;
 var Particle = class extends LveObject {
-  /** strict 모드 여부 */
-  strict;
   _manager = null;
   _clipName = null;
   _clip = null;
@@ -9520,7 +9518,6 @@ var Particle = class extends LveObject {
   _paused = false;
   constructor(options) {
     super("particle", options, Object.keys(DELEGATED_GETTERS4));
-    this.strict = options?.strict ?? false;
   }
   /**
    * ParticleManager를 연결합니다.
@@ -9657,7 +9654,7 @@ var Particle = class extends LveObject {
         born: timestamp,
         lifespan: clip.lifespan
       };
-      if (this.strict && this._physics) {
+      if (this.attribute.strictPhysics && this._physics) {
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4;
         const bodyOpts = {
           density: attr.density ?? 1e-3,

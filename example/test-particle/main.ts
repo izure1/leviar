@@ -103,20 +103,18 @@ const rightX = CX / 2
 
 // strict 에미터 ① — 중앙
 const pStrict = world.createParticle({
-  strict: true,
   style: { width: 18, height: 18, blendMode: 'lighter' },
   transform: { position: { x: rightX, y: -60, z: Z } },
-  attribute: { restitution: 0.6, friction: 0.05, density: 0.002, gravityScale: 0.8, collisionCategory: 0x0001, collisionMask: 0x0002 },
+  attribute: { strictPhysics: true, restitution: 0.6, friction: 0.05, density: 0.002, gravityScale: 0.8, collisionCategory: 0x0001, collisionMask: 0x0002 },
 })
 pStrict.attribute.src = 'star-strict'
 pStrict.play()
 
 // strict 에미터 ② — 오른쪽
 const pStrictFast = world.createParticle({
-  strict: true,
   style: { width: 12, height: 12, blendMode: 'lighter' },
   transform: { position: { x: rightX + 100, y: 30, z: Z } },
-  attribute: { restitution: 0.4, friction: 0.1, density: 0.001, gravityScale: 1.2, collisionCategory: 0x0001, collisionMask: 0x0002 },
+  attribute: { strictPhysics: true, restitution: 0.4, friction: 0.1, density: 0.001, gravityScale: 1.2, collisionCategory: 0x0001, collisionMask: 0x0002 },
 })
 pStrictFast.attribute.src = 'star-strict-fast'
 pStrictFast.play()

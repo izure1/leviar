@@ -5,7 +5,7 @@
 ![platform](https://img.shields.io/badge/platform-WebGL-orange?style=for-the-badge)
 
 <p align="center">
-  <img src="docs/assets/logo.png" width="300" alt="levia logo" />
+  <img src="docs/assets/logo.png" width="600" alt="levia logo" style="border-radius: 50% 10%" />
 </p>
 
 ---

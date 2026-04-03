@@ -188,8 +188,8 @@ mouseParticle.attribute.src = 'mouse-particle'
 mouseParticle.play()
 
 const dustParticle = world.createParticle({
-  strict: true,
   attribute: {
+    strictPhysics: true,
     physics: 'dynamic',
     density: 1,
     friction: 0,

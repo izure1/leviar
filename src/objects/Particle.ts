@@ -6,6 +6,11 @@ import Matter from 'matter-js'
 
 export interface ParticleAttribute {
   src?: string
+  /**
+   * true이면 matter-js 기반 물리를 각 파티클 인스턴스에 적용합니다.
+   * false(기본)이면 내부 velocity 시뮬레이션을 사용합니다.
+   */
+  strictPhysics?: boolean
 }
 
 const DELEGATED_GETTERS: Record<string, (self: Particle) => any> = {
@@ -37,11 +42,6 @@ const DELEGATED_SETTERS: Record<string, (self: Particle, value: any) => void> = 
 export interface ParticleOptions<
   D extends Record<string, any> = Record<string, any>
 > extends LveObjectOptions<ParticleAttribute, D> {
-  /**
-   * true이면 matter-js 기반 물리를 각 파티클 인스턴스에 적용합니다.
-   * false(기본)이면 내부 velocity 시뮬레이션을 사용합니다.
-   */
-  strict?: boolean
 }
 
 export interface ParticleInstance {
@@ -80,8 +80,6 @@ const GRAVITY = 0.00015 // px/ms² (내부 시뮬레이션용 중력 가속도)
 export class Particle<
   D extends Record<string, any> = Record<string, any>
 > extends LveObject<ParticleAttribute, D> {
-  /** strict 모드 여부 */
-  readonly strict: boolean
 
   private _manager: ParticleManager | null = null
   private _clipName: string | null = null
@@ -102,7 +100,6 @@ export class Particle<
 
   constructor(options?: ParticleOptions<D>) {
     super('particle', options, Object.keys(DELEGATED_GETTERS))
-    this.strict = options?.strict ?? false
   }
 
   /**
@@ -270,7 +267,7 @@ export class Particle<
         lifespan: clip.lifespan,
       }
 
-      if (this.strict && this._physics) {
+      if (this.attribute.strictPhysics && this._physics) {
         // strict 모드: 스폰 오프셋을 적용한 world 좌표에 바디 생성
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4
         const bodyOpts: any = {

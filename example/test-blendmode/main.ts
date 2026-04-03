@@ -56,8 +56,7 @@ world.particleManager.create({
 })
 
 const src = world.createParticle({
-  strict: true,
-  attribute: { gravityScale: 0.15, friction: 0.005, density: 0.001 },
+  attribute: { strictPhysics: true, gravityScale: 0.15, friction: 0.005, density: 0.001 },
   style: { blendMode: 'source-over', zIndex: 1 },
   transform: { position: { x: 0, y: -500, z: 0 } }
 })
