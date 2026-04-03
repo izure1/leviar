@@ -5,114 +5,134 @@
 ---
 
 ## 📋 1. 객체 공용 메서드 (Common Methods)
-
 모든 객체(`LveObject`)가 공통적으로 사용할 수 있는 핵심 기능들입니다.
 
 ### ✨ 상태 및 시각 효과
--  **animate(target: AnimateTarget, duration: number, easing: EasingType = 'linear'): Animation**
-   객체의 속성을 목표값까지 부드럽게 변화시킵니다.
-   - `target`: 변경할 속성(style, transform, dataset)과 목표값을 담은 객체입니다. `+=`, `-=` 등의 연산자를 사용할 수 있습니다.
-   - `duration`: 애니메이션이 지속될 시간(ms)입니다.
-   - `easing`: 움직임의 가속도 조절 함수 이름입니다. (기본값: `'linear'`)
-   - **반환값**: 제어 가능한 `Animation` 객체를 반환합니다.
 
--  **fadeIn(durationMs: number, easing?: EasingType): FadeTransition**
-   객체를 투명도 0에서 1로 서서히 나타나게 합니다.
-   - **작동 방식**: 호출 즉시 `style.display`를 `'block'`으로 설정한 후 투명도 애니메이션을 시작합니다.
-   - **중요**: 이때의 투명도는 `style.opacity` 값을 최대치(100%)로 보고 계산합니다. 예를 들어 `style.opacity`가 `0.5`라면, 최종적으로는 `0.5` 만큼만 밝아집니다.
-   - **반환값**: `FadeTransition` 객체를 반환합니다.
+#### `animate(target, duration, easing)`
+객체의 속성을 목표값까지 부드럽게 변화시킵니다.
 
--  **fadeOut(durationMs: number, easing?: EasingType): FadeTransition**
-   객체를 투명도 1에서 0으로 서서히 사라지게 합니다.
-   - **작동 방식**: 애니메이션이 완료되면 `style.display`를 `'none'`으로 자동 전환합니다. 이 시점부터는 물리 엔진의 충돌 계산에서도 제외됩니다.
-   - **중요**: 현재 설정된 `style.opacity` 값에서부터 서서히 투명해집니다.
-   - **반환값**: `FadeTransition` 객체를 반환합니다.
+| 파라미터 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `target` | `AnimateTarget` | - | 변경할 속성(style, transform, dataset)과 목표값입니다. `+=`, `-=` 사용 가능. |
+| `duration` | `number` | - | 애니메이션 지속 시간 (ms) |
+| `easing` | `EasingType` | `'linear'` | 가속도 조절 함수 이름 |
 
--  **remove(options?: { follower?: boolean; child?: boolean }): this**
-   객체를 월드와 메모리에서 안전하게 제거합니다.
-   - `options.child`: `true`로 설정하면 모든 자식 객체도 함께 제거합니다. (기본값: `false`)
-   - `options.follower`: `true`로 설정하면 자신을 따라다니는 객체(`follow`)들도 함께 제거합니다. (기본값: `false`)
-   - **부수 효과**: 월드에서 제외됨과 동시에 물리 바디도 삭제됩니다.
+- **반환값**: 제어 가능한 `Animation` 객체
+
+#### `fadeIn(durationMs, easing)`
+객체를 투명도 0에서 1로 서서히 나타나게 합니다.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `durationMs` | `number` | - | 애니메이션 지속 시간 (ms) |
+| `easing` | `EasingType` | - | 가속도 조절 함수 이름 |
+
+- **작동 방식**: 호출 즉시 `style.display`를 `'block'`으로 설정 후 투명도 애니메이션 시작.
+- **반환값**: `FadeTransition` 객체
+
+#### `fadeOut(durationMs, easing)`
+객체를 투명도 1에서 0으로 서서히 사라지게 합니다.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `durationMs` | `number` | - | 애니메이션 지속 시간 (ms) |
+| `easing` | `EasingType` | - | 가속도 조절 함수 이름 |
+
+- **작동 방식**: 완료 후 `style.display`를 `'none'`으로 전환하며 물리 계산에서 제외.
+- **반환값**: `FadeTransition` 객체
+
+#### `remove(options)`
+객체를 월드와 메모리에서 안전하게 제거합니다.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `options.child` | `boolean` | `false` | `true` 시 모든 자식 객체도 함께 제거 |
+| `options.follower` | `boolean` | `false` | `true` 시 나를 따라다니는 객체(`follow`)들도 제거 |
+
+- **반환값**: `this` (메서드 체이닝 지원)
 
 ### 🏷️ 클래스 및 상태 확인
--  **hasClass(classNames: string): boolean**
-   객체가 특정 클래스 이름을 가지고 있는지 확인합니다. 공백으로 구분하여 여러 개를 동시에 체크할 수 있으며, 모두 포함하고 있을 때만 `true`를 반환합니다.
--  **addClass(classNames: string): this**
-   객체에 하나 이상의 클래스 이름을 추가합니다. 이미 존재하는 이름은 중복 추가되지 않습니다.
--  **removeClass(classNames: string): this**
-   객체에서 하나 이상의 클래스 이름을 제거합니다.
+
+#### `hasClass(classNames)` / `addClass(classNames)` / `removeClass(classNames)`
+객체의 클래스 목록을 관리합니다.
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `hasClass` | `string` | `boolean` | 특정 클래스 포함 여부 확인 (공백 구분 다중 체크 가능) |
+| `addClass` | `string` | `this` | 클래스 추가 (중복 시 추가되지 않음) |
+| `removeClass` | `string` | `this` | 클래스 제거 |
 
 ### ⛓️ 계층 구조 (Hierarchy)
--  **addChild(child: LveObject): this**
-   다른 객체를 자식으로 등록합니다.
-   - **작동 방식**: 자식 객체는 부모의 위치, 회전, 크기 변환(Matrix)을 그대로 상속받습니다. 이미 다른 부모가 있다면 자동으로 기존 연결을 끊고 이동합니다.
--  **removeChild(child: LveObject): this**
-   지정한 자식 객체를 해제합니다. 해제된 자식은 더 이상 부모의 움직임을 따르지 않습니다.
--  **removeFromParent(): this**
-   현재 부모 객체로부터 독립합니다.
+
+#### `addChild(child)` / `removeChild(child)` / `removeFromParent()`
+객체 간의 부모-자식 관계를 관리합니다.
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `addChild` | `LveObject` | `this` | 자식으로 추가. 부모의 변환(Matrix)을 상속받음. |
+| `removeChild` | `LveObject` | `this` | 지정한 자식 객체 해제. |
+| `removeFromParent`| - | `this` | 현재 부모로부터 독립. |
 
 ### 👣 추적 (Following)
--  **follow(target: LveObject, offset?: { x?: number, y?: number, z?: number }): this**
-   다른 객체를 일정 거리를 두고 실시간으로 따라다니게 합니다.
-   - **작동 방식**: 타겟 객체의 위치 변경 이벤트를 구독하여 매 프레임 위치를 동기화합니다. 자식 관계(addChild)와 달리 부모의 회전이나 크기 변화에는 영향을 받지 않습니다.
--  **unfollow(): this**
-   추적 동작을 중단합니다.
--  **kick(follower: LveObject): this**
-   나를 따라다니고 있는 특정 객체와의 연결을 끊어냅니다.
--  **get following(): LveObject | undefined** (Getter)
-   현재 내가 누구를 따라다니고 있는지 확인합니다.
--  **get followers(): LveObject[]** (Getter)
-   나를 따라다니고 있는 객체들의 목록을 확인합니다.
+
+#### `follow(target, offset)`
+다른 객체를 일정 거리를 두고 실시간으로 따라다니게 합니다.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `target` | `LveObject` | - | 따라다닐 대상 객체 |
+| `offset` | `{x?, y?, z?}` | - | 대상과의 간격 좌표 |
+
+- **반환값**: `this`
+
+#### `unfollow()` / `kick(follower)`
+추적 관계를 해제합니다.
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `unfollow` | - | `this` | 현재 대상을 따라가는 동작 중단. |
+| `kick` | `LveObject` | `this` | 나를 따라다니는 특정 객체와의 연결 해제. |
+
+- **Getter**: `following` (내가 따라가는 대상), `followers` (나를 따라오는 목록)
 
 ### ⚖️ 물리 엔진 제어 (Physics)
-*이 메서드들은 `attribute.physics`가 설정된 동적/정적 객체에서만 유효합니다.*
--  **applyForce(force: { x?: number, y?: number }): this**
-   객체의 중심에 특정 방향으로 힘을 가합니다. 질량에 따라 가속도가 결정됩니다.
--  **setVelocity(velocity: { x?: number, y?: number }): this**
-   현재 속도를 무시하고 즉시 새로운 속도로 설정합니다. 인자를 생략하면 현재 속도를 유지합니다.
--  **setAngularVelocity(angularVelocity: number): this**
-   회전 속도(라디안/초)를 즉시 설정합니다.
--  **applyTorque(torque: number): this**
-   회전하는 힘(토크)을 가합니다.
+*이 메서드들은 `attribute.physics`가 설정된 객체에서만 유효합니다.*
+
+| 메서드 | 파라미터 | 설명 |
+| :--- | :--- | :--- |
+| `applyForce` | `force: {x?, y?}` | 객체 중심에 특정 방향으로 힘을 가함. |
+| `setVelocity` | `velocity: {x?, y?}` | 무시하고 즉시 새로운 속도로 설정. |
+| `setAngularVelocity` | `angularVelocity: number` | 회전 속도(라디안/초) 설정. |
+| `applyTorque` | `torque: number` | 회전하는 힘(토크)을 가함. |
 
 ---
 
 ## 📋 2. 객체별 고유 메서드 (Specific Methods)
 
 ### 📸 Camera 전용
--  **canvasToWorld(x: number, y: number, targetZ?: number): { x: number, y: number, z: number }**
-   화면상의 한 점(픽셀 좌표)이 실제 월드의 어떤 좌표에 해당하는지 계산합니다.
-   - `targetZ`: 투영하고자 하는 심도입니다. 생략 시 카메라의 초점이 1:1로 맺히는 심도를 사용합니다.
--  **canvasToLocal(x: number, y: number, targetZ?: number): { x: number, y: number, z: number }**
-   화면 좌표를 카메라 내부의 로컬 좌표계로 변환합니다. UI 요소를 카메라 전면에 배치할 때 유용합니다.
--  **calcDepthRatio(targetZ: number, value: number): number**
-   특정 심도(`targetZ`)에서 특정 픽셀 크기(`value`)로 보이게 하려면 실제 객체 크기를 얼마로 설정해야 하는지 계산해 줍니다.
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `canvasToWorld` | `x, y, targetZ?` | `{x, y, z}` | 화면 픽셀 좌표를 월드 좌표로 변환. |
+| `canvasToLocal` | `x, y, targetZ?` | `{x, y, z}` | 화면 좌표를 카메라 로컬 좌표계로 변환. |
+| `calcDepthRatio` | `targetZ, value` | `number` | 특정 심도에서 특정 픽셀 크기로 보이기 위한 객체 크기 계산. |
 
 ### 🎬 재생 제어 (Video / Sprite / Particle)
--  **play(): this**
-   재생을 시작하거나 일시정지된 상태를 해제합니다.
-   - **사용법**: `attribute.src`로 재생할 리소스/클립을 먼저 지정한 후 매개변수 없이 호출하십시오.
-   - **LveImage**: 이미지 객체에는 `play` 메서드가 없습니다. `attribute.src = '...'` 형태로 수정만 해도 즉시 반영됩니다.
--  **pause(): this**
-   재생을 일시정지합니다. 이어서 재생하려면 `play()`를 다시 호출하십시오.
--  **stop(): this**
-   재생을 완전히 정지합니다.
-   - **Video / Sprite**: 재생이 정지되며 **동시에 재생 지점이 처음(`0` 또는 `start` 프레임)으로 초기화**됩니다.
-   - **Particle**: 새로운 파티클 에미션이 중단됩니다. (단, 이미 생성되어 날아가고 있는 파티클은 수명이 다할 때까지 유지됩니다.)
+
+| 메서드 | 반환값 | 설명 |
+| :--- | :--- | :--- |
+| `play()` | `this` | 재생 시작 또는 일시정지 해제. |
+| `pause()` | `this` | 재생 일시정지. |
+| `stop()` | `this` | 재생 정지 및 초기화 (Video/Sprite는 처음으로, Particle은 생성 중단). |
 
 ---
 
 ## 📋 3. 월드 메서드 (World Methods)
 
-월드 전체의 생명주기와 객체들을 관리하는 `World` 클래스의 메서드입니다.
+| 메서드 | 파라미터 | 설명 |
+| :--- | :--- | :--- |
+| `create[Type]` | `options?` | `Image`, `Video`, `Rectangle` 등 신규 객체 생성 및 등록. |
+| `select` | `selector` | CSS 선택자 기반 복합 검색. (`.class`, `[attr-key=value]`, `[data-key=value]`) |
+| `start()` / `stop()` | - | 월드 렌더링 및 물리 시뮬레이션 시작/중단. |
 
--  **createImage / createVideo / createRectangle / createEllipse / createText / createSprite / createParticle / createCamera (options?): LveObject**
-   새로운 타입의 객체를 생성하고 월드에 자동으로 등록합니다. 각 메서드는 생성된 구체적인 객체 인스턴스(예: `createImage`는 `LveImage`)를 반환합니다. 초기 속성을 담은 `options` 객체는 선택사항입니다.
--  **select(selector: string): LveObject[]**
-   CSS 스타일 선택자를 사용해 월드 내의 객체들을 찾으며 속성과 클래스를 잇는 **복합 검색**을 지원합니다.
-   - Class 검색: `.className` (예: `.active`, 여러 개인 경우 `.student.leader` 로 점표기법 체이닝)
-   - Attribute 검색: `[attr-key=value]` (예: `[attr-id="hero"]`, `[attr-physics=true]`)
-   - Dataset 검색: `[data-key=value]` (예: `[data-hp=100]`, 값 입력시 따옴표 여부에 맞춰 부울/숫자로 자동 파싱됨)
-   - 복합 검색 예제: `world.select('.student.leader[data-hp=100][attr-id="asdf"]')`
--  **start(): this** / **stop(): this**
-   월드의 렌더링 루프와 물리 엔진 시뮬레이션을 시작하거나 멈춥니다.

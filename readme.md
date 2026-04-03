@@ -1,111 +1,85 @@
-# levia
+# levia Engine
+## High-Performance 2.5D Rendering Engine for WebGL
 
-반갑습니다! **levia**는 WebGL 기술을 활용해 놀라운 시각적 효과를 만들어내는 고성능 2.5D 렌더링 엔진입니다. 복잡한 그래픽 지식이 없어도 누구나 입체감 있는 화면과 살아 움직이는 듯한 물리 효과를 손쉽게 구현할 수 있도록 돕습니다.
+![license](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![platform](https://img.shields.io/badge/platform-WebGL-orange?style=for-the-badge)
 
----
-
-## 🎨 핵심 개념 알아보기
-
-levia의 모든 객체(`LveObject`)는 4가지 핵심 모델을 통해 관리됩니다. 각 모델이 어떤 역할을 하는지 함께 살펴볼까요?
-
-### 1. Attribute (속성)
-객체의 **이름표와 물리적 성격**을 정해줍니다.
--  **식별**: `id`, `type`, `name`, `className`
--  **물리**: `physics`, `density`, `friction`, `frictionAir`, `restitution`, `fixedRotation`, `gravityScale`
--  **충돌**: `collisionGroup`, `collisionMask`, `collisionCategory`
--  **[상세 설명](docs/attribute.md)**
-
-### 2. Dataset (데이터셋)
-사용자가 직접 정의하는 **똑똑한 데이터 저장소**입니다.
--  객체마다 필요한 고유 정보를 저장하고, 애니메이션(`animate()`)과 연동해 수치가 자연스럽게 변하도록 만들 수 있습니다.
--  **[상세 설명](docs/dataset.md)**
-
-### 3. Style (스타일)
-객체의 **매력적인 외형**을 결정합니다.
--  이미 알고 있는 CSS 방식처럼 `color`, `opacity`, `borderRadius`, `boxShadow` 등을 자유롭게 설정해 보세요.
--  **[상세 설명](docs/style.md)**
-
-### 4. Transform (변형)
-객체가 **어느 위치에, 어떤 모습으로 놓일지** 결정합니다.
--  3차원 좌표(`position`), 회전(`rotation`), 크기(`scale`) 및 기준점(`pivot`)을 관리합니다.
--  Z축 깊이 조절을 통해 멀리 있는 물체는 작게, 가까이 있는 물체는 크게 보여주는 원근감을 지원합니다.
--  **[상세 설명](docs/transform.md)**
-
-### 5. Method (메서드)
-객체가 수행할 수 있는 **구체적인 행동**을 명령합니다.
--  **공용**: `animate`, `follow`, `addChild`, `remove`, `applyForce`
--  **전용**: `canvasToWorld` (Camera), `play` (Video/Sprite)
--  **[상세 설명](docs/method.md)**
-
-### 6. Event (이벤트)
-월드 안에서 일어나는 **다양한 사건**을 감지합니다.
--  **사건**: `click`, `mouseover`, `mousedown`, `ended`
--  **변경**: `cssmodified`, `attrmodified`, `datamodified`
--  **[상세 설명](docs/event.md)**
+<p align="center">
+  <img src="docs/assets/logo.png" width="300" alt="levia logo" />
+</p>
 
 ---
 
-## 🚀 강력한 기능들
-
-### 🎥 카메라와 원근감
-초점 거리(Focal Length)를 이용해 실제 세상처럼 입체감 있는 월드를 구현합니다.
--  거리에 따른 자동 크기 변화로 깊이감을 느껴보세요.
--  화면 클릭 위치를 실제 월드 좌표로 바꾸는 편리한 기능도 제공합니다.
--  **[상세 설명](docs/camera.md)**
-
-### ⚖️ 물리 시뮬레이션
-간단한 설정만으로 현실적인 물리 반응을 추가할 수 있습니다.
--  부딪히고 튕겨 나가는 효과를 코드 한 줄로 만들어 보세요.
--  깊이에 따라 충돌 레이어를 자동으로 나누어주는 똑똑한 시스템이 포함되어 있습니다.
--  **[상세 설명](docs/physics.md)**
-
-### 🏃 애니메이션 엔진
-객체의 모든 수치를 부드럽게 변화시켜 생동감을 불어넣습니다.
--  다양한 움직임 효과(Easing)를 골라보세요.
--  나만의 부드러운 전환 효과를 손쉽게 완성할 수 있습니다.
--  **[상세 설명](docs/animation.md)**
+**levia**는 WebGL의 강력한 성능을 기반으로, 복잡한 3D 수식 없이도 압도적인 **2.5D 시각 효과**와 **현실적인 물리 엔진**을 구현할 수 있는 모던 렌더링 엔진입니다.
 
 ---
 
-## 🛠️ 바로 시작하기 (Quick Start)
+> [!IMPORTANT]
+> ### 💎 핵심 철학: 객체 제어의 원칙 (Attributes First)
+> 레비아 엔진은 **속성(Attribute/Style/Transform)을 직접 수정하는 방식**을 가장 직관적이고 효율적인 제어 방식으로 정의합니다. 메서드는 속성만으로 표현하기 어려운 복잡한 물리 연작용이나 애니메이션 트랜지션을 보존하기 위해 존재하는 강력한 서포터입니다.
 
-levia를 사용하는 가장 쉬운 방법을 소개합니다.
+---
+
+## ✨ 왜 levia인가요?
+
+| 🚀 성능 (Performance) | ⚖️ 물리 (Physics) | 🎬 연출 (Dynamics) |
+| :--- | :--- | :--- |
+| **WebGL 기반 최적화**: 수천 개의 객체를 부드럽게 렌더링하는 인스턴싱 기술 적용. | **Z-Isolation**: 심도에 따른 지능적 충돌 레이어 분리 시스템 제공. | **34종 이징(Easing)**: 어떤 속성이든 살아 움직이게 만드는 애니메이션 엔진. |
+
+---
+
+## 🏗️ 핵심 아키텍처
+
+레비아 엔진은 객체를 6가지 명확한 레이어로 구분하여 정밀하게 제어합니다.
+
+-  🏷️ **[Attribute](docs/attribute.md)**: 객체의 ID, 물리 특성 및 타입을 정의하는 식별 계층.
+-  🎨 **[Style](docs/style.md)**: CSS 기반의 친숙한 외형 디자인 (BorderRadius, Shadow 등).
+-  📐 **[Transform](docs/transform.md)**: 3D 월드 상의 위치, 회전, 크기 및 부모-자식 계층 관리.
+-  📦 **[Dataset](docs/dataset.md)**: 애니메이션과 연계되는 지능적 사용자 데이터 저장소.
+-  🛠️ **[Method](docs/method.md)**: `animate`, `follow`, `applyForce` 등 구체적 동작 명령.
+-  🔔 **[Event](docs/event.md)**: 상호작용 및 변화를 감지하는 실시간 이벤트 시스템.
+
+---
+
+## ⚡ 빠른 시작 (Quick Start)
+
+단 몇 줄의 코드로 입체감 있는 세계를 창조하세요.
 
 ```typescript
 import { World } from 'levia'
 
 const world = new World()
-const camera = world.createCamera()
+const camera = world.createCamera({ attribute: { focalLength: 150 } })
 world.camera = camera
 
+// 화려한 상자 하나를 월드 중앙에 배치합니다.
 const box = world.createRectangle({
-  attribute: {
-    name: 'main_box',
-    physics: 'dynamic',
-    friction: 0.1
+  attribute: { name: 'hero_box', physics: 'dynamic' },
+  style: { 
+    color: '#3498db', width: 100, height: 100, 
+    borderRadius: 15, boxShadowBlur: 20 
   },
-  style: {
-    color: '#3498db',
-    width: 100,
-    height: 100,
-    borderRadius: 20
-  },
-  transform: {
-    position: { x: 0, y: 0, z: 0 }
-  }
+  transform: { position: { x: 0, y: 0, z: 0 } }
 })
 
-// 특정 객체를 선택해 멋진 회전 애니메이션을 적용해 보세요!
-const selected = world.select('[attr-name="main_box"]')[0]
-selected.animate({
-  style: { opacity: 0.5 },
+// 속성을 직접 수정하여 회전시키며 투명하게 만드는 애니메이션!
+box.animate({
+  style: { opacity: 0.3 },
   transform: { rotation: { z: '+=360' } }
-}, 1000, 'easeInOutQuad')
+}, 1500, 'easeInOutBack')
 
 world.start()
 ```
 
 ---
 
-## 📜 라이선스
-MIT License
+## 🎥 더 깊이 알아보기
+
+-  📸 **[카메라와 원근감](docs/camera.md)**: 초점 거리와 깊이에 따른 시각적 깊이감 제어.
+-  ⚖️ **[물리 엔진 활용](docs/physics.md)**: 현실적인 마찰, 반발, 중력 제어 가이드.
+-  🏃 **[애니메이션 가이드](docs/animation.md)**: 수치 기반의 부드러운 전환 연출법.
+
+---
+
+## 📜 License
+MIT License. © 2026 levia Engine Team.

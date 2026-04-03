@@ -6,9 +6,12 @@
 
 ## 📦 1. 데이터 보관 (Storage)
 
-모든 객체는 `dataset: Record<string, any>` 속성을 가집니다.
+모든 객체는 `dataset` 속성을 통해 데이터를 관리합니다.
 
--  **데이터 타입**: `string`, `number`, `boolean`, `object` 등 자바스크립트의 어떤 값이든 자유롭게 저장할 수 있습니다.
+| 속성 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `dataset` | `Record<string, any>` | 자유로운 키-값 쌍을 저장합니다. (문자열, 숫자, 불리언, 객체 등) |
+
 -  **감지 시스템 (Proxy)**: `dataset`은 특수 객체(Proxy)로 감싸져 있어, 값을 대입하는 즉시 엔진이 이를 감지하고 이벤트를 처리합니다.
 
 ---
@@ -17,10 +20,9 @@
 
 데이터가 변할 때마다 객체는 `datamodified` 이벤트를 발생시킵니다.
 
--  **이벤트 명세**: `obj.on('datamodified', (key: string, value: any, prev: any) => { ... })`
-   - `key`: 변경된 데이터의 이름입니다.
-   - `value`: 새롭게 설정된 값입니다.
-   - `prev`: 변경되기 직전의 이전 값입니다.
+| 이벤트 명 | 인자(Arguments) | 설명 |
+| :--- | :--- | :--- |
+| `datamodified` | `key, value, prev` | 특정 키의 값이 변경되었을 때 발생합니다. |
 
 ---
 
@@ -37,6 +39,7 @@
 ### 체력 수치에 따라 색상이 변하는 몬스터 만들기
 ```typescript
 const monster = world.createImage({
+  attribute: { name: 'monster_01' }, // 고유 식별을 위해 name 사용
   dataset: { hp: 100, maxHp: 100 } // 초기 데이터 설정
 });
 
@@ -59,4 +62,3 @@ monster.animate({
 }, 1000, 'easeOutCubic');
 ```
 
-이처럼 `dataset`은 단순한 저장소를 넘어, 게임이나 앱의 **로직과 시각적 표현을 연결하는 튼튼한 다리** 역할을 수행합니다. 여러분만의 창의적인 데이터를 담아보세요!
