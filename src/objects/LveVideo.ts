@@ -104,7 +104,6 @@ export class LveVideo<
       console.warn('[LveVideo] src 속성을 먼저 설정하십시오.')
       return this
     }
-
     this._playing = true
     this._paused = false
     this.emit('play')

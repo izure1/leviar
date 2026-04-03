@@ -108,8 +108,6 @@ export class Sprite<
     return this
   }
 
-
-
   /** 애니메이션을 정지하고 처음으로 되돌립니다. */
   stop(): this {
     this._playing = false
