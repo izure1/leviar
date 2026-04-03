@@ -44,6 +44,7 @@ export class PhysicsEngine {
 
   constructor() {
     this.engine = Matter.Engine.create()
+    this.engine.gravity.y = -1
 
     // matter-js는 기본적으로 engine.gravity를 모든 바디에 일괄 적용합니다 (force = mass * gravity.y * gravity.scale).
     // attribute.gravityScale이 개별 설정된 바디에 대해 각 바디의 최종 중력이 원래 중력 * gravityScale이 되도록
