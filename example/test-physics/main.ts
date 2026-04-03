@@ -4,7 +4,6 @@ const world = new World()
 const camera = world.createCamera()
 
 world.camera = camera
-world.gravity = { x: 0, y: -1 }
 
 // 바닥 생성
 world.createRectangle({

@@ -4,7 +4,6 @@ const world = new World({ disableContextMenu: true })
 const camera = world.createCamera()
 
 world.camera = camera
-world.gravity = { x: 0, y: -1 }
 
 // 바닥 역할을 할 정적 물리 객체
 const ground = world.createRectangle({
