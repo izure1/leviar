@@ -36,7 +36,7 @@ const currentModeLabel = world.createText({
 const dest = world.createImage({
   transform: { position: { x: 0, y: 0, z: 0 } }
 })
-dest.attr({ src: 'logo' })
+dest.attribute.src = 'logo'
 
 world.particleManager.create({
   name: 'star-anti-gravity',

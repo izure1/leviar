@@ -85,7 +85,7 @@ const testImg = world.createImage({
   },
   transform: { position: { x: -200, y: -250, z: 0 } }
 })
-testImg.attr({ src: 'img' })
+testImg.attribute.src = 'img'
 
 // 6. 비디오 텍스처 곡률 검증
 world.videoManager.create({
@@ -108,7 +108,8 @@ const testVid = world.createVideo({
   },
   transform: { position: { x: 0, y: -250, z: 0 } }
 })
-testVid.attr({ src: 'sample_vid' }).play()
+testVid.attribute.src = 'sample_vid'
+testVid.play()
 
 // 7. 스프라이트 텍스처 곡률 검증
 world.spriteManager.create({
@@ -135,6 +136,7 @@ const testSprite = world.createSprite({
   },
   transform: { position: { x: 200, y: -250, z: 0 } }
 })
-testSprite.attr({ src: 'play' }).play()
+testSprite.attribute.src = 'play'
+testSprite.play()
 
 world.start()

@@ -35,7 +35,7 @@ const bgImage = world.createImage({
     }
   }
 })
-bgImage.attr({ src: 'bg' })
+bgImage.attribute.src = 'bg'
 
 // 캐릭터 이미지
 const girl = world.createImage({
@@ -48,7 +48,7 @@ const girl = world.createImage({
     }
   }
 })
-girl.attr({ src: 'girl_before' })
+girl.attribute.src = 'girl_before'
 
 // 대사창 좌표
 const talkBoxW = 800
@@ -115,7 +115,9 @@ const coin = world.createSprite({
   transform: {
     position: { z: 100 }
   }
-}).attr({ src: 'coin' }).play()
+})
+coin.attribute.src = 'coin'
+coin.play()
 
 Object.assign(coin.transform.position, camera.canvasToLocal(canvas.width - 100, 30))
 

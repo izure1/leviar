@@ -8729,27 +8729,6 @@ var LveObject = class extends EventEmitter {
     }
   }
   /**
-   * 속성(attribute)을 일괄 변경하고 체이닝을 지원합니다.
-   */
-  attr(attributes) {
-    if (!attributes) return this;
-    for (const key in attributes) {
-      if (Object.prototype.hasOwnProperty.call(attributes, key)) {
-        ;
-        this.attribute[key] = attributes[key];
-      }
-    }
-    return this;
-  }
-  setDataset(key, value) {
-    ;
-    this.dataset[key] = value;
-    return this;
-  }
-  getDataset(key) {
-    return this.dataset[key];
-  }
-  /**
    * 객체가 주어진 클래스들을 모두 포함하고 있는지 확인합니다. (공백으로 구분)
    * 전달된 모든 클래스가 존재할 때만 true를 반환합니다.
    */

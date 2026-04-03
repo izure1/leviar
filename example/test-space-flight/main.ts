@@ -20,10 +20,11 @@ for (let i = 0; i < 15000; i++) {
   const z = (Math.random() - 0.5) * 8000
   const size = Math.random() * 20 + 5
 
-  world.createImage({
+    const star = world.createImage({
     style: { width: size, height: size, blendMode: 'lighter' },
     transform: { position: { x, y, z } }
-  }).attr({ src: 'star' })
+  })
+  star.attribute.src = 'star'
 }
 
 world.on('mouseover', (obj, e) => {

@@ -42,9 +42,6 @@
 -  **removeClass(classNames: string): this**
    객체에서 하나 이상의 클래스 이름을 제거합니다.
 
--  **setDataset(key: string, value: any): this**
-   객체의 `dataset` 보관소에 데이터를 직접 저장합니다. `datamodified` 이벤트를 발생시킵니다.
-
 ### ⛓️ 계층 구조 (Hierarchy)
 -  **addChild(child: LveObject): this**
    다른 객체를 자식으로 등록합니다.
@@ -92,14 +89,17 @@
    특정 심도(`targetZ`)에서 특정 픽셀 크기(`value`)로 보이게 하려면 실제 객체 크기를 얼마로 설정해야 하는지 계산해 줍니다.
 
 ### 🎬 Video / Sprite / Particle 재생 제어
--  **play(clipName: string): this**
-   지정한 이름의 클립을 재생합니다.
+-  **play(clipName?: string): this**
+   재생을 시작하거나 일시정지된 상태를 해제합니다.
+   - **Particle**: 반드시 `clipName`을 전달하여 에미션을 시작해야 합니다.
+   - **Video / Sprite**: 매개변수를 받지 않습니다. `attr({ src: '...' })`로 재생할 리소스를 먼저 지정한 후 호출하십시오.
+   - **LveImage**: 이미지 객체에는 `play` 메서드가 없습니다. `attr({ src: '...' })`를 사용하십시오.
 -  **pause(): this**
-   재생을 일시정지합니다.
+   재생을 일시정지합니다. 이어서 재생하려면 `play()`를 다시 호출하십시오.
 -  **stop(): this**
-   재생을 정지합니다. (비디오/스프라이트의 경우 처음으로 돌아가지 않고 그 자리에 멈춥니다.)
--  **resume(): this** (Sprite 전용)
-   정지되거나 일시정지된 애니메이션을 이어서 재생합니다.
+   재생을 완전히 정지합니다.
+   - **Video / Sprite**: 재생 지점이 처음(`0` 또는 `start` 프레임)으로 리셋됩니다.
+   - **Particle**: 에미션이 중단되지만, 이미 생성된 파티클은 수명이 다할 때까지 유지됩니다.
 
 ---
 

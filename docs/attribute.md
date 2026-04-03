@@ -55,6 +55,8 @@
    카메라의 초점 거리입니다. (기본값: `100`) 이 거리를 기준으로 원근감이 계산됩니다.
 -  **src: string (Image / Video / Sprite / Particle)**
    사용할 소스 자원의 경로 또는 키 값입니다.
+   - **중요**: `Video` 또는 `Sprite`에서 `src` 속성을 변경하면, 재생 위치가 즉시 처음(`0` 또는 `start` 프레임)으로 리셋되며 **재생이 정지된 상태**가 됩니다. 교체 후 다시 재생하려면 `play()` 메서드를 호출하십시오.
+   - **LveImage**: 이미지 객체는 `src` 값만 수정해도 화면에 즉시 반영됩니다.
 -  **volume: number (0 ~ 1, Video 전용)**
    비디오의 음량 크기입니다.
 -  **playbackRate: number (Video / Sprite 전용)**

@@ -64,7 +64,8 @@ const spr = world.createSprite({
   style: { width: 132 },
   transform: { position: { x: -200, y: 0, z: 0 } },
 })
-spr.attr({ src: 'play' }).play()
+spr.attribute.src = 'play'
+spr.play()
 
 // Video 생성
 label('Video (playbackRate, volume, currentTime)', 250, -150)
@@ -72,7 +73,8 @@ const vid = world.createVideo({
   style: { width: 300 },
   transform: { position: { x: 250, y: 0, z: 0 } },
 })
-vid.attr({ src: 'sample' }).play()
+vid.attribute.src = 'sample'
+vid.play()
 
 // UI Bindings
 const sprRate = document.getElementById('spr-rate') as HTMLInputElement
@@ -122,13 +124,13 @@ document.getElementById('btn-vid-toggle')?.addEventListener('click', () => {
 let sprToggleSrc = false
 document.getElementById('btn-spr-src')?.addEventListener('click', () => {
   sprToggleSrc = !sprToggleSrc
-  spr.attr({ src: sprToggleSrc ? 'play2' : 'play' })
+  spr.attribute.src = sprToggleSrc ? 'play2' : 'play'
 })
 
 let vidToggleSrc = false
 document.getElementById('btn-vid-src')?.addEventListener('click', () => {
   vidToggleSrc = !vidToggleSrc
-  vid.attr({ src: vidToggleSrc ? 'sample2' : 'sample' })
+  vid.attribute.src = vidToggleSrc ? 'sample2' : 'sample'
 })
 
 world.start()
