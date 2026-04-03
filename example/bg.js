@@ -9292,12 +9292,18 @@ var LveVideo = class extends LveObject {
     return this;
   }
   /**
-   * 재생을 정지합니다. loop=false일 때 'ended'를 emit합니다.
+   * 재생을 정지하고 처음으로 되돌립니다. loop=false일 때 'ended'를 emit합니다.
    */
   stop() {
     const wasPlaying = this._playing;
     this._playing = false;
     this._paused = false;
+    this._needsSeekToStart = true;
+    if (this._videoElement) {
+      this._videoElement.currentTime = 0;
+    } else {
+      this._pendingSeek = 0;
+    }
     if (wasPlaying && this._clip && !this._clip.loop) {
       this.emit("ended");
     }
@@ -9417,10 +9423,14 @@ var Sprite = class extends LveObject {
     this.emit("pause");
     return this;
   }
-  /** 애니메이션을 정지합니다. */
+  /** 애니메이션을 정지하고 처음으로 되돌립니다. */
   stop() {
     this._playing = false;
     this._paused = false;
+    if (this._clip) {
+      this._currentFrame = this._clip.start;
+      this._lastFrameTime = 0;
+    }
     return this;
   }
   /**
@@ -9467,6 +9477,30 @@ var Sprite = class extends LveObject {
 
 // src/objects/Particle.ts
 var import_matter_js = __toESM(require_matter(), 1);
+var DELEGATED_GETTERS4 = {
+  src: (self) => self["_clipName"] ?? void 0
+};
+var DELEGATED_SETTERS4 = {
+  src: (self, value) => {
+    const anySelf = self;
+    if (!anySelf._manager) {
+      console.warn("[Particle] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
+      return;
+    }
+    const clip = anySelf._manager.get(value);
+    if (!clip) {
+      console.warn(`[Particle] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+      return;
+    }
+    anySelf._clipName = value;
+    self._clip = clip;
+    anySelf._playing = false;
+    anySelf._paused = false;
+    anySelf._lastSpawnTime = 0;
+    anySelf._spawnCount = 0;
+    self._instances = [];
+  }
+};
 var GRAVITY = 15e-5;
 var Particle = class extends LveObject {
   /** strict 모드 여부 */
@@ -9485,7 +9519,7 @@ var Particle = class extends LveObject {
   /** 일시정지 여부 */
   _paused = false;
   constructor(options) {
-    super("particle", options);
+    super("particle", options, Object.keys(DELEGATED_GETTERS4));
     this.strict = options?.strict ?? false;
   }
   /**
@@ -9503,24 +9537,15 @@ var Particle = class extends LveObject {
     return this;
   }
   /**
-   * 지정한 클립 이름으로 파티클 에미션을 시작합니다.
+   * 파티클 에미션을 시작합니다.
    */
-  play(name) {
-    if (!this._manager) {
-      console.warn("[Particle] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
+  play() {
+    if (!this._clip) {
+      console.warn("[Particle] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    const clip = this._manager.get(name);
-    if (!clip) {
-      console.warn(`[Particle] \uD074\uB9BD '${name}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
-      return this;
-    }
-    this._clipName = name;
-    this._clip = clip;
     this._playing = true;
-    this._lastSpawnTime = 0;
-    this._spawnCount = 0;
-    this._instances = [];
+    this._paused = false;
     this.emit("play");
     return this;
   }
@@ -9659,6 +9684,19 @@ var Particle = class extends LveObject {
     if (!inst.body || !this._physics) return;
     import_matter_js.default.Composite.remove(this._physics.engine.world, inst.body);
     inst.body = void 0;
+  }
+  _getDelegatedAttribute(key) {
+    const handler = DELEGATED_GETTERS4[key];
+    if (handler) return handler(this);
+    return super._getDelegatedAttribute(key);
+  }
+  _setDelegatedAttribute(key, value) {
+    const handler = DELEGATED_SETTERS4[key];
+    if (handler) {
+      handler(this, value);
+    } else {
+      super._setDelegatedAttribute(key, value);
+    }
   }
 };
 

@@ -51,22 +51,28 @@ world.particleManager.create({
 const leftX = -CX / 2
 
 // 에미터 ① — 느린 별 (가운데)
-world.createParticle({
+const p1 = world.createParticle({
   style: { width: 20, height: 20, blendMode: 'lighter' },
   transform: { position: { x: leftX, y: 0, z: Z } },
-}).play('star-slow')
+})
+p1.attribute.src = 'star-slow'
+p1.play()
 
 // 에미터 ② — 빠른 버스트 (왼쪽)
-world.createParticle({
+const p2 = world.createParticle({
   style: { width: 12, height: 12, blendMode: 'lighter' },
   transform: { position: { x: leftX - 120, y: 60, z: Z } },
-}).play('star-burst')
+})
+p2.attribute.src = 'star-burst'
+p2.play()
 
 // 에미터 ③ — 크고 느린 별 (오른쪽)
-world.createParticle({
+const p3 = world.createParticle({
   style: { width: 36, height: 36, blendMode: 'lighter' },
   transform: { position: { x: leftX + 120, y: -60, z: Z } },
-}).play('star-large')
+})
+p3.attribute.src = 'star-large'
+p3.play()
 
 // ────────────────────────────────────────────────────────
 // ② strict 모드 — 오른쪽 절반, matter-js 물리 기반
@@ -96,20 +102,24 @@ world.particleManager.create({
 const rightX = CX / 2
 
 // strict 에미터 ① — 중앙
-world.createParticle({
+const pStrict = world.createParticle({
   strict: true,
   style: { width: 18, height: 18, blendMode: 'lighter' },
   transform: { position: { x: rightX, y: -60, z: Z } },
   attribute: { restitution: 0.6, friction: 0.05, density: 0.002, gravityScale: 0.8, collisionCategory: 0x0001, collisionMask: 0x0002 },
-}).play('star-strict')
+})
+pStrict.attribute.src = 'star-strict'
+pStrict.play()
 
 // strict 에미터 ② — 오른쪽
-world.createParticle({
+const pStrictFast = world.createParticle({
   strict: true,
   style: { width: 12, height: 12, blendMode: 'lighter' },
   transform: { position: { x: rightX + 100, y: 30, z: Z } },
   attribute: { restitution: 0.4, friction: 0.1, density: 0.001, gravityScale: 1.2, collisionCategory: 0x0001, collisionMask: 0x0002 },
-}).play('star-strict-fast')
+})
+pStrictFast.attribute.src = 'star-strict-fast'
+pStrictFast.play()
 
 // static 바닥 (파티클 bounce)
 const floorY = -(H / 2 - 200)

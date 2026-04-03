@@ -60,7 +60,9 @@ const src = world.createParticle({
   attribute: { gravityScale: 0.15, friction: 0.005, density: 0.001 },
   style: { blendMode: 'source-over', zIndex: 1 },
   transform: { position: { x: 0, y: -500, z: 0 } }
-}).play('star-anti-gravity')
+})
+src.attribute.src = 'star-anti-gravity'
+src.play()
 
 // 하단에 버튼 라벨 16개 배치
 const cols = 8;

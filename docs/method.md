@@ -88,18 +88,17 @@
 -  **calcDepthRatio(targetZ: number, value: number): number**
    특정 심도(`targetZ`)에서 특정 픽셀 크기(`value`)로 보이게 하려면 실제 객체 크기를 얼마로 설정해야 하는지 계산해 줍니다.
 
-### 🎬 Video / Sprite / Particle 재생 제어
--  **play(clipName?: string): this**
+### 🎬 재생 제어 (Video / Sprite / Particle)
+-  **play(): this**
    재생을 시작하거나 일시정지된 상태를 해제합니다.
-   - **Particle**: 반드시 `clipName`을 전달하여 에미션을 시작해야 합니다.
-   - **Video / Sprite**: 매개변수를 받지 않습니다. `attr({ src: '...' })`로 재생할 리소스를 먼저 지정한 후 호출하십시오.
-   - **LveImage**: 이미지 객체에는 `play` 메서드가 없습니다. `attr({ src: '...' })`를 사용하십시오.
+   - **사용법**: `attribute.src`로 재생할 리소스/클립을 먼저 지정한 후 매개변수 없이 호출하십시오.
+   - **LveImage**: 이미지 객체에는 `play` 메서드가 없습니다. `attribute.src = '...'` 형태로 수정만 해도 즉시 반영됩니다.
 -  **pause(): this**
    재생을 일시정지합니다. 이어서 재생하려면 `play()`를 다시 호출하십시오.
 -  **stop(): this**
    재생을 완전히 정지합니다.
-   - **Video / Sprite**: 재생 지점이 처음(`0` 또는 `start` 프레임)으로 리셋됩니다.
-   - **Particle**: 에미션이 중단되지만, 이미 생성된 파티클은 수명이 다할 때까지 유지됩니다.
+   - **Video / Sprite**: 재생이 정지되며 **동시에 재생 지점이 처음(`0` 또는 `start` 프레임)으로 초기화**됩니다.
+   - **Particle**: 새로운 파티클 에미션이 중단됩니다. (단, 이미 생성되어 날아가고 있는 파티클은 수명이 다할 때까지 유지됩니다.)
 
 ---
 

@@ -104,7 +104,8 @@ const ptcl = world.createParticle({
   style: { width: 30, height: 30, blendMode: 'lighter' },
   transform: { position: { x: -120, y: 160, z: 0 } },
 })
-ptcl.play('flame')
+ptcl.attribute.src = 'flame'
+ptcl.play()
 
 // 마우스로 카메라 이동
 window.addEventListener('mousemove', (e) => {

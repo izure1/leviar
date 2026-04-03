@@ -110,10 +110,14 @@ export class Sprite<
 
 
 
-  /** 애니메이션을 정지합니다. */
+  /** 애니메이션을 정지하고 처음으로 되돌립니다. */
   stop(): this {
     this._playing = false
     this._paused = false
+    if (this._clip) {
+      this._currentFrame = this._clip.start
+      this._lastFrameTime = 0
+    }
     return this
   }
 

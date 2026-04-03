@@ -183,9 +183,11 @@ const mouseParticle = world.createParticle({
   transform: {
     position: { x: 0, y: 0, z: 100 }
   }
-}).play('mouse-particle')
+})
+mouseParticle.attribute.src = 'mouse-particle'
+mouseParticle.play()
 
-world.createParticle({
+const dustParticle = world.createParticle({
   strict: true,
   attribute: {
     physics: 'dynamic',
@@ -203,7 +205,9 @@ world.createParticle({
   transform: {
     position: camera.canvasToWorld(canvas.width / 2, canvas.height / 2)
   }
-}).play('dust-particle')
+})
+dustParticle.attribute.src = 'dust-particle'
+dustParticle.play()
 
 camera.addChild(talkBox)
 camera.addChild(mouseParticle)

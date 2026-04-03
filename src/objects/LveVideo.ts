@@ -123,12 +123,18 @@ export class LveVideo<
   }
 
   /**
-   * 재생을 정지합니다. loop=false일 때 'ended'를 emit합니다.
+   * 재생을 정지하고 처음으로 되돌립니다. loop=false일 때 'ended'를 emit합니다.
    */
   stop(): this {
     const wasPlaying = this._playing
     this._playing = false
     this._paused = false
+    this._needsSeekToStart = true
+    if (this._videoElement) {
+      this._videoElement.currentTime = 0
+    } else {
+      this._pendingSeek = 0
+    }
 
     if (wasPlaying && this._clip && !this._clip.loop) {
       this.emit('ended')

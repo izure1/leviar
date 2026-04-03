@@ -8,6 +8,32 @@ export interface ParticleAttribute {
   src?: string
 }
 
+const DELEGATED_GETTERS: Record<string, (self: Particle) => any> = {
+  src: (self) => self['_clipName'] ?? undefined,
+}
+
+const DELEGATED_SETTERS: Record<string, (self: Particle, value: any) => void> = {
+  src: (self, value: string) => {
+    const anySelf = self as any
+    if (!anySelf._manager) {
+      console.warn('[Particle] __setManager()를 먼저 호출하십시오.')
+      return
+    }
+    const clip = anySelf._manager.get(value)
+    if (!clip) {
+      console.warn(`[Particle] 클립 '${value}'을 찾을 수 없습니다.`)
+      return
+    }
+    anySelf._clipName = value
+    self._clip = clip
+    anySelf._playing = false
+    anySelf._paused = false
+    anySelf._lastSpawnTime = 0
+    anySelf._spawnCount = 0
+    self._instances = []
+  },
+}
+
 export interface ParticleOptions<
   D extends Record<string, any> = Record<string, any>
 > extends LveObjectOptions<ParticleAttribute, D> {
@@ -75,7 +101,7 @@ export class Particle<
   private _paused: boolean = false
 
   constructor(options?: ParticleOptions<D>) {
-    super('particle', options)
+    super('particle', options, Object.keys(DELEGATED_GETTERS))
     this.strict = options?.strict ?? false
   }
 
@@ -96,24 +122,15 @@ export class Particle<
   }
 
   /**
-   * 지정한 클립 이름으로 파티클 에미션을 시작합니다.
+   * 파티클 에미션을 시작합니다.
    */
-  play(name: string): this {
-    if (!this._manager) {
-      console.warn('[Particle] __setManager()를 먼저 호출하십시오.')
+  play(): this {
+    if (!this._clip) {
+      console.warn('[Particle] src 속성을 먼저 설정하십시오.')
       return this
     }
-    const clip = this._manager.get(name)
-    if (!clip) {
-      console.warn(`[Particle] 클립 '${name}'을 찾을 수 없습니다.`)
-      return this
-    }
-    this._clipName = name
-    this._clip = clip
     this._playing = true
-    this._lastSpawnTime = 0
-    this._spawnCount = 0
-    this._instances = []
+    this._paused = false
     this.emit('play')
     return this
   }
@@ -285,5 +302,20 @@ export class Particle<
     if (!inst.body || !this._physics) return
     Matter.Composite.remove(this._physics.engine.world, inst.body)
     inst.body = undefined
+  }
+
+  protected _getDelegatedAttribute(key: string): any {
+    const handler = DELEGATED_GETTERS[key]
+    if (handler) return handler(this)
+    return super._getDelegatedAttribute(key)
+  }
+
+  protected _setDelegatedAttribute(key: string, value: any): void {
+    const handler = DELEGATED_SETTERS[key]
+    if (handler) {
+      handler(this, value)
+    } else {
+      super._setDelegatedAttribute(key, value)
+    }
   }
 }
