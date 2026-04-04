@@ -640,7 +640,7 @@ export class Renderer {
    * 객체의 고유 TRS(Translation, Rotation, Scale, Pivot)만으로 Model Matrix를 생성합니다.
    * 카메라 정보는 View Matrix에서 처리됩니다.
    */
-  private _makeModelMatrix(x: number, y: number, w: number, h: number, zOffset: number = 0, baseW?: number, baseH?: number): Float32Array {
+  private _makeModelMatrix(x: number, y: number, w: number, h: number, zOffset: number = 0, baseW?: number, baseH?: number, rotationRad: number = 0): Float32Array {
     const obj = this._activeObj
     const pivot = obj.transform.pivot
 
@@ -662,7 +662,12 @@ export class Renderer {
     this._tmpVec[2] = 0
     this._modelMat.translate(this._tmpVec)
 
-    // 4. 메시 사이즈 확보를 위한 기본 쿼드 스케일링
+    // 4. 파티클 인스턴스 개별 Z축 회전 (스케일 적용 전에 수행하여 피벗 기준 올바른 회전 보장)
+    if (rotationRad !== 0) {
+      this._modelMat.rotate(rotationRad, AXIS_Z)
+    }
+
+    // 5. 메시 사이즈 확보를 위한 기본 쿼드 스케일링
     this._tmpVec[0] = w; this._tmpVec[1] = h; this._tmpVec[2] = 1
     this._modelMat.scale(this._tmpVec)
 
@@ -864,7 +869,8 @@ export class Renderer {
     uvOffset: [number, number] = [0, 0],
     uvScale: [number, number] = [1, 1],
     zOffset: number = 0,
-    borderRadius: [number, number, number, number] | null = null
+    borderRadius: [number, number, number, number] | null = null,
+    rotationRad: number = 0
   ) {
     const blendMode = this._activeObj?.style?.blendMode ?? 'source-over';
 
@@ -875,7 +881,7 @@ export class Renderer {
     this._batchTexture = texture;
     this._batchBlendMode = blendMode;
 
-    const m = this._makeModelMatrix(x, y, w, h, zOffset);
+    const m = this._makeModelMatrix(x, y, w, h, zOffset, undefined, undefined, rotationRad);
     const idx = this._batchCount;
     const idx4 = idx * 4;
     const idx2 = idx * 2;
@@ -1666,7 +1672,9 @@ export class Renderer {
         ix, iy, iw, ih,
         obj.style.opacity * obj._fadeOpacity * opacity,
         false, [0, 0], [1, 1],
-        inst.z || 0
+        inst.z || 0,
+        null,
+        inst.angle || 0
       )
     }
 

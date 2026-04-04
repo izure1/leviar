@@ -10,7 +10,10 @@ world.camera = camera
 await world.loader.load({
   'bg': '../asset/image/background.jpg',
   'girl_before': '../asset/image/transition_before.png',
-  'dust': '../asset/image/star.png' // 임시: 프리셋에서 인식할 수 있는 dust 이미지로 사용 
+  'dust': '../asset/image/star.png',
+  'rain': '../asset/image/rain.png',
+  'snow': '../asset/image/snow.png',
+  'sakura': '../asset/image/sakura.png'
 })
 
 // Visualnovel 인스턴스 생성
@@ -20,25 +23,11 @@ const vn = new Visualnovel(world, {
   depth: 500
 })
 
-// 파티클 설정 (미리 정의)
-world.particleManager.create({
-  name: 'dust',
-  src: 'dust',
-  impulse: 0.01,
-  rate: 5,
-  lifespan: 10000,
-  interval: 250,
-  size: { start: { min: 0.5, max: 1 }, end: { min: 0, max: 0.5 } },
-  spawnX: canvas.width * 2,
-  spawnY: canvas.height * 2,
-  spawnZ: 100,
-  loop: true,
-})
 
 // 씬 연출 시작
 vn.setBackground('bg', 'cover')
-  .setMood('sunset')
-  .addEffect('dust', 'light')
+  .setMood('night')
+  .addEffect('sakura', 'heavy')
   .addCharacter('girl_before', 'center')
   .addOverlay('테스트 씬이 시작되었습니다...', 'caption')
 

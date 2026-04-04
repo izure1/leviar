@@ -9606,12 +9606,14 @@ var Particle = class _Particle extends LveObject {
         inst.x = inst.spawnX + inst.vx * dt + 0.5 * (gX * gScale) * dt * dt;
         inst.y = inst.spawnY + inst.vy * dt + 0.5 * (gY * gScale) * dt * dt;
         inst.z = inst.spawnZ + inst.vz * dt;
+        inst.angle = inst.angularVelocity * dt;
       } else {
         const emX = this.transform.position.x;
         const emY = this.transform.position.y;
         inst.x = inst.body.position.x - emX;
         inst.y = inst.body.position.y - emY;
         inst.z = inst.spawnZ;
+        inst.angle = inst.body.angle;
       }
       alive.push(inst);
     }
@@ -9637,6 +9639,8 @@ var Particle = class _Particle extends LveObject {
       const offsetX = rangeX > 0 ? (Math.random() - 0.5) * rangeX : 0;
       const offsetY = rangeY > 0 ? (Math.random() - 0.5) * rangeY : 0;
       const offsetZ = rangeZ > 0 ? (Math.random() - 0.5) * rangeZ : 0;
+      const angImpulse = clip.angularImpulse ?? 0;
+      const angularVelocity = angImpulse > 0 ? (Math.random() * 2 - 1) * angImpulse : 0;
       const inst = {
         spawnX: offsetX,
         spawnY: offsetY,
@@ -9650,7 +9654,9 @@ var Particle = class _Particle extends LveObject {
         startSize,
         endSize,
         born: timestamp,
-        lifespan: clip.lifespan
+        lifespan: clip.lifespan,
+        angle: 0,
+        angularVelocity
       };
       if (this.attribute.strictPhysics && this._physics) {
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4;
@@ -9669,6 +9675,9 @@ var Particle = class _Particle extends LveObject {
         if (attr.fixedRotation) import_matter_js.default.Body.setInertia(body, Infinity);
         if (attr.gravityScale != null) body.gravityScale = attr.gravityScale;
         import_matter_js.default.Body.setVelocity(body, { x: inst.vx * 16, y: inst.vy * 16 });
+        if (angularVelocity !== 0) {
+          import_matter_js.default.Body.setAngularVelocity(body, angularVelocity * 16);
+        }
         import_matter_js.default.Composite.add(this._physics.engine.world, body);
         inst.body = body;
       }
@@ -10876,7 +10885,7 @@ var Renderer2 = class {
    * 객체의 고유 TRS(Translation, Rotation, Scale, Pivot)만으로 Model Matrix를 생성합니다.
    * 카메라 정보는 View Matrix에서 처리됩니다.
    */
-  _makeModelMatrix(x, y, w, h, zOffset = 0, baseW, baseH) {
+  _makeModelMatrix(x, y, w, h, zOffset = 0, baseW, baseH, rotationRad = 0) {
     const obj = this._activeObj;
     const pivot = obj.transform.pivot;
     const pw = baseW ?? w;
@@ -10892,6 +10901,9 @@ var Renderer2 = class {
     this._tmpVec[1] = -(0.5 - pivot.y) * ph;
     this._tmpVec[2] = 0;
     this._modelMat.translate(this._tmpVec);
+    if (rotationRad !== 0) {
+      this._modelMat.rotate(rotationRad, AXIS_Z);
+    }
     this._tmpVec[0] = w;
     this._tmpVec[1] = h;
     this._tmpVec[2] = 1;
@@ -11081,14 +11093,14 @@ var Renderer2 = class {
     program.uniforms["uProjectionMatrix"].value = this._projMatrix();
     this.colorMesh.draw({ camera: this.camera });
   }
-  _drawTextureMesh(texture, x, y, w, h, opacity, flipY = false, uvOffset = [0, 0], uvScale = [1, 1], zOffset = 0, borderRadius = null) {
+  _drawTextureMesh(texture, x, y, w, h, opacity, flipY = false, uvOffset = [0, 0], uvScale = [1, 1], zOffset = 0, borderRadius = null, rotationRad = 0) {
     const blendMode = this._activeObj?.style?.blendMode ?? "source-over";
     if (this._batchTexture !== texture || this._batchBlendMode !== blendMode || this._batchCount >= this._batchMaxSize) {
       this._flushBatch();
     }
     this._batchTexture = texture;
     this._batchBlendMode = blendMode;
-    const m = this._makeModelMatrix(x, y, w, h, zOffset);
+    const m = this._makeModelMatrix(x, y, w, h, zOffset, void 0, void 0, rotationRad);
     const idx = this._batchCount;
     const idx4 = idx * 4;
     const idx2 = idx * 2;
@@ -11711,7 +11723,9 @@ var Renderer2 = class {
         false,
         [0, 0],
         [1, 1],
-        inst.z || 0
+        inst.z || 0,
+        null,
+        inst.angle || 0
       );
     }
   }

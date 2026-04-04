@@ -26,6 +26,8 @@ export interface ParticleClipOptions {
   spawnZ?: number
   /** 파티클 생성 시 초기 발사 속도의 최대 강도 */
   impulse: number
+  /** 파티클 생성 시 초기 각속도의 최대 강도 (rad/ms). 미지정 또는 0이면 회전 없음 */
+  angularImpulse?: number
   /** 파티클 크기 시작/종료 범위 지정 */
   size?: {
     start?: SizeRange

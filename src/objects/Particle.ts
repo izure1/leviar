@@ -47,6 +47,10 @@ export interface ParticleInstance {
   born: number
   /** 생존 시간 (ms) */
   lifespan: number
+  /** 현재 회전각 (rad) — 매 tick 갱신 */
+  angle: number
+  /** 각속도 (rad/ms) — 스폰 시 결정 */
+  angularVelocity: number
   /** strict 모드 전용 matter-js 바디 */
   body?: Matter.Body
 }
@@ -220,13 +224,15 @@ export class Particle<
         inst.x = inst.spawnX + inst.vx * dt + 0.5 * (gX * gScale) * dt * dt
         inst.y = inst.spawnY + inst.vy * dt + 0.5 * (gY * gScale) * dt * dt
         inst.z = inst.spawnZ + inst.vz * dt
+        inst.angle = inst.angularVelocity * dt
       } else {
-        // strict 모드: matter-js 바디 위치를 상대 좌표로
+        // strict 모드: matter-js 바디 위치 및 각도를 상대 좌표로
         const emX = this.transform.position.x
         const emY = this.transform.position.y
         inst.x = inst.body.position.x - emX
         inst.y = inst.body.position.y - emY
         inst.z = inst.spawnZ // matter.js는 2D이므로 z 보존
+        inst.angle = inst.body.angle
       }
 
       alive.push(inst)
@@ -261,6 +267,11 @@ export class Particle<
       const offsetY = rangeY > 0 ? (Math.random() - 0.5) * rangeY : 0
       const offsetZ = rangeZ > 0 ? (Math.random() - 0.5) * rangeZ : 0
 
+      const angImpulse = clip.angularImpulse ?? 0
+      const angularVelocity = angImpulse > 0
+        ? (Math.random() * 2 - 1) * angImpulse
+        : 0
+
       const inst: ParticleInstance = {
         spawnX: offsetX,
         spawnY: offsetY,
@@ -275,6 +286,8 @@ export class Particle<
         endSize,
         born: timestamp,
         lifespan: clip.lifespan,
+        angle: 0,
+        angularVelocity,
       }
 
       if (this.attribute.strictPhysics && this._physics) {
@@ -295,8 +308,11 @@ export class Particle<
         // IBodyDefinition에 없는 필드는 직접 할당
         if (attr.fixedRotation) Matter.Body.setInertia(body, Infinity)
         if (attr.gravityScale != null) (body as any).gravityScale = attr.gravityScale
-        // 초기 속도 부여
+        // 초기 속도 및 각속도 부여
         Matter.Body.setVelocity(body, { x: inst.vx * 16, y: inst.vy * 16 })
+        if (angularVelocity !== 0) {
+          Matter.Body.setAngularVelocity(body, angularVelocity * 16)
+        }
         Matter.Composite.add(this._physics.engine.world, body)
         inst.body = body
       }

@@ -1,4 +1,5 @@
 import { World } from '../src/World'
+import type { ParticleClipOptions } from '../src/ParticleManager'
 import type { LveObject } from '../src/LveObject'
 import type { ParticleOptions } from '../src/objects/Particle'
 import type { RectangleOptions } from '../src/objects/Rectangle'
@@ -38,11 +39,171 @@ export type OverlayPreset = 'caption' | 'title' | 'whisper'
 // =============================================================
 
 const EFFECT_PRESETS: Record<EffectType, Record<Intensity, Partial<ParticleOptions>>> = {
-  dust: { light: { attribute: { src: 'dust' }, style: { opacity: 0.3 } }, normal: { attribute: { src: 'dust' }, style: { opacity: 0.6 } }, heavy: { attribute: { src: 'dust' }, style: { opacity: 0.9 } } },
-  rain: { light: { attribute: { src: 'rain' }, style: { opacity: 0.4 } }, normal: { attribute: { src: 'rain' }, style: { opacity: 0.7 } }, heavy: { attribute: { src: 'rain' }, style: { opacity: 1.0 } } },
-  snow: { light: { attribute: { src: 'snow' }, style: { opacity: 0.5 } }, normal: { attribute: { src: 'snow' }, style: { opacity: 0.8 } }, heavy: { attribute: { src: 'snow' }, style: { opacity: 1.0 } } },
-  sakura: { light: { attribute: { src: 'sakura' }, style: { opacity: 0.6 } }, normal: { attribute: { src: 'sakura' }, style: { opacity: 0.85 } }, heavy: { attribute: { src: 'sakura' }, style: { opacity: 1.0 } } },
-  sparkle: { light: { attribute: { src: 'sparkle' }, style: { opacity: 0.4 } }, normal: { attribute: { src: 'sparkle' }, style: { opacity: 0.8 } }, heavy: { attribute: { src: 'sparkle' }, style: { opacity: 1.0 } } }
+  dust: {
+    light: { attribute: { src: 'dust', frictionAir: 0, gravityScale: 0, strictPhysics: true }, style: { width: 10, height: 10, blendMode: 'lighter' } },
+    normal: { attribute: { src: 'dust', frictionAir: 0, gravityScale: 0, strictPhysics: true }, style: { width: 10, height: 10, blendMode: 'lighter' } },
+    heavy: { attribute: { src: 'dust', frictionAir: 0, gravityScale: 0, strictPhysics: true }, style: { width: 10, height: 10, blendMode: 'lighter' } }
+  },
+  rain: {
+    light: { attribute: { src: 'rain', gravityScale: 1, density: 1, strictPhysics: true }, style: { width: 2, height: 20, opacity: 0.2, blendMode: 'screen' } },
+    normal: { attribute: { src: 'rain', gravityScale: 1, density: 1, strictPhysics: true }, style: { width: 2, height: 20, opacity: 0.2, blendMode: 'screen' } },
+    heavy: { attribute: { src: 'rain', gravityScale: 1, density: 1, strictPhysics: true }, style: { width: 2, height: 20, opacity: 0.2, blendMode: 'screen' } }
+  },
+  snow: {
+    light: { attribute: { src: 'snow', gravityScale: 0.01, frictionAir: 0, strictPhysics: true }, style: { width: 15, height: 15 } },
+    normal: { attribute: { src: 'snow', gravityScale: 0.01, frictionAir: 0, strictPhysics: true }, style: { width: 15, height: 15 } },
+    heavy: { attribute: { src: 'snow', gravityScale: 0.01, frictionAir: 0, strictPhysics: true }, style: { width: 15, height: 15 } }
+  },
+  sakura: {
+    light: { attribute: { src: 'sakura', gravityScale: 0.02, frictionAir: 0, strictPhysics: true }, style: { width: 12, height: 15, opacity: 0.8 } },
+    normal: { attribute: { src: 'sakura', gravityScale: 0.02, frictionAir: 0, strictPhysics: true }, style: { width: 12, height: 15, opacity: 0.8 } },
+    heavy: { attribute: { src: 'sakura', gravityScale: 0.02, frictionAir: 0, strictPhysics: true }, style: { width: 12, height: 15, opacity: 0.8 } }
+  },
+  sparkle: {
+    light: { attribute: { src: 'sparkle', gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.4 } },
+    normal: { attribute: { src: 'sparkle', gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 0.8 } },
+    heavy: { attribute: { src: 'sparkle', gravityScale: 0.1 }, style: { width: 16, height: 16, opacity: 1.0 } }
+  }
+}
+
+// 파티클 클립 기본값 설정 (src 제외)
+const EFFECT_CLIP_PRESETS: Record<EffectType, Record<Intensity, Omit<ParticleClipOptions, 'name' | 'src' | 'spawnX' | 'spawnY' | 'spawnZ'>>> = {
+  dust: {
+    light: {
+      impulse: 0.05,
+      rate: 2,
+      lifespan: 12000,
+      interval: 300,
+      size: { start: { min: 0.5, max: 1 }, end: { min: 0, max: 0.5 } },
+      loop: true
+    },
+    normal: {
+      impulse: 0.05,
+      rate: 5,
+      lifespan: 10000,
+      interval: 250,
+      size: { start: { min: 0.5, max: 1 }, end: { min: 0, max: 0.5 } },
+      loop: true
+    },
+    heavy: {
+      impulse: 0.05,
+      rate: 10,
+      lifespan: 8000,
+      interval: 150,
+      size: { start: { min: 0.5, max: 1 }, end: { min: 0, max: 0.5 } },
+      loop: true
+    }
+  },
+  rain: {
+    light: {
+      impulse: 0,
+      rate: 5,
+      lifespan: 2500,
+      interval: 150,
+      size: { start: { min: 0.1, max: 0.3 }, end: { min: 0.1, max: 0.3 } },
+      loop: true
+    },
+    normal: {
+      impulse: 0,
+      rate: 15,
+      lifespan: 2000,
+      interval: 100,
+      size: { start: { min: 0.1, max: 0.3 }, end: { min: 0.1, max: 0.3 } },
+      loop: true
+    },
+    heavy: {
+      impulse: 0,
+      rate: 30,
+      lifespan: 1500,
+      interval: 80,
+      size: { start: { min: 0.1, max: 0.3 }, end: { min: 0.1, max: 0.3 } },
+      loop: true
+    }
+  },
+  snow: {
+    light: {
+      impulse: 0.03,
+      angularImpulse: 0.001,
+      rate: 3,
+      lifespan: 12000,
+      interval: 150,
+      size: { start: { min: 0.3, max: 0.8 }, end: { min: 0.3, max: 0.8 } },
+      loop: true
+    },
+    normal: {
+      impulse: 0.03,
+      angularImpulse: 0.001,
+      rate: 8,
+      lifespan: 10000,
+      interval: 100,
+      size: { start: { min: 0.3, max: 0.8 }, end: { min: 0.3, max: 0.8 } },
+      loop: true
+    },
+    heavy: {
+      impulse: 0.03,
+      angularImpulse: 0.001,
+      rate: 20,
+      lifespan: 8000,
+      interval: 75,
+      size: { start: { min: 0.3, max: 0.8 }, end: { min: 0.3, max: 0.8 } },
+      loop: true
+    }
+  },
+  sakura: {
+    light: {
+      impulse: 0.02,
+      angularImpulse: 0.001,
+      rate: 4,
+      lifespan: 8000,
+      interval: 400,
+      size: { start: { min: 0.5, max: 0.8 }, end: { min: 0.3, max: 0.5 } },
+      loop: true
+    },
+    normal: {
+      impulse: 0.02,
+      angularImpulse: 0.001,
+      rate: 8,
+      lifespan: 6000,
+      interval: 300,
+      size: { start: { min: 0.5, max: 0.8 }, end: { min: 0.3, max: 0.5 } },
+      loop: true
+    },
+    heavy: {
+      impulse: 0.02,
+      angularImpulse: 0.001,
+      rate: 12,
+      lifespan: 5000,
+      interval: 200,
+      size: { start: { min: 0.5, max: 0.8 }, end: { min: 0.3, max: 0.5 } },
+      loop: true
+    }
+  },
+  sparkle: {
+    light: {
+      impulse: 0.01,
+      rate: 3,
+      lifespan: 2000,
+      interval: 200,
+      size: { start: { min: 0.2, max: 0.5 }, end: { min: 0, max: 0.1 } },
+      loop: true
+    },
+    normal: {
+      impulse: 0.02,
+      rate: 10,
+      lifespan: 1500,
+      interval: 150,
+      size: { start: { min: 0.5, max: 1 }, end: { min: 0, max: 0.1 } },
+      loop: true
+    },
+    heavy: {
+      impulse: 0.04,
+      rate: 25,
+      lifespan: 1000,
+      interval: 100,
+      size: { start: { min: 0.8, max: 1.5 }, end: { min: 0, max: 0.1 } },
+      loop: true
+    }
+  }
 }
 
 const MOOD_PRESETS: Record<MoodType, string> = {
@@ -212,11 +373,25 @@ export class Visualnovel {
   addEffect(type: EffectType = 'dust', intensity: Intensity = 'normal', overrides?: Partial<ParticleOptions>): this {
     const preset = EFFECT_PRESETS[type]?.[intensity] || EFFECT_PRESETS.dust.normal
 
+    // 파티클 설정이 등록되어 있지 않은 경우, Visualnovel이 자동 등록 (src 속성만 외부 주입 가능)
+    const clipName = `${type}_${intensity}`
+    if (!this.world.particleManager.get(clipName)) {
+      const clipBase = EFFECT_CLIP_PRESETS[type]?.[intensity] || EFFECT_CLIP_PRESETS.dust.normal
+      const customSrc = overrides?.attribute?.src ?? preset.attribute?.src ?? type
+
+      this.world.particleManager.create({
+        name: clipName,
+        src: customSrc,
+        ...clipBase,
+        spawnX: this.width * 2,
+        spawnY: this.height * 2,
+        spawnZ: this.depth
+      })
+    }
+
     const particle = this._track(this.world.createParticle({
-      attribute: { ...preset.attribute, ...overrides?.attribute },
+      attribute: { ...preset.attribute, src: clipName, ...overrides?.attribute },
       style: {
-        width: this.width,
-        height: this.height,
         ...preset.style,
         ...overrides?.style
       },
