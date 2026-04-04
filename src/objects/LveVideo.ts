@@ -65,6 +65,8 @@ export class LveVideo<
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   _clip: VideoClip | null = null
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  private _pendingSrc: string | null = null
 
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
   _src: string | null = null
@@ -86,6 +88,9 @@ export class LveVideo<
 
   constructor(options?: LveObjectOptions<VideoAttribute, D>) {
     super('video', options, Object.keys(DELEGATED_GETTERS))
+    // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
+    // __setManager() 호출 시 자동으로 적용됩니다.
+    this._pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
@@ -93,6 +98,10 @@ export class LveVideo<
    */
   __setManager(manager: VideoManager): this {
     this._manager = manager
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc
+      this._pendingSrc = null
+    }
     return this
   }
 

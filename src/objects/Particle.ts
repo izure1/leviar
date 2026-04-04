@@ -84,6 +84,8 @@ export class Particle<
   private _manager: ParticleManager | null = null
   private _clipName: string | null = null
   _clip: ParticleClip | null = null
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  private _pendingSrc: string | null = null
 
   /** 활성 파티클 인스턴스 목록 (Renderer에서 직접 참조) */
   _instances: ParticleInstance[] = []
@@ -100,6 +102,9 @@ export class Particle<
 
   constructor(options?: ParticleOptions<D>) {
     super('particle', options, Object.keys(DELEGATED_GETTERS))
+    // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
+    // __setManager() 호출 시 자동으로 적용됩니다.
+    this._pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
@@ -107,6 +112,10 @@ export class Particle<
    */
   __setManager(manager: ParticleManager): this {
     this._manager = manager
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc
+      this._pendingSrc = null
+    }
     return this
   }
 

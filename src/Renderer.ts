@@ -413,6 +413,7 @@ export class Renderer {
         uOpacity: { value: 1 },
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
+        uBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },

@@ -55,6 +55,8 @@ export class Sprite<
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   _clip: SpriteClip | null = null
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  private _pendingSrc: string | null = null
 
   /** 커스텀 재생 속도 (fps). undefined면 clip의 frameRate 사용 */
   _playbackRate?: number
@@ -73,6 +75,9 @@ export class Sprite<
 
   constructor(options?: LveObjectOptions<SpriteAttribute, D>) {
     super('sprite', options, Object.keys(DELEGATED_GETTERS))
+    // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
+    // __setManager() 호출 시 자동으로 적용됩니다.
+    this._pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
@@ -80,6 +85,10 @@ export class Sprite<
    */
   __setManager(manager: SpriteManager): this {
     this._manager = manager
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc
+      this._pendingSrc = null
+    }
     return this
   }
 

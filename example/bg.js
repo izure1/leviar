@@ -9246,6 +9246,8 @@ var LveVideo = class extends LveObject {
   _clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   _clip = null;
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  _pendingSrc = null;
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
   _src = null;
   /** Renderer에서 활성화된 실제 VideoElement 인스턴스 참조 */
@@ -9260,12 +9262,17 @@ var LveVideo = class extends LveObject {
   _pendingSeek = null;
   constructor(options) {
     super("video", options, Object.keys(DELEGATED_GETTERS2));
+    this._pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * VideoManager를 연결합니다.
    */
   __setManager(manager) {
     this._manager = manager;
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc;
+      this._pendingSrc = null;
+    }
     return this;
   }
   /**
@@ -9381,6 +9388,8 @@ var Sprite = class extends LveObject {
   _clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   _clip = null;
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  _pendingSrc = null;
   /** 커스텀 재생 속도 (fps). undefined면 clip의 frameRate 사용 */
   _playbackRate;
   /** 현재 프레임 인덱스 (clip.start 기준 절대 인덱스) */
@@ -9393,12 +9402,17 @@ var Sprite = class extends LveObject {
   _paused = false;
   constructor(options) {
     super("sprite", options, Object.keys(DELEGATED_GETTERS3));
+    this._pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * SpriteManager를 연결합니다.
    */
   __setManager(manager) {
     this._manager = manager;
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc;
+      this._pendingSrc = null;
+    }
     return this;
   }
   /**
@@ -9506,6 +9520,8 @@ var Particle = class extends LveObject {
   _manager = null;
   _clipName = null;
   _clip = null;
+  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
+  _pendingSrc = null;
   /** 활성 파티클 인스턴스 목록 (Renderer에서 직접 참조) */
   _instances = [];
   _playing = false;
@@ -9518,12 +9534,17 @@ var Particle = class extends LveObject {
   _paused = false;
   constructor(options) {
     super("particle", options, Object.keys(DELEGATED_GETTERS4));
+    this._pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * ParticleManager를 연결합니다.
    */
   __setManager(manager) {
     this._manager = manager;
+    if (this._pendingSrc) {
+      this.attribute.src = this._pendingSrc;
+      this._pendingSrc = null;
+    }
     return this;
   }
   /**
@@ -10704,6 +10725,7 @@ var Renderer2 = class {
         uOpacity: { value: 1 },
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
+        uBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) }
