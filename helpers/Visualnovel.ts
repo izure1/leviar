@@ -16,7 +16,8 @@
  *   vn.setBackground('library', 'cover', 1000)
  */
 
-import type { World, LveObject, EasingType } from '../src'
+import type { World, LveObject, EasingType, LveObjectOptions, LveObjectEvents } from '../src'
+import type { SpriteClipOptions } from '../src/SpriteManager'
 import type { ParticleOptions } from '../src/objects/Particle'
 import type { RectangleOptions } from '../src/objects/Rectangle'
 
@@ -57,6 +58,20 @@ export type CharDefs = Record<string, CharDef>
 export type BgDefs = Record<string, BgDef>
 
 export type ZoomPreset = 'close-up' | 'medium' | 'wide' | 'reset'
+
+export type UiNodeType = 'rectangle' | 'ellipse' | 'text' | 'image' | 'video' | 'sprite' | 'particle'
+
+/** Single UI definition */
+export interface UiDef {
+  type: UiNodeType
+  children?: Record<string, UiDef>
+  make: LveObjectOptions<{ text?: string; src?: string; sprite?: Omit<SpriteClipOptions, 'name' | 'src'> }>
+  on?: Partial<{
+    [K in keyof LveObjectEvents]: (...args: LveObjectEvents[K]) => void
+  }> & Record<string, (...args: any[]) => void>
+}
+
+export type UiDefs = Record<string, UiDef>
 export type PanPreset = 'left' | 'right' | 'up' | 'down' | 'center'
 export type CameraEffectPreset = 'shake' | 'bounce' | 'wave' | 'nod' | 'shake-x' | 'fall'
 export type CharacterPositionPreset = 'far-left' | 'left' | 'center' | 'right' | 'far-right' | string
@@ -263,6 +278,33 @@ const DEFAULT_RATES: Partial<Record<EffectType, number>> = {
 }
 
 // =============================================================
+// Utils
+// =============================================================
+
+/**
+ * 객체 병합 유틸리티 함수 (optional default 적용)
+ * target의 속성을 유지하되, 정의되지 않은(undefined) 속성은 defaultObj의 값으로 재귀적으로 채워넣습니다.
+ */
+export function applyDefaults<T extends Record<string, any>>(
+  target: T | undefined | null,
+  defaultObj: Partial<T>
+): T {
+  if (!target) return { ...defaultObj } as T
+  const result = { ...target } as Record<string, any>
+  for (const key in defaultObj) {
+    if (result[key] === undefined) {
+      result[key] = defaultObj[key]
+    } else if (
+      typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key]) &&
+      typeof defaultObj[key] === 'object' && defaultObj[key] !== null && !Array.isArray(defaultObj[key])
+    ) {
+      result[key] = applyDefaults(result[key], defaultObj[key] as any)
+    }
+  }
+  return result as T
+}
+
+// =============================================================
 // VisualnovelBuilder
 // =============================================================
 
@@ -272,14 +314,17 @@ const DEFAULT_RATES: Partial<Record<EffectType, number>> = {
  */
 export class VisualnovelBuilder<
   TC extends CharDefs = Record<never, never>,
-  TB extends BgDefs = Record<never, never>
+  TB extends BgDefs = Record<never, never>,
+  TU extends UiDefs = Record<never, never>
 > {
   private readonly _c: TC
   private readonly _b: TB
+  private readonly _u: TU
 
-  constructor(c: TC, b: TB) {
+  constructor(c: TC, b: TB, u: TU) {
     this._c = c
     this._b = b
+    this._u = u
   }
 
   /**
@@ -289,8 +334,8 @@ export class VisualnovelBuilder<
    *   heroine: { images: { normal: 'girl_normal', happy: 'girl_happy' }, focusPoint: { x:0.5, y:0.2 } }
    * })
    */
-  defineCharacter<C extends CharDefs>(defs: C): VisualnovelBuilder<C, TB> {
-    return new VisualnovelBuilder(defs, this._b)
+  defineCharacter<C extends CharDefs>(defs: C): VisualnovelBuilder<C, TB, TU> {
+    return new VisualnovelBuilder(defs, this._b, this._u)
   }
 
   /**
@@ -301,13 +346,20 @@ export class VisualnovelBuilder<
    *   rooftop: { src: 'bg_roof',    parallax: false }
    * })
    */
-  defineBackground<B extends BgDefs>(defs: B): VisualnovelBuilder<TC, B> {
-    return new VisualnovelBuilder(this._c, defs)
+  defineBackground<B extends BgDefs>(defs: B): VisualnovelBuilder<TC, B, TU> {
+    return new VisualnovelBuilder(this._c, defs, this._u)
+  }
+
+  /**
+   * Define UI layouts. Keys become type-safe identifiers.
+   */
+  defineUI<U extends UiDefs>(defs: U): VisualnovelBuilder<TC, TB, U> {
+    return new VisualnovelBuilder(this._c, this._b, defs)
   }
 
   /** Instantiate the Visualnovel engine. */
-  build(world: World, option: VisualnovelOption): Visualnovel<TC, TB> {
-    return new Visualnovel(world, option, this._c, this._b)
+  build(world: World, option: VisualnovelOption): Visualnovel<TC, TB, TU> {
+    return new Visualnovel(world, option, this._c, this._b, this._u)
   }
 }
 
@@ -317,7 +369,8 @@ export class VisualnovelBuilder<
 
 export class Visualnovel<
   TC extends CharDefs = Record<never, never>,
-  TB extends BgDefs = Record<never, never>
+  TB extends BgDefs = Record<never, never>,
+  TU extends UiDefs = Record<never, never>
 > {
   protected readonly world: World
   protected readonly width: number
@@ -330,6 +383,7 @@ export class Visualnovel<
 
   private readonly _charDefs: TC
   private readonly _bgDefs: TB
+  private readonly _uiDefs: TU
 
   private _objects: Set<LveObject> = new Set()
   private _characters: Map<string, LveObject> = new Map()
@@ -340,6 +394,7 @@ export class Visualnovel<
   private _transitionObj: LveObject | null = null
   private _overlayObjs: Map<string, LveObject> = new Map()
   private _lightObjs: Map<string, LveObject> = new Map()
+  private _uiObjs: Map<string, LveObject> = new Map()
   private _flickerObj: LveObject | null = null
   private _initialCamZ: number = 0
 
@@ -351,6 +406,7 @@ export class Visualnovel<
   static create(): VisualnovelBuilder {
     return new VisualnovelBuilder(
       {} as Record<never, never>,
+      {} as Record<never, never>,
       {} as Record<never, never>
     )
   }
@@ -359,13 +415,14 @@ export class Visualnovel<
   // Constructor (internal; use Visualnovel.create()...build())
   // -----------------------------------------------------------
 
-  constructor(world: World, option: VisualnovelOption, charDefs: TC, bgDefs: TB) {
+  constructor(world: World, option: VisualnovelOption, charDefs: TC, bgDefs: TB, uiDefs: TU) {
     this.world = world
     this.width = option.width
     this.height = option.height
     this.depth = option.depth
     this._charDefs = charDefs
     this._bgDefs = bgDefs
+    this._uiDefs = uiDefs
 
     if (!this.world.camera) {
       this.world.camera = this.world.createCamera()
@@ -383,6 +440,13 @@ export class Visualnovel<
     const charW = 500
     this.maxCameraX = Math.ceil(this.width * 0.4 + charW * 0.5)
     this.maxCameraY = Math.ceil(charW * 1.0 + this.height * 0.1)
+
+    // UI 요소 자동 생성 및 카메라 추가 (월드 생성 시 자동 렌더링)
+    for (const [key, def] of Object.entries(this._uiDefs)) {
+      const uiObj = this._track(this._buildUINode(def as UiDef, key))
+      this.world.camera?.addChild(uiObj)
+      this._uiObjs.set(key, uiObj)
+    }
   }
 
   // -----------------------------------------------------------
@@ -450,6 +514,7 @@ export class Visualnovel<
     if (this._moodObj) { this._moodObj.remove(); this._moodObj = null }
     this._overlayObjs.forEach(obj => obj.remove()); this._overlayObjs.clear()
     this._lightObjs.forEach(obj => obj.remove()); this._lightObjs.clear()
+    this._uiObjs.forEach(obj => obj.remove()); this._uiObjs.clear()
     this._flickerObj = null
     return this
   }
@@ -1106,6 +1171,102 @@ export class Visualnovel<
     const rect = this._getTransitionRect('rgba(0,0,0,1)')
     rect.style.opacity = 0
     rect.animate({ style: { opacity: 1 } }, duration, 'easeInOut')
+    return this
+  }
+
+  // -----------------------------------------------------------
+  // UI
+  // -----------------------------------------------------------
+
+  private _buildUINode(def: UiDef, id: string): LveObject {
+    const nodeType = def.type ?? 'rectangle'
+
+    const mergedMake = applyDefaults(def.make, {
+      style: {
+        color: nodeType === 'rectangle' ? 'transparent' : undefined,
+        zIndex: 999, // 자동 배치 기본값
+      },
+      transform: {
+        pivot: { x: 0, y: 0 },
+        position: { z: 100 } // UI의 기본 Z-depth
+      }
+    }) as any
+
+    let uiNode: LveObject
+
+    switch (nodeType) {
+      case 'text':
+        uiNode = this.world.createText(mergedMake)
+        break
+      case 'image':
+        uiNode = this.world.createImage(mergedMake)
+        break
+      case 'video':
+        uiNode = this.world.createVideo(mergedMake)
+        break
+      case 'sprite': {
+        const spriteData = mergedMake.attribute?.sprite
+        if (spriteData) {
+          const clipName = `ui_auto_${id}`
+          if (!this.world.spriteManager.get(clipName)) {
+            this.world.spriteManager.create({
+              name: clipName,
+              src: mergedMake.attribute?.src ?? '',
+              ...spriteData
+            })
+          }
+          if (mergedMake.attribute) {
+            mergedMake.attribute.src = clipName
+          }
+        }
+        uiNode = this.world.createSprite(mergedMake)
+        break
+      }
+      case 'particle': {
+        uiNode = this.world.createParticle(mergedMake as any)
+        break
+      }
+      case 'ellipse':
+        uiNode = this.world.createEllipse(mergedMake)
+        break
+      case 'rectangle':
+        uiNode = this.world.createRectangle(mergedMake)
+        break
+      default:
+        throw new Error(`UI type "${nodeType}" is not supported.`)
+    }
+
+    if (def.on) {
+      for (const [evtName, handler] of Object.entries(def.on)) {
+        uiNode.on(evtName, handler)
+      }
+    }
+
+    if (def.children) {
+      for (const [childId, childDef] of Object.entries(def.children)) {
+        const childNode = this._buildUINode(childDef, childId)
+        uiNode.addChild(childNode)
+      }
+    }
+
+    return uiNode
+  }
+
+  /** UI 요소를 페이드인 시킵니다. */
+  fadeInUI<K extends keyof TU & string>(key: K, duration: number = 800): this {
+    const obj = this._uiObjs.get(key)
+    if (obj && typeof (obj as any).fadeIn === 'function') {
+      ; (obj as any).fadeIn(duration)
+    }
+    return this
+  }
+
+  /** UI 요소를 페이드아웃 시킵니다 (제거하지 않음). 제거를 원한다면 removeUI를 사용하거나, fadeOut 메서드 콜백을 쓰십시오. */
+  fadeOutUI<K extends keyof TU & string>(key: K, duration: number = 800): this {
+    const obj = this._uiObjs.get(key)
+    if (obj && typeof (obj as any).fadeOut === 'function') {
+      ; (obj as any).fadeOut(duration)
+    }
     return this
   }
 }

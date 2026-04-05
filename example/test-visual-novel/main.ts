@@ -10,6 +10,7 @@ await world.loader.load({
   'girl_after': '../asset/image/transition_after.png',
   'bg_library': '../asset/image/bg_library.png',
   'bg_floor': '../asset/image/bg_floor.png',
+  'bg_park': '../asset/image/bg_park.png',
   'dust': '../asset/image/star.png',
   'sakura': '../asset/image/sakura.png',
   'rain': '../asset/image/rain.png',
@@ -34,13 +35,32 @@ const vn = Visualnovel.create()
   })
   .defineBackground({
     library: { src: 'bg_library', parallax: true }, // 패럴럭스 O
-    floor: { src: 'bg_floor', parallax: false }  // 패럴럭스 X (카메라 고정)
+    floor: { src: 'bg_floor', parallax: false },  // 패럴럭스 X (카메라 고정),
+    park: { src: 'bg_park', parallax: true },  // 패럴럭스 O
+  })
+  .defineUI({
+    dialogueBox: {
+      type: 'rectangle',
+      make: {
+        style: {
+          width: 800,
+          height: 200,
+          gradientType: 'linear',
+          gradient: '90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 0, 0, 0.5) 100%'
+        },
+        transform: {
+          position: { x: 0, y: 400 },
+        }
+      }
+    }
   })
   .build(world, {
     width: canvas.width,
     height: canvas.height,
     depth: 500
   })
+
+console.log(vn)
 
 // 초기 오버레이
 vn.addOverlay("클릭 또는 엔터로 진행 (step 1~16)", 'caption')
@@ -163,7 +183,7 @@ function nextStep() {
       vn.clearOverlay()
       vn.addOverlay("테스트: 배경 전환 → floor (parallax: false, 카메라 고정)", 'caption')
       vn.setMood('dawn', 1, 1000)
-      vn.setBackground('floor', 'contain', 1500)
+      vn.setBackground('floor', 'cover', 1500)
       vn.focusCharacter('heroine', 'chest', 'reset')
       break
 
@@ -171,6 +191,7 @@ function nextStep() {
     case 15: {
       vn.clearOverlay()
       vn.setMood('day', 1, 2000)
+      vn.setBackground('park', 'cover', 1500)
       vn.addOverlay("테스트: addLight(spot) + setFlicker(spot, candle)", 'caption')
       vn.removeEffect('sakura')
       vn.removeEffect('dust')
