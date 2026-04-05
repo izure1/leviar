@@ -505,17 +505,43 @@ export class Visualnovel<
   // -----------------------------------------------------------
 
   /** Remove all scene objects (characters, effects, background, mood, overlays, lights). */
-  clear(): this {
-    this._objects.forEach(obj => obj.remove())
-    this._objects.clear()
+  clear(resetUI: boolean = true): this {
+    if (!resetUI) {
+      this._objects.forEach(obj => {
+        let isUI = false;
+        for (const uiObj of this._uiObjs.values()) {
+          if (uiObj === obj) {
+            isUI = true;
+            break;
+          }
+        }
+        if (!isUI) obj.remove();
+      })
+      const uiVals = Array.from(this._uiObjs.values());
+      this._objects.clear();
+      uiVals.forEach(ui => this._objects.add(ui));
+    } else {
+      this._objects.forEach(obj => obj.remove())
+      this._objects.clear()
+      this._uiObjs.clear()
+    }
+
     this._characters.clear()
     this._effects.clear()
     this._backgroundObj = null
     if (this._moodObj) { this._moodObj.remove(); this._moodObj = null }
     this._overlayObjs.forEach(obj => obj.remove()); this._overlayObjs.clear()
     this._lightObjs.forEach(obj => obj.remove()); this._lightObjs.clear()
-    this._uiObjs.forEach(obj => obj.remove()); this._uiObjs.clear()
     this._flickerObj = null
+
+    if (resetUI) {
+      for (const [key, def] of Object.entries(this._uiDefs)) {
+        const uiObj = this._track(this._buildUINode(def as any, key))
+        this.world.camera?.addChild(uiObj)
+        this._uiObjs.set(key, uiObj)
+      }
+    }
+
     return this
   }
 
@@ -1188,9 +1214,23 @@ export class Visualnovel<
       },
       transform: {
         pivot: { x: 0, y: 0 },
-        position: { z: 100 } // UI의 기본 Z-depth
+        position: { x: 0, y: 0, z: 100 } // UI의 기본 Z-depth 및 x,y
       }
     }) as any
+
+    if (mergedMake.transform?.position && this.world.camera && typeof (this.world.camera as any).canvasToLocal === 'function') {
+      const pos = mergedMake.transform.position
+      const px = pos.x ?? 0
+      const py = pos.y ?? 0
+      const pz = pos.z ?? 100
+
+      const localPos = (this.world.camera as any).canvasToLocal(px, py, pz)
+      mergedMake.transform.position = {
+        x: localPos.x,
+        y: localPos.y,
+        z: localPos.z
+      }
+    }
 
     let uiNode: LveObject
 

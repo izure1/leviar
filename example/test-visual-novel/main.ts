@@ -45,11 +45,12 @@ const vn = Visualnovel.create()
         style: {
           width: 800,
           height: 200,
+          color: 'rgba(0, 0, 0, 0)',
           gradientType: 'linear',
-          gradient: '90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 0, 0, 0.5) 100%'
+          gradient: '180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 102, 255, 0.75) 100%'
         },
         transform: {
-          position: { x: 0, y: 400 },
+          position: { y: 250 }
         }
       }
     }
