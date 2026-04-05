@@ -538,8 +538,10 @@ export class Renderer {
       this._lastObjCount = objects.size
       this._sortDirty = false
 
-      // 직접 Z 좌표 기준 정렬 (GPU View 연산으로 지처리)
-      const sortedObjects: LveObject[] = []
+      // 직접 Z 좌표 기준 정렬 및 카메라 자식 별도 판별 처리
+      const worldObjects: LveObject[] = []
+      const uiObjects: LveObject[] = []
+
       for (const o of objects) {
         if (
           o.attribute.type === 'camera' ||
@@ -547,16 +549,38 @@ export class Renderer {
         ) {
           continue
         }
-        sortedObjects.push(o)
+
+        let isUI = false
+        if (activeCamera) {
+          let curr = o.parent
+          while (curr) {
+            if (curr.attribute.id === activeCamera.attribute.id) {
+              isUI = true
+              break
+            }
+            curr = curr.parent
+          }
+        }
+
+        if (isUI) {
+          uiObjects.push(o)
+        } else {
+          worldObjects.push(o)
+        }
       }
-      sortedObjects.sort((a, b) => {
+
+      const sortLogic = (a: LveObject, b: LveObject) => {
         // 계층 구조 지원 _worldMatrix의 변환된 Z좌표 기준 정렬 (-1로 원상 복구)
         const mA = a._worldMatrix as unknown as Float32Array
         const mB = b._worldMatrix as unknown as Float32Array
         const zdiff = (-mB[14]) - (-mA[14])
         return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
-      })
-      this._sortedObjects = sortedObjects
+      }
+
+      worldObjects.sort(sortLogic)
+      uiObjects.sort(sortLogic)
+
+      this._sortedObjects = [...worldObjects, ...uiObjects]
     }
 
     // 화면 클리어

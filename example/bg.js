@@ -10834,20 +10834,38 @@ var Renderer2 = class {
       this._lastCamRotZ = camRotZ;
       this._lastObjCount = objects.size;
       this._sortDirty = false;
-      const sortedObjects = [];
+      const worldObjects = [];
+      const uiObjects = [];
       for (const o of objects) {
         if (o.attribute.type === "camera" || o.style.display === "none") {
           continue;
         }
-        sortedObjects.push(o);
+        let isUI = false;
+        if (activeCamera) {
+          let curr = o.parent;
+          while (curr) {
+            if (curr.attribute.id === activeCamera.attribute.id) {
+              isUI = true;
+              break;
+            }
+            curr = curr.parent;
+          }
+        }
+        if (isUI) {
+          uiObjects.push(o);
+        } else {
+          worldObjects.push(o);
+        }
       }
-      sortedObjects.sort((a, b) => {
+      const sortLogic = (a, b) => {
         const mA = a._worldMatrix;
         const mB = b._worldMatrix;
         const zdiff = -mB[14] - -mA[14];
         return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex;
-      });
-      this._sortedObjects = sortedObjects;
+      };
+      worldObjects.sort(sortLogic);
+      uiObjects.sort(sortLogic);
+      this._sortedObjects = [...worldObjects, ...uiObjects];
     }
     this.gl.clearColor(0, 0, 0, 0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
