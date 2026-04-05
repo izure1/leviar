@@ -145,7 +145,7 @@ const EFFECT_CLIP_PRESETS: Record<EffectType, Omit<ParticleClipOptions, 'name' |
 }
 
 const MOOD_PRESETS: Record<MoodType, { color: string, vignette?: string, blendMode?: string }> = {
-  day: { color: 'rgba(255, 255, 255, 0)', vignette: 'transparent 30%, rgba(255, 255, 255, 0.4) 100%' },
+  day: { color: 'rgba(255, 255, 255, 0)', vignette: 'transparent 30%, rgba(255, 255, 255, 0.4) 100%', blendMode: 'lighter' },
   sunset: { color: 'rgba(255, 100, 0, 0.2)', vignette: 'transparent 40%, rgba(255, 180, 50, 0.5) 100%', blendMode: 'overlay' },
   night: { color: 'rgba(0, 0, 50, 0.4)', vignette: 'transparent 40%, rgba(0, 0, 0, 0.8) 100%', blendMode: 'multiply' },
   sepia: { color: 'rgba(112, 66, 20, 0.3)', vignette: 'transparent 40%, rgba(50, 30, 10, 0.8) 100%', blendMode: 'multiply' },
@@ -235,18 +235,20 @@ export class Visualnovel {
 
   /** 이 인스턴스가 생성한 모든 오브젝트 */
   private _objects: Set<LveObject> = new Set()
-  /** 위치 키 → 캐릭터 오브젝트 */
-  private _characters: Map<CharacterPositionPreset, LveObject> = new Map()
+  /** 키(또는 위치) → 캐릭터 오브젝트 */
+  private _characters: Map<string, LveObject> = new Map()
+  /** 키(또는 타입) → 환경 파티클 효과 오브젝트 */
+  private _effects: Map<string, LveObject> = new Map()
   /** 현재 배경 오브젝트 */
   private _backgroundObj: LveObject | null = null
   /** 무드 필터 오브젝트 */
   private _moodObj: LveObject | null = null
   /** 화면 전환용 오버레이 오브젝트 (재사용) */
   private _transitionObj: LveObject | null = null
-  /** 텍스트 오버레이 목록 */
-  private _overlayObjs: LveObject[] = []
-  /** 조명 오브젝트 목록 */
-  private _lightObjs: LveObject[] = []
+  /** 키 → 텍스트 오버레이 목록 */
+  private _overlayObjs: Map<string, LveObject> = new Map()
+  /** 키 → 조명 오브젝트 목록 */
+  private _lightObjs: Map<string, LveObject> = new Map()
   /** 깜빡임 타이머 핸들 */
   private _flickerHandle: ReturnType<typeof setInterval> | null = null
 
@@ -309,11 +311,18 @@ export class Visualnovel {
    * 프리셋 환경 효과(파티클)를 공간에 추가합니다.
    * @param type 효과 종류 (dust, rain, snow, sakura, sparkle, fog, leaves, fireflies)
    * @param rate 초당(혹은 인터벌 당) 생성되는 파티클 갯수
+   * @param key 효과를 식별할 고유 키 (기본값: type)
    * @param overrides 세부 옵션 오버라이드
    */
-  addEffect(type: EffectType = 'dust', rate?: number, overrides?: Partial<ParticleOptions>): this {
+  addEffect(type: EffectType = 'dust', rate?: number, key?: string, overrides?: Partial<ParticleOptions>): this {
     const preset = EFFECT_PRESETS[type] ?? EFFECT_PRESETS.dust
     const finalRate = rate ?? DEFAULT_RATES[type] ?? 10
+    const finalKey = key || type
+    
+    // 중복 추가 방지: 기존 키가 존재하면 삭제
+    if (this._effects.has(finalKey)) {
+      this.removeEffect(finalKey)
+    }
 
     // 고유한 클립 이름을 위해 rate 값을 클립명에 명시합니다.
     const clipName = `${type}_rate_${finalRate}`
@@ -345,7 +354,32 @@ export class Visualnovel {
       ...overrides
     }))
 
+    this._effects.set(finalKey, particle)
     particle.play()
+    return this
+  }
+
+  /** addEffect('dust') 의 간편 래퍼 */
+  addDust(rate?: number, key?: string, overrides?: Partial<ParticleOptions>): this {
+    return this.addEffect('dust', rate, key, overrides)
+  }
+
+  /** 지정된 키의 파티클 효과를 완전히 제거합니다. */
+  removeEffect(key: string, duration: number = 600): this {
+    const effect = this._effects.get(key)
+    if (effect) {
+      this._effects.delete(key)
+      if (duration > 0 && typeof effect.fadeOut === 'function') {
+        effect.fadeOut(duration)
+        setTimeout(() => {
+          effect.remove()
+          this._objects.delete(effect)
+        }, duration)
+      } else {
+        effect.remove()
+        this._objects.delete(effect)
+      }
+    }
     return this
   }
 
@@ -354,14 +388,21 @@ export class Visualnovel {
   // -----------------------------------------------------------
 
   /**
-   * 공간 배경을 추가합니다.
+   * 공간 배경을 설정합니다. 기존 배경이 있다면 부드럽게 화면을 교체합니다. (duration이 0이면 즉시 교체)
    * @param src 에셋 이름 또는 URL
    * @param fit 배경 맞춤 방식
+   * @param duration 전환 지속 시간 (ms). 0이면 즉시 교체
    * @param isVideo 비디오 여부
-   * @param overrides 세부 오버라이드
+   * @param overrides 세부 옵션 오버라이드
    */
-  setBackground(src: string, fit: BackgroundFitPreset = 'stretch', isVideo: boolean = false, overrides?: any): this {
-    // 기존 배경 제거
+  setBackground(src: string, fit: BackgroundFitPreset = 'stretch', duration: number = 1000, isVideo: boolean = false, overrides?: any): this {
+    // 기존 배경이 있고, 트랜지션 시간이 주어졌다면 부드럽게 전환
+    if (this._backgroundObj && duration > 0 && typeof (this._backgroundObj as any).transition === 'function') {
+      (this._backgroundObj as any).transition(src, duration)
+      return this
+    }
+
+    // 그렇지 않으면 기존 배경 파괴 후 다시 생성
     if (this._backgroundObj) {
       this._backgroundObj.remove()
       this._objects.delete(this._backgroundObj)
@@ -396,27 +437,12 @@ export class Visualnovel {
       ? (() => { const v = this.world.createVideo(options as any); v.play(); return v })()
       : this.world.createImage(options as any)
 
-    this._backgroundObj = this._track(bg)
-    return this
-  }
-
-  /**
-   * 배경을 새로운 에셋으로 부드럽게 전환합니다.
-   * @param newSrc 새 에셋 이름
-   * @param preset 전환 방식 (현재 'fade' 지원)
-   * @param duration 지속 시간 (ms)
-   */
-  transitionTo(newSrc: string, preset: 'fade' | 'cut' = 'fade', duration: number = 1000): this {
-    const bg = this._backgroundObj as any
-    if (!bg) return this
-
-    if (preset === 'cut') {
-      bg.attribute.src = newSrc
-    } else if (preset === 'fade' && typeof bg.transition?.start === 'function') {
-      bg.transition.start(newSrc, duration)
-    } else {
-      bg.attribute.src = newSrc
+    // 최초 생성일 때에도 부드러운 페이드인이 가능하다면 적용
+    if (duration > 0 && typeof (bg as any).fadeIn === 'function') {
+      (bg as any).fadeIn(duration)
     }
+
+    this._backgroundObj = this._track(bg)
     return this
   }
 
@@ -471,14 +497,15 @@ export class Visualnovel {
    * 캐릭터 이미지를 지정 위치에 배치합니다.
    * @param src 캐릭터 에셋 이름
    * @param position 위치 프리셋
+   * @param key 캐릭터 식별 고유 키 (기본값: position)
    * @param overrides 세부 오버라이드
    */
-  addCharacter(src: string, position: CharacterPositionPreset = 'center', overrides?: any): this {
+  addCharacter(src: string, position: CharacterPositionPreset = 'center', key?: string, overrides?: any): this {
+    const finalKey = key || position
+
     // 같은 위치에 이미 캐릭터가 있으면 교체
-    const existing = this._characters.get(position)
-    if (existing) {
-      existing.remove()
-      this._objects.delete(existing)
+    if (this._characters.has(finalKey)) {
+      this.removeCharacter(finalKey)
     }
 
     const xPos = this.width * (CHARACTER_X_RATIO[position] - 0.5)
@@ -498,7 +525,44 @@ export class Visualnovel {
       ...overrides
     }))
 
-    this._characters.set(position, img)
+    this._characters.set(finalKey, img)
+    return this
+  }
+
+  /** 지정된 키를 가진 캐릭터를 제거합니다. */
+  removeCharacter(key: string, duration: number = 600): this {
+    const obj = this._characters.get(key)
+    if (obj) {
+      this._characters.delete(key)
+      if (duration > 0 && typeof obj.fadeOut === 'function') {
+        obj.fadeOut(duration)
+        setTimeout(() => {
+          obj.remove()
+          this._objects.delete(obj)
+        }, duration)
+      } else {
+        obj.remove()
+        this._objects.delete(obj)
+      }
+    }
+    return this
+  }
+
+  /**
+   * 캐릭터의 에셋을 부드럽게 변경합니다 (표정, 포즈, 옷차림 전환 등에 활용). (duration이 0이면 즉시 교체)
+   * @param keyOrPosition 변경할 캐릭터 식별 키
+   * @param newSrc 새로운 에셋 이름
+   * @param duration 전환 지속 시간 (ms). 0이면 즉시 교체
+   */
+  changeCharacter(keyOrPosition: string, newSrc: string, duration: number = 600): this {
+    const target = this._characters.get(keyOrPosition)
+    if (!target) return this
+
+    if (duration > 0 && typeof (target as any).transition === 'function') {
+      (target as any).transition(newSrc, duration)
+    } else {
+      (target as any).attribute.src = newSrc
+    }
     return this
   }
 
@@ -509,10 +573,17 @@ export class Visualnovel {
   /**
    * 공간에 조명 효과를 추가합니다.
    * @param preset 조명 프리셋 (spot, ambient, warm, cold)
+   * @param key 조명 식별 고유 키 (기본값: preset)
    * @param overrides 세부 오버라이드
    */
-  addLight(preset: LightPreset = 'ambient', overrides?: Partial<RectangleOptions>): this {
+  addLight(preset: LightPreset = 'ambient', key?: string, overrides?: Partial<RectangleOptions>): this {
     const p = LIGHT_PRESETS[preset]
+    const finalKey = key || preset
+    
+    if (this._lightObjs.has(finalKey)) {
+      this.removeLight(finalKey)
+    }
+
     const rect = this._track(this.world.createRectangle({
       attribute: overrides?.attribute,
       style: {
@@ -532,16 +603,36 @@ export class Visualnovel {
       ...overrides
     }))
     this.world.camera?.addChild(rect)
-    this._lightObjs.push(rect)
+    this._lightObjs.set(finalKey, rect)
+    return this
+  }
+
+  /** 지정된 키의 조명을 제거합니다. */
+  removeLight(key: string, duration: number = 600): this {
+    const obj = this._lightObjs.get(key)
+    if (obj) {
+      this._lightObjs.delete(key)
+      if (duration > 0 && typeof obj.fadeOut === 'function') {
+        obj.fadeOut(duration)
+        setTimeout(() => {
+          obj.remove()
+          this._objects.delete(obj)
+        }, duration)
+      } else {
+        obj.remove()
+        this._objects.delete(obj)
+      }
+    }
     return this
   }
 
   /**
    * 조명이 자연스럽게 깜빡이는 효과를 적용합니다.
    * @param preset 깜빡임 프리셋 (candle, strobe, flicker)
+   * @param key 적용할 조명의 키 (생략 시 마지막 등록된 조명에 적용)
    */
-  setFlicker(preset: FlickerPreset = 'candle'): this {
-    const target = this._lightObjs[this._lightObjs.length - 1]
+  setFlicker(preset: FlickerPreset = 'candle', key?: string): this {
+    const target = key ? this._lightObjs.get(key) : Array.from(this._lightObjs.values()).pop()
     if (!target) return this
 
     // 기존 깜빡임 취소
@@ -573,10 +664,17 @@ export class Visualnovel {
    * 화면에 텍스트 오버레이를 추가합니다.
    * @param text 표시할 텍스트
    * @param preset 오버레이 스타일 프리셋
+   * @param key 오버레이 식별 고유 키 (기본값: preset)
    * @param overrides 세부 오버라이드
    */
-  addOverlay(text: string, preset: OverlayPreset = 'caption', overrides?: any): this {
+  addOverlay(text: string, preset: OverlayPreset = 'caption', key?: string, overrides?: any): this {
     const p = OVERLAY_PRESETS[preset]
+    const finalKey = key || preset
+
+    if (this._overlayObjs.has(finalKey)) {
+      this.removeOverlay(finalKey)
+    }
+
     const yPosMap: Record<'top' | 'center' | 'bottom', number> = {
       top: this.height * 0.1,
       center: this.height * 0.5,
@@ -606,17 +704,36 @@ export class Visualnovel {
     }))
 
     this.world.camera?.addChild(textObj)
-    this._overlayObjs.push(textObj)
+    this._overlayObjs.set(finalKey, textObj)
+    return this
+  }
+
+  /** 지정된 키의 텍스트 오버레이를 제거합니다. */
+  removeOverlay(key: string, duration: number = 600): this {
+    const obj = this._overlayObjs.get(key)
+    if (obj) {
+      this._overlayObjs.delete(key)
+      if (duration > 0 && typeof obj.fadeOut === 'function') {
+        obj.fadeOut(duration)
+        setTimeout(() => {
+          obj.remove()
+          this._objects.delete(obj)
+        }, duration)
+      } else {
+        obj.remove()
+        this._objects.delete(obj)
+      }
+    }
     return this
   }
 
   /** 모든 텍스트 오버레이를 제거합니다 */
   clearOverlay(): this {
-    for (const obj of this._overlayObjs) {
+    for (const obj of this._overlayObjs.values()) {
       obj.remove()
       this._objects.delete(obj)
     }
-    this._overlayObjs = []
+    this._overlayObjs.clear()
     return this
   }
 
@@ -692,9 +809,13 @@ export class Visualnovel {
 
   /**
    * 지정 위치의 캐릭터를 향해 카메라를 팬 + 줌인 합산으로 포커스합니다.
+   * keyOrPosition은 추가 시 부여된 캐릭터 고유 키 (기본 위치명과 동일) 입니다.
    */
-  focusCharacter(position: CharacterPositionPreset, zoomPreset: ZoomPreset = 'close-up', duration: number = 1200): this {
-    const xPos = this.width * (CHARACTER_X_RATIO[position] - 0.5)
+  focusCharacter(keyOrPosition: string, zoomPreset: ZoomPreset = 'close-up', duration: number = 1200): this {
+    const target = this._characters.get(keyOrPosition)
+    if (!target) return this
+
+    const xPos = target.transform.position.x
     this.panCamera('center', { x: xPos, y: 0, duration })
     this.zoomCamera(zoomPreset, { duration })
     return this
@@ -704,8 +825,8 @@ export class Visualnovel {
    * 지정 위치의 캐릭터를 강조합니다 (무드 레이어를 해당 캐릭터 뒤에만 적용).
    * 기존 무드를 어둡게 바꾸고, 해당 캐릭터만 zIndex를 올립니다.
    */
-  highlightCharacter(position: CharacterPositionPreset): this {
-    const target = this._characters.get(position)
+  highlightCharacter(keyOrPosition: string): this {
+    const target = this._characters.get(keyOrPosition)
     if (!target) return this
 
     // 무드를 어둠으로 교체
@@ -768,11 +889,14 @@ export class Visualnovel {
     const rect = this._getTransitionRect('rgba(0,0,0,1)')
     rect.style.opacity = 1
 
+    const w = this.world.canvas ? Math.max(this.world.canvas.width, this.width) : this.width
+    const h = this.world.canvas ? Math.max(this.world.canvas.height, this.height) : this.height
+
     const targetPos: Record<WipePreset, { x: number, y: number }> = {
-      left: { x: -this.width, y: 0 },
-      right: { x: this.width, y: 0 },
-      up: { x: 0, y: -this.height },
-      down: { x: 0, y: this.height }
+      left: { x: -w * 1.5, y: 0 },
+      right: { x: w * 1.5, y: 0 },
+      up: { x: 0, y: -h * 1.5 },
+      down: { x: 0, y: h * 1.5 }
     }
 
     const target = targetPos[preset]
@@ -803,10 +927,11 @@ export class Visualnovel {
 
     this._objects.clear()
     this._characters.clear()
+    this._effects.clear()
     this._backgroundObj = null
     this._moodObj = null
-    this._overlayObjs = []
-    this._lightObjs = []
+    this._overlayObjs.clear()
+    this._lightObjs.clear()
     return this
   }
 

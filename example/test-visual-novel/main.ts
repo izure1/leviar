@@ -11,6 +11,7 @@ world.gravity.x = 0.2
 await world.loader.load({
   'bg': '../asset/image/background.jpg',
   'girl_before': '../asset/image/transition_before.png',
+  'girl_after': '../asset/image/transition_after.png',
   'dust': '../asset/image/star.png',
   'rain': '../asset/image/rain.png',
   'snow': '../asset/image/snow.png',
@@ -27,10 +28,11 @@ const vn = new Visualnovel(world, {
 
 
 // 씬 연출 시작
-vn.setBackground('bg', 'cover')
-  .setMood('sunset')
-  .addEffect('snow', 100)
-  .addCharacter('girl_before', 'center')
+vn.setBackground('bg', 'cover', 1000)
+  .setMood('day')
+  .addEffect('rain', 1000, 'my-rain')
+  .addEffect('snow', 10)
+  .addCharacter('girl_before', 'center', 'my-girl')
   .addOverlay('테스트 씬이 시작되었습니다...', 'caption')
 
 // 화면을 검게 암전시킨 후, 서서히 나타남
@@ -46,6 +48,8 @@ world.on('click', () => {
   if (step === 1) {
     vn.clearOverlay()
     vn.addOverlay('선생님이 다가옵니다!', 'title')
+    vn.removeEffect('my-rain')
+    vn.changeCharacter('my-girl', 'girl_after')
     vn.focusCharacter('center', 'medium', 1000)
     vn.screenFlash('white')
   }
@@ -53,8 +57,9 @@ world.on('click', () => {
     vn.clearOverlay()
     vn.addOverlay('밤이 되었습니다.', 'caption')
     vn.setMood('night')
-    vn.addLight('spot', { style: { width: 500, height: 500 } })
-    // vn.setFlicker('candle') // 조명 생성 후 깜빡임 적용 가능
+    vn.addLight('spot', 'my_spot', { style: { width: 500, height: 500 } })
+    vn.removeCharacter('my-girl')
+    vn.setFlicker('candle', 'my_spot') // 조명 생성 후 깜빡임 적용 가능
   }
   else if (step === 3) {
     vn.screenWipe('left', 800)

@@ -351,6 +351,13 @@ export class World extends EventEmitter<WorldEvents> {
   }
 
   /**
+   * 월드에 연결된 캔버스 엘리먼트를 반환합니다.
+   */
+  get canvas(): HTMLCanvasElement | null {
+    return this._canvas
+  }
+
+  /**
    * 월드의 중력 x, y 값. 직접 수정하거나 새 객체를 할당할 수 있습니다.
    */
   get gravity(): { x: number; y: number } {
