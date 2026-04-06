@@ -1,5 +1,5 @@
-import { LveObject } from '../LveObject.js'
-import type { LveObjectOptions } from '../types.js'
+import { LeviaObject } from '../LeviaObject.js'
+import type { LeviaObjectOptions } from '../types.js'
 import type { ParticleClip, ParticleManager } from '../ParticleManager.js'
 import type { PhysicsEngine } from '../PhysicsEngine.js'
 import Matter from 'matter-js'
@@ -17,7 +17,7 @@ const DELEGATED_KEYS = ['src']
 
 export interface ParticleOptions<
   D extends Record<string, any> = Record<string, any>
-> extends LveObjectOptions<ParticleAttribute, D> {
+> extends LeviaObjectOptions<ParticleAttribute, D> {
 }
 
 export interface ParticleInstance {
@@ -62,7 +62,7 @@ const GRAVITY = 0.001 // px/ms²
 
 export class Particle<
   D extends Record<string, any> = Record<string, any>
-> extends LveObject<ParticleAttribute, D> {
+> extends LeviaObject<ParticleAttribute, D> {
 
   private _manager: ParticleManager | null = null
   private _clipName: string | null = null

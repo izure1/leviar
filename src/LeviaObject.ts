@@ -16,8 +16,8 @@ import type {
   Dataset,
   DatasetValue,
   EasingType,
-  LveObjectOptions,
-  LveObjectEvents,
+  LeviaObjectOptions,
+  LeviaObjectEvents,
   Style,
   Transform,
   Vec3,
@@ -131,10 +131,10 @@ function makeVec3Proxy(
   })
 }
 
-export abstract class LveObject<
+export abstract class LeviaObject<
   T extends Record<string, any> = Record<string, any>,
   D extends Record<string, any> = Record<string, any>
-> extends EventEmitter<LveObjectEvents> {
+> extends EventEmitter<LeviaObjectEvents> {
   readonly attribute: Attribute & T
   readonly dataset: D
   readonly style: Style
@@ -198,16 +198,16 @@ export abstract class LveObject<
   _fadeOpacity: number = 1
 
   /** 부모 객체 (계층 구조) */
-  parent: LveObject | null = null
+  parent: LeviaObject | null = null
   /** 자식 객체 목록 */
-  children: Set<LveObject> = new Set()
+  children: Set<LeviaObject> = new Set()
 
   /** 로컬 변환 매트릭스 (자신의 position, rotation, scale) */
   _localMatrix: Mat4 = new Mat4()
   /** 부모의 반영이 끝난 최종 월드 매트릭스 */
   _worldMatrix: Mat4 = new Mat4()
 
-  constructor(type: string, options?: LveObjectOptions<T, D>, delegatedKeys?: string[]) {
+  constructor(type: string, options?: LeviaObjectOptions<T, D>, delegatedKeys?: string[]) {
     super()
 
     const rawAttribute = {
@@ -301,10 +301,10 @@ export abstract class LveObject<
   }
 
   /**
-   * 계층 구조(Hierarchy)의 자식으로 다른 LveObject를 추가합니다.
+   * 계층 구조(Hierarchy)의 자식으로 다른 LeviaObject를 추가합니다.
    * 부모 객체의 3D 매트릭스 변환을 완전히 상속받게 됩니다.
    */
-  addChild(child: LveObject): this {
+  addChild(child: LeviaObject): this {
     if (child.parent) {
       child.parent.removeChild(child)
     }
@@ -316,7 +316,7 @@ export abstract class LveObject<
   /**
    * 자식 객체를 삭제합니다.
    */
-  removeChild(child: LveObject): this {
+  removeChild(child: LeviaObject): this {
     if (child.parent === this) {
       child.parent = null
       this.children.delete(child)
@@ -456,7 +456,7 @@ export abstract class LveObject<
    */
   applyForce(force: { x?: number; y?: number }): this {
     if (!this._body) {
-      console.warn('[LveObject] applyForce: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      console.warn('[LeviaObject] applyForce: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
@@ -471,7 +471,7 @@ export abstract class LveObject<
    */
   setVelocity(velocity: { x?: number; y?: number }): this {
     if (!this._body) {
-      console.warn('[LveObject] setVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      console.warn('[LeviaObject] setVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
@@ -487,7 +487,7 @@ export abstract class LveObject<
    */
   setAngularVelocity(angularVelocity: number): this {
     if (!this._body) {
-      console.warn('[LveObject] setAngularVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      console.warn('[LeviaObject] setAngularVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
@@ -504,37 +504,37 @@ export abstract class LveObject<
    */
   applyTorque(torque: number): this {
     if (!this._body) {
-      console.warn('[LveObject] applyTorque: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
+      console.warn('[LeviaObject] applyTorque: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     this._body.torque += torque
     return this
   }
 
-  private _followTarget?: LveObject
+  private _followTarget?: LeviaObject
   private _followOffset?: { x?: number; y?: number; z?: number }
   private _followListener?: (axis: string, val: number) => void
-  private _followers: Set<LveObject> = new Set()
+  private _followers: Set<LeviaObject> = new Set()
 
   /**
    * 자신이 따라다니는 객체를 반환합니다. 없다면 undefined를 반환합니다.
    */
-  get following(): LveObject | undefined {
+  get following(): LeviaObject | undefined {
     return this._followTarget
   }
 
   /**
    * 현재 자신을 따라다니거나 들러붙은 모든 객체를 배열로 반환합니다.
    */
-  get followers(): LveObject[] {
+  get followers(): LeviaObject[] {
     return Array.from(this._followers)
   }
 
   /**
-   * 다른 LveObject를 일정 거리를 두고 따라다닙니다.
+   * 다른 LeviaObject를 일정 거리를 두고 따라다닙니다.
    * 기존에 따라다니던 객체가 있다면 새로운 객체로 덮어씁니다.
    */
-  follow(target: LveObject, offset?: { x?: number; y?: number; z?: number }): this {
+  follow(target: LeviaObject, offset?: { x?: number; y?: number; z?: number }): this {
     this.unfollow()
 
     this._followTarget = target
@@ -584,7 +584,7 @@ export abstract class LveObject<
    * 자신을 따라다니는 특정 오브젝트의 추적을 끊어냅니다. (unfollow 시킴)
    * @param follower 제거할 추적 객체
    */
-  kick(follower: LveObject): this {
+  kick(follower: LeviaObject): this {
     if (this._followers.has(follower)) {
       follower.unfollow()
     }
@@ -606,7 +606,7 @@ export abstract class LveObject<
       delete normalized.position
     }
 
-    // LveObject가 가진 실제 속성 맵을 구성합니다
+    // LeviaObject가 가진 실제 속성 맵을 구성합니다
     const source: Record<string, any> = {
       style: this.style,
       transform: this.transform,

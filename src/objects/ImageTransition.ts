@@ -1,8 +1,8 @@
-import { LveImage } from './LveImage.js'
+import { LeviaImage } from './LeviaImage.js'
 import { BaseTransition } from './BaseTransition.js'
 
-export class ImageTransition extends BaseTransition<LveImage> {
-  constructor(target: LveImage) { super(target) }
+export class ImageTransition extends BaseTransition<LeviaImage> {
+  constructor(target: LeviaImage) { super(target) }
 
   start(newSrc: string, durationMs: number): this {
     if (this._anim) this._anim.stop()

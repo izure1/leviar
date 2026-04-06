@@ -1,5 +1,5 @@
-import { LveObject } from '../LveObject.js'
-import type { LveObjectOptions } from '../types.js'
+import { LeviaObject } from '../LeviaObject.js'
+import type { LeviaObjectOptions } from '../types.js'
 import type { VideoManager } from '../VideoManager.js'
 import type { VideoClip } from '../VideoManager.js'
 
@@ -12,9 +12,9 @@ export interface VideoAttribute {
 
 const DELEGATED_KEYS = ['src', 'currentTime', 'playbackRate', 'volume']
 
-export class LveVideo<
+export class LeviaVideo<
   D extends Record<string, any> = Record<string, any>
-> extends LveObject<VideoAttribute, D> {
+> extends LeviaObject<VideoAttribute, D> {
   /** 연결된 VideoManager */
   private _manager: VideoManager | null = null
 
@@ -45,22 +45,22 @@ export class LveVideo<
   /** currentTime setter에서 _videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
   _pendingSeek: number | null = null
 
-  private static readonly DELEGATED_GETTERS: Record<string, (self: LveVideo) => any> = {
+  private static readonly DELEGATED_GETTERS: Record<string, (self: LeviaVideo) => any> = {
     src: (self) => self._clipName ?? undefined,
     currentTime: (self) => self._videoElement?.currentTime ?? 0,
     playbackRate: (self) => self._videoElement?.playbackRate ?? 1.0,
     volume: (self) => self._videoElement?.volume ?? 1.0,
   }
 
-  private static readonly DELEGATED_SETTERS: Record<string, (self: LveVideo, value: any) => void> = {
+  private static readonly DELEGATED_SETTERS: Record<string, (self: LeviaVideo, value: any) => void> = {
     src: (self, value: string) => {
       if (!self._manager) {
-        console.warn('[LveVideo] __setManager()를 먼저 호출하십시오.')
+        console.warn('[LeviaVideo] __setManager()를 먼저 호출하십시오.')
         return
       }
       const clip = self._manager.get(value)
       if (!clip) {
-        console.warn(`[LveVideo] 클립 '${value}'을 찾을 수 없습니다.`)
+        console.warn(`[LeviaVideo] 클립 '${value}'을 찾을 수 없습니다.`)
         return
       }
       self._clipName = value
@@ -88,7 +88,7 @@ export class LveVideo<
     },
   }
 
-  constructor(options?: LveObjectOptions<VideoAttribute, D>) {
+  constructor(options?: LeviaObjectOptions<VideoAttribute, D>) {
     super('video', options, DELEGATED_KEYS)
     // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.
@@ -112,7 +112,7 @@ export class LveVideo<
    */
   play(): this {
     if (!this._clip) {
-      console.warn('[LveVideo] src 속성을 먼저 설정하십시오.')
+      console.warn('[LeviaVideo] src 속성을 먼저 설정하십시오.')
       return this
     }
     this._playing = true
@@ -170,13 +170,13 @@ export class LveVideo<
   }
 
   protected _getDelegatedAttribute(key: string): any {
-    const handler = LveVideo.DELEGATED_GETTERS[key]
+    const handler = LeviaVideo.DELEGATED_GETTERS[key]
     if (handler) return handler(this)
     return super._getDelegatedAttribute(key)
   }
 
   protected _setDelegatedAttribute(key: string, value: any): void {
-    const handler = LveVideo.DELEGATED_SETTERS[key]
+    const handler = LeviaVideo.DELEGATED_SETTERS[key]
     if (handler) {
       handler(this, value)
     } else {

@@ -1,5 +1,5 @@
 import Matter from 'matter-js'
-import type { LveObject } from './LveObject.js'
+import type { LeviaObject } from './LeviaObject.js'
 import { PHYSICS_THROTTLE_FRAMES, PHYSICS_DEBOUNCE_FRAMES } from './dirty.js'
 
 /**
@@ -24,17 +24,17 @@ function parseMargin(margin?: string): { top: number; right: number; bottom: num
   }
 }
 
-// globalThis에 Matter를 노출하여 LveObject에서 applyForce/setVelocity 호출 가능하게 함
+// globalThis에 Matter를 노출하여 LeviaObject에서 applyForce/setVelocity 호출 가능하게 함
 ; (globalThis as any).__Matter__ = Matter
 
 /**
  * matter-js 기반 물리 엔진 래퍼.
- * attribute.physics = 'dynamic' | 'static' 인 LveObject를 등록하고 매 프레임 시뮬레이션을 수행합니다.
+ * attribute.physics = 'dynamic' | 'static' 인 LeviaObject를 등록하고 매 프레임 시뮬레이션을 수행합니다.
  */
 export class PhysicsEngine {
   readonly engine: Matter.Engine
   private bodyMap: Map<string, Matter.Body> = new Map()
-  private objMap: Map<string, LveObject> = new Map()
+  private objMap: Map<string, LeviaObject> = new Map()
   private prevTime: number = 0
   /** syncObjectSizes에서 크기 변경 감지용 - border/margin 제외한 순수 w, h */
   private lastSizeMap: Map<string, { w: number; h: number }> = new Map()
@@ -64,10 +64,10 @@ export class PhysicsEngine {
 
 
   /**
-   * LveObject를 물리 바디로 등록합니다.
+   * LeviaObject를 물리 바디로 등록합니다.
    * attribute.physics에 따라 dynamic / static 바디를 생성합니다.
    */
-  addBody(obj: LveObject, w: number, h: number) {
+  addBody(obj: LeviaObject, w: number, h: number) {
     if (!obj.attribute.physics) return
 
     const { x, y } = obj.transform.position
@@ -76,7 +76,7 @@ export class PhysicsEngine {
     // style.margin을 파싱하여 물리 바디 크기에 반영
     const m = parseMargin(obj.style.margin)
     const bw = (obj.style.borderWidth ?? 0) * 2
-    
+
     // w, h는 이미 scale이 적용된 렌더링 크기 또는 style 크기가 들어옵니다.
     const baseW = w || 32
     const baseH = h || 32
@@ -113,7 +113,7 @@ export class PhysicsEngine {
     const angle = options.angle as number
     const cos = Math.cos(angle)
     const sin = Math.sin(angle)
-    
+
     const worldCenterX = x + localCenterX * cos - localCenterY * sin
     const worldCenterY = y + localCenterX * sin + localCenterY * cos
 
@@ -145,7 +145,7 @@ export class PhysicsEngine {
    * 현재 위치, 속도, 각도를 유지합니다.
    * w, h는 style.width * scale, style.height * scale 기준 (margin/border 미포함)
    */
-  updateBodySize(obj: LveObject, w: number, h: number) {
+  updateBodySize(obj: LeviaObject, w: number, h: number) {
     const prevBody = this.bodyMap.get(obj.attribute.id)
     if (!prevBody) return
 
@@ -183,10 +183,10 @@ export class PhysicsEngine {
   }
 
   /**
-   * LveObject._renderedSize 기반으로 물리 바디 크기를 동기화합니다.
+   * LeviaObject._renderedSize 기반으로 물리 바디 크기를 동기화합니다.
    * dirty + 디바운스(개혁) 또는 스로틄(강제) 조건 달성 시에만 크기를 재확인합니다.
    */
-  syncObjectSizes(objects: Iterable<LveObject>) {
+  syncObjectSizes(objects: Iterable<LeviaObject>) {
     const EPS = 0.5
     for (const obj of objects) {
       if (!obj._body || !obj._renderedSize) continue
@@ -216,9 +216,9 @@ export class PhysicsEngine {
   }
 
   /**
-   * LveObject의 물리 바디를 제거합니다.
+   * LeviaObject의 물리 바디를 제거합니다.
    */
-  removeBody(obj: LveObject) {
+  removeBody(obj: LeviaObject) {
     const body = this.bodyMap.get(obj.attribute.id)
     if (!body) return
     Matter.Composite.remove(this.engine.world, body)
@@ -231,7 +231,7 @@ export class PhysicsEngine {
   /**
    * 특정 오브젝트에 힘을 적용합니다.
    */
-  applyForce(obj: LveObject, force: { x: number; y: number }) {
+  applyForce(obj: LeviaObject, force: { x: number; y: number }) {
     if (!obj._body) return
     Matter.Body.applyForce(obj._body, obj._body.position, force)
   }
@@ -239,13 +239,13 @@ export class PhysicsEngine {
   /**
    * 특정 오브젝트의 속도를 설정합니다.
    */
-  setVelocity(obj: LveObject, velocity: { x: number; y: number }) {
+  setVelocity(obj: LeviaObject, velocity: { x: number; y: number }) {
     if (!obj._body) return
     Matter.Body.setVelocity(obj._body, velocity)
   }
 
   /**
-   * 물리 시뮬레이션을 진행하고, 바디 위치를 LveObject에 동기화합니다.
+   * 물리 시뮬레이션을 진행하고, 바디 위치를 LeviaObject에 동기화합니다.
    * @param timestamp requestAnimationFrame의 타임스탬프
    */
   step(timestamp: number) {
@@ -298,7 +298,7 @@ export class PhysicsEngine {
   }
 
   /**
-   * matter-js 바디의 위치/회전을 LveObject.transform에 반영합니다.
+   * matter-js 바디의 위치/회전을 LeviaObject.transform에 반영합니다.
    */
   private syncToObjects() {
     for (const [id, body] of this.bodyMap) {
@@ -328,14 +328,14 @@ export class PhysicsEngine {
       const pivotOffsetY = -(0.5 - obj.transform.pivot.y) * baseH
       const marginOffsetX = (m.right - m.left) / 2
       const marginOffsetY = (m.top - m.bottom) / 2
-      
+
       const localCenterX = pivotOffsetX + marginOffsetX
       const localCenterY = pivotOffsetY + marginOffsetY
 
       // 현재 바디의 각도를 기반으로 오프셋 회전
       const cos = Math.cos(body.angle)
       const sin = Math.sin(body.angle)
-      
+
       const rotatedOffsetX = localCenterX * cos - localCenterY * sin
       const rotatedOffsetY = localCenterX * sin + localCenterY * cos
 

@@ -8418,7 +8418,7 @@ var TEXTURE_DEBOUNCE_FRAMES = 2;
 var PHYSICS_THROTTLE_FRAMES = 6;
 var PHYSICS_DEBOUNCE_FRAMES = 2;
 
-// src/LveObject.ts
+// src/LeviaObject.ts
 var VEC3_X = new Vec3(1, 0, 0);
 var VEC3_Y = new Vec3(0, 1, 0);
 var VEC3_Z = new Vec3(0, 0, 1);
@@ -8503,7 +8503,7 @@ function makeVec3Proxy(vec, emitter, eventName) {
     }
   });
 }
-var LveObject = class extends EventEmitter {
+var LeviaObject = class extends EventEmitter {
   attribute;
   dataset;
   style;
@@ -8649,7 +8649,7 @@ var LveObject = class extends EventEmitter {
     });
   }
   /**
-   * 계층 구조(Hierarchy)의 자식으로 다른 LveObject를 추가합니다.
+   * 계층 구조(Hierarchy)의 자식으로 다른 LeviaObject를 추가합니다.
    * 부모 객체의 3D 매트릭스 변환을 완전히 상속받게 됩니다.
    */
   addChild(child) {
@@ -8778,7 +8778,7 @@ var LveObject = class extends EventEmitter {
    */
   applyForce(force) {
     if (!this._body) {
-      console.warn("[LveObject] applyForce: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      console.warn("[LeviaObject] applyForce: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
@@ -8792,7 +8792,7 @@ var LveObject = class extends EventEmitter {
    */
   setVelocity(velocity) {
     if (!this._body) {
-      console.warn("[LveObject] setVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      console.warn("[LeviaObject] setVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
@@ -8807,7 +8807,7 @@ var LveObject = class extends EventEmitter {
    */
   setAngularVelocity(angularVelocity) {
     if (!this._body) {
-      console.warn("[LveObject] setAngularVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      console.warn("[LeviaObject] setAngularVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
@@ -8823,7 +8823,7 @@ var LveObject = class extends EventEmitter {
    */
   applyTorque(torque) {
     if (!this._body) {
-      console.warn("[LveObject] applyTorque: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      console.warn("[LeviaObject] applyTorque: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     this._body.torque += torque;
@@ -8846,7 +8846,7 @@ var LveObject = class extends EventEmitter {
     return Array.from(this._followers);
   }
   /**
-   * 다른 LveObject를 일정 거리를 두고 따라다닙니다.
+   * 다른 LeviaObject를 일정 거리를 두고 따라다닙니다.
    * 기존에 따라다니던 객체가 있다면 새로운 객체로 덮어씁니다.
    */
   follow(target, offset) {
@@ -8943,7 +8943,7 @@ var LveObject = class extends EventEmitter {
 };
 
 // src/objects/Camera.ts
-var Camera2 = class extends LveObject {
+var Camera2 = class extends LeviaObject {
   /** @internal */
   _world;
   constructor(options) {
@@ -9047,14 +9047,14 @@ var Camera2 = class extends LveObject {
 };
 
 // src/objects/Rectangle.ts
-var Rectangle = class extends LveObject {
+var Rectangle = class extends LeviaObject {
   constructor(options) {
     super("rectangle", options);
   }
 };
 
 // src/objects/Ellipse.ts
-var Ellipse = class extends LveObject {
+var Ellipse = class extends LeviaObject {
   constructor(options) {
     super("ellipse", options);
   }
@@ -9095,7 +9095,7 @@ var TextTransition = class extends BaseTransition {
 };
 
 // src/objects/Text.ts
-var Text = class extends LveObject {
+var Text = class extends LeviaObject {
   /** 트랜지션 진행도 (0 ~ 1, 1이면 완료 또는 미실행) */
   _transitionProgress = 1;
   /** 전환 관리자 */
@@ -9148,8 +9148,8 @@ var ImageTransition = class extends BaseTransition {
   }
 };
 
-// src/objects/LveImage.ts
-var LveImage = class extends LveObject {
+// src/objects/LeviaImage.ts
+var LeviaImage = class extends LeviaObject {
   /** 트랜지션용 과거 에셋 키 */
   _transitionOldSrc = null;
   /** 트랜지션 진행도 (0 ~ 1) */
@@ -9173,9 +9173,9 @@ var LveImage = class extends LveObject {
   }
 };
 
-// src/objects/LveVideo.ts
+// src/objects/LeviaVideo.ts
 var DELEGATED_KEYS = ["src", "currentTime", "playbackRate", "volume"];
-var LveVideo = class _LveVideo extends LveObject {
+var LeviaVideo = class _LeviaVideo extends LeviaObject {
   /** 연결된 VideoManager */
   _manager = null;
   /** 현재 재생 중인 클립 이름 */
@@ -9205,12 +9205,12 @@ var LveVideo = class _LveVideo extends LveObject {
   static DELEGATED_SETTERS = {
     src: (self, value) => {
       if (!self._manager) {
-        console.warn("[LveVideo] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
+        console.warn("[LeviaVideo] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
       const clip = self._manager.get(value);
       if (!clip) {
-        console.warn(`[LveVideo] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
+        console.warn(`[LeviaVideo] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
       self._clipName = value;
@@ -9257,7 +9257,7 @@ var LveVideo = class _LveVideo extends LveObject {
    */
   play() {
     if (!this._clip) {
-      console.warn("[LveVideo] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
+      console.warn("[LeviaVideo] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     this._playing = true;
@@ -9309,12 +9309,12 @@ var LveVideo = class _LveVideo extends LveObject {
     this.emit("ended");
   }
   _getDelegatedAttribute(key) {
-    const handler = _LveVideo.DELEGATED_GETTERS[key];
+    const handler = _LeviaVideo.DELEGATED_GETTERS[key];
     if (handler) return handler(this);
     return super._getDelegatedAttribute(key);
   }
   _setDelegatedAttribute(key, value) {
-    const handler = _LveVideo.DELEGATED_SETTERS[key];
+    const handler = _LeviaVideo.DELEGATED_SETTERS[key];
     if (handler) {
       handler(this, value);
     } else {
@@ -9325,7 +9325,7 @@ var LveVideo = class _LveVideo extends LveObject {
 
 // src/objects/Sprite.ts
 var DELEGATED_KEYS2 = ["src", "currentTime", "playbackRate"];
-var Sprite = class _Sprite extends LveObject {
+var Sprite = class _Sprite extends LeviaObject {
   /** 연결된 SpriteManager */
   _manager = null;
   /** 현재 재생 중인 클립 이름 */
@@ -9470,7 +9470,7 @@ var Sprite = class _Sprite extends LveObject {
 var import_matter_js = __toESM(require_matter(), 1);
 var DELEGATED_KEYS3 = ["src"];
 var GRAVITY = 1e-3;
-var Particle = class _Particle extends LveObject {
+var Particle = class _Particle extends LeviaObject {
   _manager = null;
   _clipName = null;
   _clip = null;
@@ -9809,7 +9809,7 @@ var PhysicsEngine = class {
     });
   }
   /**
-   * LveObject를 물리 바디로 등록합니다.
+   * LeviaObject를 물리 바디로 등록합니다.
    * attribute.physics에 따라 dynamic / static 바디를 생성합니다.
    */
   addBody(obj, w, h) {
@@ -9895,7 +9895,7 @@ var PhysicsEngine = class {
     import_matter_js2.default.Body.setAngularVelocity(newBody, angularVelocity);
   }
   /**
-   * LveObject._renderedSize 기반으로 물리 바디 크기를 동기화합니다.
+   * LeviaObject._renderedSize 기반으로 물리 바디 크기를 동기화합니다.
    * dirty + 디바운스(개혁) 또는 스로틄(강제) 조건 달성 시에만 크기를 재확인합니다.
    */
   syncObjectSizes(objects) {
@@ -9917,7 +9917,7 @@ var PhysicsEngine = class {
     }
   }
   /**
-   * LveObject의 물리 바디를 제거합니다.
+   * LeviaObject의 물리 바디를 제거합니다.
    */
   removeBody(obj) {
     const body = this.bodyMap.get(obj.attribute.id);
@@ -9943,7 +9943,7 @@ var PhysicsEngine = class {
     import_matter_js2.default.Body.setVelocity(obj._body, velocity);
   }
   /**
-   * 물리 시뮬레이션을 진행하고, 바디 위치를 LveObject에 동기화합니다.
+   * 물리 시뮬레이션을 진행하고, 바디 위치를 LeviaObject에 동기화합니다.
    * @param timestamp requestAnimationFrame의 타임스탬프
    */
   step(timestamp) {
@@ -9987,7 +9987,7 @@ var PhysicsEngine = class {
     }
   }
   /**
-   * matter-js 바디의 위치/회전을 LveObject.transform에 반영합니다.
+   * matter-js 바디의 위치/회전을 LeviaObject.transform에 반영합니다.
    */
   syncToObjects() {
     for (const [id, body] of this.bodyMap) {
@@ -12285,14 +12285,14 @@ var World = class extends EventEmitter {
     return text;
   }
   createImage(options) {
-    const img = new LveImage(options);
+    const img = new LeviaImage(options);
     this._registerObject(img);
     this._trackSortDirty(img);
     this.renderer.markSortDirty();
     return img;
   }
   createVideo(options) {
-    const video = new LveVideo(options);
+    const video = new LeviaVideo(options);
     video.__setManager(this.videoManager);
     this._registerObject(video);
     this._trackSortDirty(video);

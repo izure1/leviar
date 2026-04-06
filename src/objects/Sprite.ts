@@ -1,5 +1,5 @@
-import { LveObject } from '../LveObject.js'
-import type { LveObjectOptions } from '../types.js'
+import { LeviaObject } from '../LeviaObject.js'
+import type { LeviaObjectOptions } from '../types.js'
 import type { SpriteClip, SpriteManager } from '../SpriteManager.js'
 
 export interface SpriteAttribute {
@@ -12,7 +12,7 @@ const DELEGATED_KEYS = ['src', 'currentTime', 'playbackRate']
 
 export class Sprite<
   D extends Record<string, any> = Record<string, any>
-> extends LveObject<SpriteAttribute, D> {
+> extends LeviaObject<SpriteAttribute, D> {
   /** 연결된 SpriteManager */
   private _manager: SpriteManager | null = null
 
@@ -21,6 +21,7 @@ export class Sprite<
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   _clip: SpriteClip | null = null
+
   /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
   private _pendingSrc: string | null = null
 
@@ -74,7 +75,7 @@ export class Sprite<
     },
   }
 
-  constructor(options?: LveObjectOptions<SpriteAttribute, D>) {
+  constructor(options?: LeviaObjectOptions<SpriteAttribute, D>) {
     super('sprite', options, DELEGATED_KEYS)
     // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.

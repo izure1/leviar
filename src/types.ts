@@ -1,7 +1,7 @@
 // ============================================================
 // Attribute
 // ============================================================
-import type { LveObject } from './LveObject.js'
+import type { LeviaObject } from './LeviaObject.js'
 
 export interface Attribute {
   type: string
@@ -109,7 +109,7 @@ export interface Transform {
 // Object Init Options
 // ============================================================
 
-export interface LveObjectOptions<
+export interface LeviaObjectOptions<
   T extends Record<string, any> = Record<string, any>,
   D extends Record<string, any> = Record<string, any>
 > {
@@ -174,8 +174,8 @@ export interface AnimateTarget {
 // Event Maps
 // ============================================================
 
-/** LveObject (및 하위 클래스) 공통 이벤트 맵 */
-export interface LveObjectEvents {
+/** LeviaObject (및 하위 클래스) 공통 이벤트 맵 */
+export interface LeviaObjectEvents {
   // 속성 변경 이벤트
   cssmodified: [key: string, value: any, prev: any]
   attrmodified: [key: string, value: any, prev: any]
@@ -212,13 +212,13 @@ export interface AnimationEvents {
 
 /** World 클래스 이벤트 맵 */
 export interface WorldEvents {
-  click: [obj: LveObject | undefined, e: MouseEvent]
-  dblclick: [obj: LveObject | undefined, e: MouseEvent]
-  contextmenu: [obj: LveObject | undefined, e: MouseEvent]
-  mousedown: [obj: LveObject | undefined, e: MouseEvent]
-  mouseup: [obj: LveObject | undefined, e: MouseEvent]
-  mousemove: [obj: LveObject | undefined, e: MouseEvent]
-  mouseover: [obj: LveObject | undefined, e: MouseEvent]
-  mouseout: [obj: LveObject | undefined, e: MouseEvent]
+  click: [obj: LeviaObject | undefined, e: MouseEvent]
+  dblclick: [obj: LeviaObject | undefined, e: MouseEvent]
+  contextmenu: [obj: LeviaObject | undefined, e: MouseEvent]
+  mousedown: [obj: LeviaObject | undefined, e: MouseEvent]
+  mouseup: [obj: LeviaObject | undefined, e: MouseEvent]
+  mousemove: [obj: LeviaObject | undefined, e: MouseEvent]
+  mouseover: [obj: LeviaObject | undefined, e: MouseEvent]
+  mouseout: [obj: LeviaObject | undefined, e: MouseEvent]
   update: [timestamp: number]
 }

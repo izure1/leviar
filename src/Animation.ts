@@ -268,10 +268,10 @@ export class Animation extends EventEmitter<AnimationEvents> {
 }
 
 // ============================================================
-// Helpers for LveObject.animate()
+// Helpers for LeviaObject.animate()
 // ============================================================
 
-/** LveObject의 animate()에서 사용 - source 객체를 직접 업데이트합니다. */
+/** LeviaObject의 animate()에서 사용 - source 객체를 직접 업데이트합니다. */
 export function animateObject(
   source: Record<string, any>,
   rawTarget: DeepRecord,
