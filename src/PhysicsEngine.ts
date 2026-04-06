@@ -134,7 +134,7 @@ export class PhysicsEngine {
       ; (body as any).gravityScale = attr.gravityScale
     }
 
-    obj._body = body
+    obj.__body = body
     this.bodyMap.set(obj.attribute.id, body)
     this.objMap.set(obj.attribute.id, obj)
     Matter.Composite.add(this.engine.world, body)
@@ -158,7 +158,7 @@ export class PhysicsEngine {
     // 기존 body 제거 (objMap/bodyMap에서도 제거)
     Matter.Composite.remove(this.engine.world, prevBody)
     this.bodyMap.delete(obj.attribute.id)
-    obj._body = null
+    obj.__body = null
 
     // 위치를 물리 바디 좌표로 임시 반영
     const savedX = obj.transform.position.x
@@ -189,25 +189,25 @@ export class PhysicsEngine {
   syncObjectSizes(objects: Iterable<LeviaObject>) {
     const EPS = 0.5
     for (const obj of objects) {
-      if (!obj._body || !obj._renderedSize) continue
+      if (!obj.__body || !obj.__renderedSize) continue
 
       // 스로틄: 마지막 업데이트 이후 프레임 카운터 증가
-      obj._physicsThrottleCount++
+      obj.__physicsThrottleCount++
       // 디바운스: dirty 상태일 때만 idle 카운터 증가
-      if (obj._dirtyPhysics) obj._physicsIdleCount++
+      if (obj.__dirtyPhysics) obj.__physicsIdleCount++
 
-      const shouldCheck = obj._dirtyPhysics && (
-        obj._physicsIdleCount >= PHYSICS_DEBOUNCE_FRAMES    // 디바운스: K프레임 변경 없음 → 마무리
-        || obj._physicsThrottleCount >= PHYSICS_THROTTLE_FRAMES // 스로틄: N프레임 초과 → 강제
+      const shouldCheck = obj.__dirtyPhysics && (
+        obj.__physicsIdleCount >= PHYSICS_DEBOUNCE_FRAMES    // 디바운스: K프레임 변경 없음 → 마무리
+        || obj.__physicsThrottleCount >= PHYSICS_THROTTLE_FRAMES // 스로틄: N프레임 초과 → 강제
       )
 
       if (!shouldCheck) continue
 
-      obj._dirtyPhysics = false
-      obj._physicsIdleCount = 0
-      obj._physicsThrottleCount = 0  // 업데이트 후 양쪽 리셋
+      obj.__dirtyPhysics = false
+      obj.__physicsIdleCount = 0
+      obj.__physicsThrottleCount = 0  // 업데이트 후 양쪽 리셋
 
-      const { w, h } = obj._renderedSize
+      const { w, h } = obj.__renderedSize
       const last = this.lastSizeMap.get(obj.attribute.id)
       if (last && Math.abs(last.w - w) < EPS && Math.abs(last.h - h) < EPS) continue
       this.lastSizeMap.set(obj.attribute.id, { w, h })
@@ -225,23 +225,23 @@ export class PhysicsEngine {
     this.bodyMap.delete(obj.attribute.id)
     this.objMap.delete(obj.attribute.id)
     this.lastSizeMap.delete(obj.attribute.id)
-    obj._body = null
+    obj.__body = null
   }
 
   /**
    * 특정 오브젝트에 힘을 적용합니다.
    */
   applyForce(obj: LeviaObject, force: { x: number; y: number }) {
-    if (!obj._body) return
-    Matter.Body.applyForce(obj._body, obj._body.position, force)
+    if (!obj.__body) return
+    Matter.Body.applyForce(obj.__body, obj.__body.position, force)
   }
 
   /**
    * 특정 오브젝트의 속도를 설정합니다.
    */
   setVelocity(obj: LeviaObject, velocity: { x: number; y: number }) {
-    if (!obj._body) return
-    Matter.Body.setVelocity(obj._body, velocity)
+    if (!obj.__body) return
+    Matter.Body.setVelocity(obj.__body, velocity)
   }
 
   /**
@@ -309,8 +309,8 @@ export class PhysicsEngine {
       // PhysicsEngine에서 캐싱된 _renderedSize 또는 style 속성 활용
       const lastSize = this.lastSizeMap.get(id)
       // syncObjectSizes가 호출되기 전이면 _renderedSize의 값을 근사치로 가져옵니다.
-      let baseW = lastSize?.w ?? obj._renderedSize?.w ?? obj.style.width
-      let baseH = lastSize?.h ?? obj._renderedSize?.h ?? obj.style.height
+      let baseW = lastSize?.w ?? obj.__renderedSize?.w ?? obj.style.width
+      let baseH = lastSize?.h ?? obj.__renderedSize?.h ?? obj.style.height
       // sizeMap에 캐시된 값이 없으면 (생성 직후 등) scale을 곱해야 할 수도 있으나,
       // lastSizeMap은 syncObjectSizes에서 세팅되며 사실상 w, h입니다.
       if (!lastSize) {

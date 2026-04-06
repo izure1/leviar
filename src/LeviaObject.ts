@@ -141,7 +141,7 @@ export abstract class LeviaObject<
   readonly transform: Transform
 
   /** matter-js 바디 참조 (PhysicsEngine에서 설정) */
-  _body: Matter.Body | null = null
+  __body: Matter.Body | null = null
 
   /**
    * attribute Proxy의 위임 키에 대한 값을 가져옵니다. (하위 클래스에서 재정의)
@@ -160,42 +160,42 @@ export abstract class LeviaObject<
    * Renderer가 매 프레임 기록하는 실제 렌더 크기 (월드 좌표 기준, scale 포함, perspectiveScale 제외)
    * style.width/height 미지정 시 naturalWidth 등의 값이 들어옵니다.
    */
-  _renderedSize: { w: number; h: number } | null = null
+  __renderedSize: { w: number; h: number } | null = null
 
   /** Offscreen Canvas · 텍스처 재생성이 필요함을 나타내는 dirty flag */
-  _dirtyTexture: boolean = true
+  __dirtyTexture: boolean = true
 
   /** 물리 바디 크기 재확인이 필요함을 나타내는 dirty flag */
-  _dirtyPhysics: boolean = false
+  __dirtyPhysics: boolean = false
 
   /**
    * 마지막 텍스처 변경 이후 경과한 프레임 수.
    * 새 변경이 오면 0으로 리셋, 임계값 도달 시 텍스처를 업데이트합니다. (디바운스)
    */
-  _textureIdleCount: number = 0
+  __textureIdleCount: number = 0
 
   /**
    * 마지막 물리 변경 이후 경과한 프레임 수.
    * 새 변경이 오면 0으로 리셋, 임계값 도달 시 물리 실제 크기를 재확인합니다. (디바운스)
    */
-  _physicsIdleCount: number = 0
+  __physicsIdleCount: number = 0
 
   /**
    * 마지막 텍스처 업데이트 이후 경과한 프레임 수.
    * 렌더 후 0으로 리셋, 임계값 도달 시 강제 업데이트합니다. (스로틀)
    */
-  _textureThrottleCount: number = 0
+  __textureThrottleCount: number = 0
 
   /**
    * 마지막 물리 업데이트 이후 경과한 프레임 수.
    * 업데이트 후 0으로 리셋, 임계값 도달 시 강제 재확인합니다. (스로틀)
    */
-  _physicsThrottleCount: number = 0
+  __physicsThrottleCount: number = 0
 
   /**
    * FadeTransition에 의해 제어되는 렌더링용 내부 투명도.
    */
-  _fadeOpacity: number = 1
+  __fadeOpacity: number = 1
 
   /** 부모 객체 (계층 구조) */
   parent: LeviaObject | null = null
@@ -203,9 +203,9 @@ export abstract class LeviaObject<
   children: Set<LeviaObject> = new Set()
 
   /** 로컬 변환 매트릭스 (자신의 position, rotation, scale) */
-  _localMatrix: Mat4 = new Mat4()
+  private localMatrix: Mat4 = new Mat4()
   /** 부모의 반영이 끝난 최종 월드 매트릭스 */
-  _worldMatrix: Mat4 = new Mat4()
+  __worldMatrix: Mat4 = new Mat4()
 
   constructor(type: string, options?: LeviaObjectOptions<T, D>, delegatedKeys?: string[]) {
     super()
@@ -266,37 +266,37 @@ export abstract class LeviaObject<
       const flags = STYLE_DIRTY_MAP[key]
       if (!flags) return
       if (flags.includes('texture')) {
-        this._dirtyTexture = true
-        this._textureIdleCount = 0
+        this.__dirtyTexture = true
+        this.__textureIdleCount = 0
       }
       if (flags.includes('physics')) {
-        this._dirtyPhysics = true
-        this._physicsIdleCount = 0
+        this.__dirtyPhysics = true
+        this.__physicsIdleCount = 0
       }
     })
     this.on('attrmodified', (key) => {
       const flags = ATTR_DIRTY_MAP[key]
       if (!flags) return
       if (flags.includes('texture')) {
-        this._dirtyTexture = true
-        this._textureIdleCount = 0
+        this.__dirtyTexture = true
+        this.__textureIdleCount = 0
       }
       if (flags.includes('physics')) {
-        this._dirtyPhysics = true
-        this._physicsIdleCount = 0
+        this.__dirtyPhysics = true
+        this.__physicsIdleCount = 0
       }
     })
     this.on('scalemodified', (key) => {
       const flags = SCALE_DIRTY_MAP[key]
       if (!flags) return
       if (flags.includes('physics')) {
-        this._dirtyPhysics = true
-        this._physicsIdleCount = 0
+        this.__dirtyPhysics = true
+        this.__physicsIdleCount = 0
       }
     })
     this.on('pivotmodified', () => {
-      this._dirtyPhysics = true
-      this._physicsIdleCount = 0
+      this.__dirtyPhysics = true
+      this.__physicsIdleCount = 0
     })
   }
 
@@ -351,7 +351,7 @@ export abstract class LeviaObject<
 
     this.removeFromParent()
 
-    const followersToKick = Array.from(this._followers)
+    const followersToKick = Array.from(this.followers)
     for (const follower of followersToKick) {
       this.kick(follower)
       if (removeFollower) {
@@ -375,21 +375,21 @@ export abstract class LeviaObject<
     const scale = this.transform.scale
 
     // 1. 자신의 로컬 매트릭스 갱신 (Z -> Y -> X 순서로 회전)
-    this._localMatrix.identity()
+    this.localMatrix.identity()
     // Levia의 관행(+Z가 앞)을 OpenGL 호환(-Z가 앞)으로 동기화하기 위해 -pos.z 적용
     _tmpVec3.set(pos.x, pos.y, -pos.z)
-    this._localMatrix.translate(_tmpVec3)
-    if (rot.z) this._localMatrix.rotate(rot.z * Math.PI / 180, VEC3_Z)
-    if (rot.y) this._localMatrix.rotate(rot.y * Math.PI / 180, VEC3_Y)
-    if (rot.x) this._localMatrix.rotate(rot.x * Math.PI / 180, VEC3_X)
+    this.localMatrix.translate(_tmpVec3)
+    if (rot.z) this.localMatrix.rotate(rot.z * Math.PI / 180, VEC3_Z)
+    if (rot.y) this.localMatrix.rotate(rot.y * Math.PI / 180, VEC3_Y)
+    if (rot.x) this.localMatrix.rotate(rot.x * Math.PI / 180, VEC3_X)
     _tmpVec3.set(scale.x, scale.y, scale.z)
-    this._localMatrix.scale(_tmpVec3)
+    this.localMatrix.scale(_tmpVec3)
 
     // 2. 부모가 존재할 경우 월드 매트릭스 상속 계산 (world = parent.world * local)
     if (this.parent) {
-      this._worldMatrix.multiply(this.parent._worldMatrix, this._localMatrix)
+      this.__worldMatrix.multiply(this.parent.__worldMatrix, this.localMatrix)
     } else {
-      this._worldMatrix.copy(this._localMatrix)
+      this.__worldMatrix.copy(this.localMatrix)
     }
 
     // 3. 하위 자식 목록에 대해 재귀 갱신 (preserve-3d 구조)
@@ -455,13 +455,13 @@ export abstract class LeviaObject<
    * 물리 바디에 힘을 적용합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
   applyForce(force: { x?: number; y?: number }): this {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn('[LeviaObject] applyForce: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
-      Matter.Body.applyForce(this._body, this._body.position, { x: force.x ?? 0, y: force.y ?? 0 })
+      Matter.Body.applyForce(this.__body, this.__body.position, { x: force.x ?? 0, y: force.y ?? 0 })
     }
     return this
   }
@@ -470,13 +470,13 @@ export abstract class LeviaObject<
    * 물리 바디의 속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
   setVelocity(velocity: { x?: number; y?: number }): this {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn('[LeviaObject] setVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
-      Matter.Body.setVelocity(this._body, { x: velocity.x ?? this._body.velocity.x, y: velocity.y ?? this._body.velocity.y })
+      Matter.Body.setVelocity(this.__body, { x: velocity.x ?? this.__body.velocity.x, y: velocity.y ?? this.__body.velocity.y })
     }
     return this
   }
@@ -486,13 +486,13 @@ export abstract class LeviaObject<
    * @param angularVelocity 각속도 (라디안/초)
    */
   setAngularVelocity(angularVelocity: number): this {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn('[LeviaObject] setAngularVelocity: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
     const Matter = (globalThis as any).__Matter__
     if (Matter) {
-      Matter.Body.setAngularVelocity(this._body, angularVelocity)
+      Matter.Body.setAngularVelocity(this.__body, angularVelocity)
     }
     return this
   }
@@ -503,11 +503,11 @@ export abstract class LeviaObject<
    * @param torque 토크 값 (양수: 시계 방향, 음수: 반시계 방향)
    */
   applyTorque(torque: number): this {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn('[LeviaObject] applyTorque: 물리 바디가 없습니다. attribute.physics를 설정하십시오.')
       return this
     }
-    this._body.torque += torque
+    this.__body.torque += torque
     return this
   }
 
@@ -539,7 +539,7 @@ export abstract class LeviaObject<
 
     this._followTarget = target
     this._followOffset = offset
-    target._followers.add(this)
+    target['_followers'].add(this)
 
     this._followListener = () => {
       if (this._followOffset?.x !== undefined) {
@@ -572,7 +572,7 @@ export abstract class LeviaObject<
   unfollow(): this {
     if (this._followTarget && this._followListener) {
       this._followTarget.off('positionmodified', this._followListener as any)
-      this._followTarget._followers.delete(this)
+      this._followTarget['_followers'].delete(this)
       this._followTarget = undefined
       this._followListener = undefined
       this._followOffset = undefined
@@ -585,7 +585,7 @@ export abstract class LeviaObject<
    * @param follower 제거할 추적 객체
    */
   kick(follower: LeviaObject): this {
-    if (this._followers.has(follower)) {
+    if (this['_followers'].has(follower)) {
       follower.unfollow()
     }
     return this

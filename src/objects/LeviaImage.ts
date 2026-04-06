@@ -10,12 +10,12 @@ export class LeviaImage<
   D extends Record<string, any> = Record<string, any>
 > extends LeviaObject<ImageAttribute, D> {
   /** 트랜지션용 과거 에셋 키 */
-  _transitionOldSrc: string | null = null
+  __transitionOldSrc: string | null = null
   /** 트랜지션 진행도 (0 ~ 1) */
-  _transitionProgress: number = 0
+  __transitionProgress: number = 0
 
   /** 전환 관리자 */
-  private _transitioner?: ImageTransition
+  private __transitioner?: ImageTransition
 
   constructor(options?: LeviaObjectOptions<ImageAttribute, D>) {
     super('image', options)
@@ -27,10 +27,10 @@ export class LeviaImage<
    * @param durationMs 전환에 걸리는 시간(밀리초)
    */
   transition(newSrc: string, durationMs: number): ImageTransition {
-    if (!this._transitioner) {
-      this._transitioner = new ImageTransition(this)
+    if (!this.__transitioner) {
+      this.__transitioner = new ImageTransition(this)
     }
-    this._transitioner.start(newSrc, durationMs)
-    return this._transitioner
+    this.__transitioner.start(newSrc, durationMs)
+    return this.__transitioner
   }
 }

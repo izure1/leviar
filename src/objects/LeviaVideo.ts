@@ -16,93 +16,93 @@ export class LeviaVideo<
   D extends Record<string, any> = Record<string, any>
 > extends LeviaObject<VideoAttribute, D> {
   /** 연결된 VideoManager */
-  private _manager: VideoManager | null = null
+  private __manager: VideoManager | null = null
 
   /** 현재 재생 중인 클립 이름 */
-  private _clipName: string | null = null
+  private __clipName: string | null = null
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
-  _clip: VideoClip | null = null
+  __clip: VideoClip | null = null
 
-  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
-  private _pendingSrc: string | null = null
+  /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
+  private __pendingSrc: string | null = null
 
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
-  _src: string | null = null
+  __src: string | null = null
 
   /** Renderer에서 활성화된 실제 VideoElement 인스턴스 참조 */
-  _videoElement: HTMLVideoElement | null = null
+  __videoElement: HTMLVideoElement | null = null
 
   /** 재생 중 여부 */
-  _playing: boolean = false
+  __playing: boolean = false
 
   /** 일시정지 여부 */
-  _paused: boolean = false
+  __paused: boolean = false
 
   /** 재생 시작 시 시작 위치로 이동해야하는지 여부 (Renderer에서 참조 및 리셋) */
-  _needsSeekToStart: boolean = false
+  __needsSeekToStart: boolean = false
 
-  /** currentTime setter에서 _videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
-  _pendingSeek: number | null = null
+  /** currentTime setter에서 __videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
+  __pendingSeek: number | null = null
 
   private static readonly DELEGATED_GETTERS: Record<string, (self: LeviaVideo) => any> = {
-    src: (self) => self._clipName ?? undefined,
-    currentTime: (self) => self._videoElement?.currentTime ?? 0,
-    playbackRate: (self) => self._videoElement?.playbackRate ?? 1.0,
-    volume: (self) => self._videoElement?.volume ?? 1.0,
+    src: (self) => self.__clipName ?? undefined,
+    currentTime: (self) => self.__videoElement?.currentTime ?? 0,
+    playbackRate: (self) => self.__videoElement?.playbackRate ?? 1.0,
+    volume: (self) => self.__videoElement?.volume ?? 1.0,
   }
 
   private static readonly DELEGATED_SETTERS: Record<string, (self: LeviaVideo, value: any) => void> = {
     src: (self, value: string) => {
-      if (!self._manager) {
+      if (!self.__manager) {
         console.warn('[LeviaVideo] __setManager()를 먼저 호출하십시오.')
         return
       }
-      const clip = self._manager.get(value)
+      const clip = self.__manager.get(value)
       if (!clip) {
         console.warn(`[LeviaVideo] 클립 '${value}'을 찾을 수 없습니다.`)
         return
       }
-      self._clipName = value
-      self._clip = clip
-      self._src = clip.src
-      self._playing = false
-      self._paused = false
-      self._needsSeekToStart = true
-      if (self._videoElement) self._videoElement.currentTime = 0
-      else self._pendingSeek = 0
+      self.__clipName = value
+      self.__clip = clip
+      self.__src = clip.src
+      self.__playing = false
+      self.__paused = false
+      self.__needsSeekToStart = true
+      if (self.__videoElement) self.__videoElement.currentTime = 0
+      else self.__pendingSeek = 0
     },
     currentTime: (self, value: number) => {
-      self._needsSeekToStart = false
-      if (self._videoElement) {
-        self._videoElement.currentTime = value
+      self.__needsSeekToStart = false
+      if (self.__videoElement) {
+        self.__videoElement.currentTime = value
       } else {
-        self._pendingSeek = value
+        self.__pendingSeek = value
       }
     },
     playbackRate: (self, value: number) => {
-      if (self._videoElement) self._videoElement.playbackRate = value
+      if (self.__videoElement) self.__videoElement.playbackRate = value
     },
     volume: (self, value: number) => {
-      if (self._videoElement) self._videoElement.volume = Math.max(0, Math.min(1, value))
+      if (self.__videoElement) self.__videoElement.volume = Math.max(0, Math.min(1, value))
     },
   }
 
   constructor(options?: LeviaObjectOptions<VideoAttribute, D>) {
     super('video', options, DELEGATED_KEYS)
-    // src setter는 _manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
+    // src setter는 __manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.
-    this._pendingSrc = (options?.attribute as any)?.src ?? null
+    this.__pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
    * VideoManager를 연결합니다.
    */
   __setManager(manager: VideoManager): this {
-    this._manager = manager
-    if (this._pendingSrc) {
-      this.attribute.src = this._pendingSrc
-      this._pendingSrc = null
+    this.__manager = manager
+    if (this.__pendingSrc) {
+      this.attribute.src = this.__pendingSrc
+      this.__pendingSrc = null
     }
     return this
   }
@@ -111,12 +111,12 @@ export class LeviaVideo<
    * 저장된 비디오 클립을 재생합니다.
    */
   play(): this {
-    if (!this._clip) {
+    if (!this.__clip) {
       console.warn('[LeviaVideo] src 속성을 먼저 설정하십시오.')
       return this
     }
-    this._playing = true
-    this._paused = false
+    this.__playing = true
+    this.__paused = false
     this.emit('play')
     return this
   }
@@ -125,9 +125,9 @@ export class LeviaVideo<
    * 재생을 일시정지합니다.
    */
   pause(): this {
-    if (!this._playing || this._paused) return this
-    this._paused = true
-    this._playing = false
+    if (!this.__playing || this.__paused) return this
+    this.__paused = true
+    this.__playing = false
     this.emit('pause')
     return this
   }
@@ -136,17 +136,17 @@ export class LeviaVideo<
    * 재생을 정지하고 처음으로 되돌립니다. loop=false일 때 'ended'를 emit합니다.
    */
   stop(): this {
-    const wasPlaying = this._playing
-    this._playing = false
-    this._paused = false
-    this._needsSeekToStart = true
-    if (this._videoElement) {
-      this._videoElement.currentTime = 0
+    const wasPlaying = this.__playing
+    this.__playing = false
+    this.__paused = false
+    this.__needsSeekToStart = true
+    if (this.__videoElement) {
+      this.__videoElement.currentTime = 0
     } else {
-      this._pendingSeek = 0
+      this.__pendingSeek = 0
     }
 
-    if (wasPlaying && this._clip && !this._clip.loop) {
+    if (wasPlaying && this.__clip && !this.__clip.loop) {
       this.emit('ended')
     }
     return this
@@ -156,7 +156,7 @@ export class LeviaVideo<
    * Renderer에서 루프 완료 시 호출 — 'repeat' 이벤트를 emit합니다.
    * @internal
    */
-  _onRepeat() {
+  __onRepeat() {
     this.emit('repeat')
   }
 
@@ -164,8 +164,8 @@ export class LeviaVideo<
    * Renderer에서 재생 종료 시 호출 — 'ended' 이벤트를 emit합니다.
    * @internal
    */
-  _onEnded() {
-    this._playing = false
+  __onEnded() {
+    this.__playing = false
     this.emit('ended')
   }
 

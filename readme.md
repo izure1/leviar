@@ -5,10 +5,10 @@
 ![platform](https://img.shields.io/badge/platform-WebGL-orange?style=for-the-badge)
 
 <p align="center">
-  <img src="docs/assets/logo.png" width="600" alt="levia logo" style="border-radius: 50% 10%" />
+  <img src="docs/assets/logo_small.png" width="320" alt="levia logo" style="border-radius: 50% 10%" />
 </p>
 
-**levia**는 WebGL의 강력한 성능을 기반으로, 복잡한 3D 수식 없이도 압도적인 **2.5D 시각 효과**와 **현실적인 물리 엔진**을 구현할 수 있는 모던 렌더링 엔진입니다.
+**levia**는 WebGL의 강력한 성능을 기반으로, 복잡한 3D 수식 없이도 **2.5D 시각 효과**와 **현실적인 물리 엔진**을 구현할 수 있는 모던 렌더링 엔진입니다.
 
 ---
 
@@ -16,7 +16,7 @@
 
 | 🚀 성능 (Performance) | ⚖️ 물리 (Physics) | 🎬 연출 (Dynamics) |
 | :--- | :--- | :--- |
-| **WebGL 기반 최적화**: 수천 개의 객체를 부드럽게 렌더링하는 인스턴싱 기술 적용. | **Z-Isolation**: 심도에 따른 지능적 충돌 레이어 분리 시스템 제공. | **34종 이징(Easing)**: 어떤 속성이든 살아 움직이게 만드는 애니메이션 엔진. |
+| **WebGL 기반 최적화**: 수천 개의 객체를 부드럽게 렌더링하는 인스턴싱 기술 적용. | **Z-Isolation**: *matter-js*을 기반으로 심도에 따른 지능적 충돌 레이어 분리 시스템 제공. | **34종 이징(Easing)**: 어떤 속성이든 살아 움직이게 만드는 애니메이션 엔진. |
 
 ---
 

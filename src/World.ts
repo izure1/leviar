@@ -239,11 +239,11 @@ export class World extends EventEmitter<WorldEvents> {
     }
 
     // z 기준 내림차순 정렬을 위해 모든 변환 사전 계산 (상단 객체 우선 판정)
-    // OGL 행렬은 열우선이므로 obj._worldMatrix의 [12, 13, 14]가 월드 좌표(x, y, z)입니다.
+    // OGL 행렬은 열우선이므로 obj.__worldMatrix의 [12, 13, 14]가 월드 좌표(x, y, z)입니다.
     const objectsData = Array.from(this.objects)
       .filter(obj => obj.attribute.type !== 'camera' && obj.style.display !== 'none' && obj.style.pointerEvents)
       .map(obj => {
-        const mat = obj._worldMatrix as unknown as Float32Array
+        const mat = obj.__worldMatrix as unknown as Float32Array
         // Levia와 OpenGL 좌표계 연결 과정에서 역방향된 z를 본래 양수 스케일로 복원 (-1 곱함)
         const wx = mat[12], wy = mat[13], wz = -mat[14]
 
@@ -279,8 +279,8 @@ export class World extends EventEmitter<WorldEvents> {
         const screenY = data.dy * perspectiveScale
 
         // 실제 크기가 아직 0이면(예: 이미지 로드 전) 무조건 패스
-        const baseW = data.obj._renderedSize?.w ?? data.obj.style.width ?? 100
-        const baseH = data.obj._renderedSize?.h ?? data.obj.style.height ?? 100
+        const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100
+        const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100
         const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x)
         const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y)
 
@@ -304,8 +304,8 @@ export class World extends EventEmitter<WorldEvents> {
       const screenX = dx * perspectiveScale
       const screenY = dy * perspectiveScale
 
-      const baseW = obj._renderedSize?.w ?? style.width ?? 0
-      const baseH = obj._renderedSize?.h ?? style.height ?? 0
+      const baseW = obj.__renderedSize?.w ?? style.width ?? 0
+      const baseH = obj.__renderedSize?.h ?? style.height ?? 0
       const w = baseW * perspectiveScale * transform.scale.x
       const h = baseH * perspectiveScale * transform.scale.y
 
@@ -477,7 +477,7 @@ export class World extends EventEmitter<WorldEvents> {
 
   createCamera<D extends Record<string, any> = Record<string, any>>(options?: LeviaObjectOptions<CameraAttribute, D>): Camera<D> {
     const cam = new Camera<D>(options)
-    cam._world = this
+    cam.__world = this
     if (options?.transform?.position?.z === undefined) {
       cam.transform.position.z = -(cam.attribute.focalLength ?? 100)
     }

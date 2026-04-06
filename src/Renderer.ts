@@ -475,7 +475,7 @@ export class Renderer {
             rotation: { x: 0, y: 0, z: 0 },
             pivot: { x: 0.5, y: 0.5 }
           },
-          _worldMatrix: new Mat4().translate(new OglVec3(0, 0, -100)),
+          __worldMatrix: new Mat4().translate(new OglVec3(0, 0, -100)),
           _fadeOpacity: 1,
           _dirtyTexture: true,
           _textureThrottleCount: 0,
@@ -571,8 +571,8 @@ export class Renderer {
 
       const worldSortLogic = (a: LeviaObject, b: LeviaObject) => {
         // 계층 구조 지원 _worldMatrix의 변환된 Z좌표 기준 정렬 (-1로 원상 복구)
-        const mA = a._worldMatrix as unknown as Float32Array
-        const mB = b._worldMatrix as unknown as Float32Array
+        const mA = a.__worldMatrix as unknown as Float32Array
+        const mB = b.__worldMatrix as unknown as Float32Array
         const zdiff = (-mB[14]) - (-mA[14])
         return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex
       }
@@ -581,8 +581,8 @@ export class Renderer {
         // UI 객체들은 거리에 상관없이 zIndex를 가장 우선 순위로 정렬합니다.
         const zIndexDiff = a.style.zIndex - b.style.zIndex
         if (zIndexDiff !== 0) return zIndexDiff
-        const mA = a._worldMatrix as unknown as Float32Array
-        const mB = b._worldMatrix as unknown as Float32Array
+        const mA = a.__worldMatrix as unknown as Float32Array
+        const mB = b.__worldMatrix as unknown as Float32Array
         return (-mB[14]) - (-mA[14])
       }
 
@@ -605,7 +605,7 @@ export class Renderer {
     // obj.z > camZ 인 것만 (카메라 앞에 있는 것)
     for (let i = 0, len = this._sortedObjects.length; i < len; i++) {
       const obj = this._sortedObjects[i]
-      const mArr = obj._worldMatrix as unknown as Float32Array
+      const mArr = obj.__worldMatrix as unknown as Float32Array
       if (-mArr[14] <= camZ) continue
       this._drawObject(obj, assets, timestamp)
     }
@@ -621,8 +621,8 @@ export class Renderer {
   ) {
     const { style, transform } = obj
 
-    const baseW = obj._renderedSize?.w ?? style.width ?? 0
-    const baseH = obj._renderedSize?.h ?? style.height ?? 0
+    const baseW = obj.__renderedSize?.w ?? style.width ?? 0
+    const baseH = obj.__renderedSize?.h ?? style.height ?? 0
 
     // 변환(Scale 등)은 이미 _worldMatrix 내부에 계층적으로 완전 곱해져 있으므로
     // 기본 메시 구성은 스케일 1 수준인 base값만 던져주어 중복 연산을 배제합니다.
@@ -681,7 +681,7 @@ export class Renderer {
     const ph = baseH ?? h
 
     // 1. 객체의 _worldMatrix를 기반으로 시작합니다. (계층 회전, 이동, 크기 완벽 포함)
-    this._modelMat.copy(obj._worldMatrix)
+    this._modelMat.copy(obj.__worldMatrix)
 
     // 2. 파티클 등 로컬단에서 발생하는 개별 위치 및 렌더 뎁스 추가
     if (x !== 0 || y !== 0 || zOffset !== 0) {
@@ -973,7 +973,7 @@ export class Renderer {
 
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor)
     this.shadowProgram.uniforms['uColor'].value = [r, g, b, a]
-    this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj._fadeOpacity
+    this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
     this.shadowProgram.uniforms['uSize'].value = [quadW, quadH]
     this.shadowProgram.uniforms['uBoxSize'].value = [w, h]
     if (this.shadowProgram.uniforms['uBorderRadius'] && borderRadius && !isEllipse) {
@@ -1015,7 +1015,7 @@ export class Renderer {
     const { style } = obj
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
 
-    const targetOpacity = style.opacity * obj._fadeOpacity
+    const targetOpacity = style.opacity * obj.__fadeOpacity
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0)
 
     this._drawShadow(obj, x, y, w, h, undefined, undefined, false, baseRadius)
@@ -1047,7 +1047,7 @@ export class Renderer {
     const drawEllipse = (ew: number, eh: number, color: string) => {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
-      this.ellipseProgram.uniforms['uOpacity'].value = style.opacity * obj._fadeOpacity
+      this.ellipseProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
       this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh, 0, w, h)
       this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.ellipseMesh.draw({ camera: this.camera })
@@ -1074,7 +1074,7 @@ export class Renderer {
     // 그라디언트 레이어 — ellipse 형태에 맞게 원형 클리핑 포함
     if (style.gradient && w > 0 && h > 0) {
       const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', true)
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj._fadeOpacity)
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj.__fadeOpacity)
     }
   }
 
@@ -1096,14 +1096,14 @@ export class Renderer {
     let entry = this.textCache.get(id)
 
     // 스로틄: 마지막 렌더 이후 프레임 카운터 증가
-    obj._textureThrottleCount++
+    obj.__textureThrottleCount++
     // 디바운스: dirty 상태일 때만 idle 카운터 증가
-    if (obj._dirtyTexture) obj._textureIdleCount++
+    if (obj.__dirtyTexture) obj.__textureIdleCount++
 
     const needRender = !entry
-      || (obj._dirtyTexture && (
-        obj._textureIdleCount >= TEXTURE_DEBOUNCE_FRAMES    // 디바운스: K프레임 동안 변경 없음 → 마무리
-        || obj._textureThrottleCount >= TEXTURE_THROTTLE_FRAMES // 스로틀링: N프레임 초과 → 강제 업데이트
+      || (obj.__dirtyTexture && (
+        obj.__textureIdleCount >= TEXTURE_DEBOUNCE_FRAMES    // 디바운스: K프레임 동안 변경 없음 → 마무리
+        || obj.__textureThrottleCount >= TEXTURE_THROTTLE_FRAMES // 스로틀링: N프레임 초과 → 강제 업데이트
       ))
 
     if (!entry) {
@@ -1114,9 +1114,9 @@ export class Renderer {
         this.textCache.set(id, entry)
         const refCount = this.textContentRefCount.get(contentKey) || 0
         this.textContentRefCount.set(contentKey, refCount + 1)
-        obj._dirtyTexture = false
-        obj._textureIdleCount = 0
-        obj._textureThrottleCount = 0
+        obj.__dirtyTexture = false
+        obj.__textureIdleCount = 0
+        obj.__textureThrottleCount = 0
       } else {
         // 새 Canvas/Texture 생성
         const canvas = document.createElement('canvas')
@@ -1157,7 +1157,7 @@ export class Renderer {
       }
 
       ; (entry as any)._contentKey = contentKey
-      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, (obj as any)._transitionProgress ?? 1)
+      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, (obj as any).__transitionProgress ?? 1)
 
       // content 캐시 신규 등록 또는 업데이트
       this.textContentCache.set(contentKey, entry)
@@ -1166,9 +1166,9 @@ export class Renderer {
         const refCount = this.textContentRefCount.get(contentKey) || 0
         this.textContentRefCount.set(contentKey, refCount + 1)
       }
-      obj._dirtyTexture = false
-      obj._textureIdleCount = 0
-      obj._textureThrottleCount = 0  // 렌더 후 양쪽 리셋
+      obj.__dirtyTexture = false
+      obj.__textureIdleCount = 0
+      obj.__textureThrottleCount = 0  // 렌더 후 양쪽 리셋
     }
 
     const cw = entry.canvas.width
@@ -1177,7 +1177,7 @@ export class Renderer {
 
     // 실제 월드 크기 기록 (TEXT_RENDER_SCALE 역산)
     // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
-    obj._renderedSize = {
+    obj.__renderedSize = {
       w: cw / TEXT_RENDER_SCALE,
       h: ch / TEXT_RENDER_SCALE,
     }
@@ -1185,7 +1185,7 @@ export class Renderer {
     // canvas는 TEXT_RENDER_SCALE 기준, 표시는 perspectiveScale 기준으로 보정
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE
     this._drawShadow(obj, x, y, cw * displayScale, ch * displayScale)
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj._fadeOpacity, false)
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj.__fadeOpacity, false)
   }
 
   private _renderTextToCanvas(
@@ -1431,8 +1431,8 @@ export class Renderer {
 
   private _drawAsset(obj: LeviaImage, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets) {
     const src = obj.attribute?.src
-    const oldSrc = obj._transitionOldSrc
-    const progress = obj._transitionProgress ?? 0
+    const oldSrc = obj.__transitionOldSrc
+    const progress = obj.__transitionProgress ?? 0
 
     const drawAssetInner = (assetSrc: string, drawOpacity: number) => {
       const asset = assets[assetSrc]
@@ -1455,14 +1455,14 @@ export class Renderer {
         drawH = h || asset.naturalHeight * perspectiveScale;
       }
 
-      obj._renderedSize = {
+      obj.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale,
       }
 
       const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0)
       this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius)
-      this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity)
+      this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity)
 
       const texture = this._getOrCreateAssetTexture(assetSrc, asset)
       this._drawTextureMesh(texture, x, y, drawW, drawH, drawOpacity, false, [0, 0], [1, 1], 0, baseRadius)
@@ -1470,12 +1470,12 @@ export class Renderer {
 
     // 트랜지션 중이면 이전 이미지와 새 이미지를 모두 그린다
     if (oldSrc) {
-      drawAssetInner(oldSrc, obj.style.opacity * obj._fadeOpacity * (1 - progress))
+      drawAssetInner(oldSrc, obj.style.opacity * obj.__fadeOpacity * (1 - progress))
       if (src) {
-        drawAssetInner(src, obj.style.opacity * obj._fadeOpacity * progress)
+        drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity * progress)
       }
     } else if (src) {
-      drawAssetInner(src, obj.style.opacity * obj._fadeOpacity)
+      drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity)
     } else {
       this._drawPlaceholder(x, y, w || 60, h || 60)
     }
@@ -1484,7 +1484,7 @@ export class Renderer {
   // ─── Video ──────────────────────────────────────────────────────────────
 
   private _drawVideo(obj: LeviaVideo, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets) {
-    const src = obj._src
+    const src = obj.__src
     const asset = src ? assets[src] : undefined
     if (!asset || !(asset instanceof HTMLVideoElement)) {
       this._drawPlaceholder(x, y, w || 60, h || 60)
@@ -1492,16 +1492,16 @@ export class Renderer {
     }
 
     // 객체에서 속성(currentTime 등)을 조작하기 위해 엘리먼트 참조 주입
-    obj._videoElement = asset
+    obj.__videoElement = asset
 
-    const clip = obj._clip
+    const clip = obj.__clip
 
-    if (obj._playing) {
+    if (obj.__playing) {
       if (clip) {
         asset.loop = clip.loop
-        if (obj._needsSeekToStart && clip.start != null) {
+        if (obj.__needsSeekToStart && clip.start != null) {
           asset.currentTime = clip.start / 1000
-          obj._needsSeekToStart = false
+          obj.__needsSeekToStart = false
         }
       }
       if (asset.paused) asset.play().catch(() => { })
@@ -1510,18 +1510,18 @@ export class Renderer {
     }
 
     // 사용자 명시적 seek — clip.start보다 뒤에 적용하여 항상 우선
-    if (obj._pendingSeek != null) {
-      asset.currentTime = obj._pendingSeek
-      obj._pendingSeek = null
+    if (obj.__pendingSeek != null) {
+      asset.currentTime = obj.__pendingSeek
+      obj.__pendingSeek = null
     }
 
     if (clip && clip.end != null && asset.currentTime >= clip.end / 1000) {
       if (clip.loop) {
         asset.currentTime = (clip.start ?? 0) / 1000
-        obj._onRepeat()
+        obj.__onRepeat()
       } else {
         asset.pause()
-        obj._onEnded()
+        obj.__onEnded()
       }
     }
 
@@ -1539,14 +1539,14 @@ export class Renderer {
       drawH = h || asset.videoHeight * perspectiveScale;
     }
 
-    obj._renderedSize = {
+    obj.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale,
     }
 
     const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0)
     this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius)
-    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity)
+    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity)
 
     // 비디오 텍스처는 매 프레임 업데이트
     let tex = this.videoTextureCache.get(src!)
@@ -1557,7 +1557,7 @@ export class Renderer {
     tex.image = asset
     tex.needsUpdate = true
 
-    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
   }
 
   // ─── Sprite ─────────────────────────────────────────────────────────────
@@ -1565,7 +1565,7 @@ export class Renderer {
   private _drawSprite(sprite: Sprite, x: number, y: number, w: number, h: number, perspectiveScale: number, assets: LoadedAssets, timestamp: number) {
     sprite.__tick(timestamp)
 
-    const clip = sprite._clip
+    const clip = sprite.__clip
     const src = clip?.src
     if (!src) return
 
@@ -1590,20 +1590,20 @@ export class Renderer {
         drawW = w || asset.naturalWidth * perspectiveScale;
         drawH = h || asset.naturalHeight * perspectiveScale;
       }
-      sprite._renderedSize = {
+      sprite.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale,
       }
       const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0)
       this._drawShadow(sprite, x, y, drawW, drawH, drawW, drawH, false, baseRadius)
-      this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite._fadeOpacity)
-      this._drawTextureMesh(texture, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite._fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
+      this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity)
+      this._drawTextureMesh(texture, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
       return
     }
 
     const { frameWidth, frameHeight } = clip
     const sheetCols = Math.floor(asset.naturalWidth / frameWidth)
-    const frameIdx = sprite._currentFrame
+    const frameIdx = sprite.__currentFrame
     const col = frameIdx % sheetCols
     const row = Math.floor(frameIdx / sheetCols)
     const uvScaleX = frameWidth / asset.naturalWidth
@@ -1624,18 +1624,18 @@ export class Renderer {
       drawH = h || frameHeight * perspectiveScale;
     }
 
-    sprite._renderedSize = {
+    sprite.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale,
     }
     const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0)
     this._drawShadow(sprite, x, y, drawW, drawH, drawW, drawH, false, baseRadius)
-    this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite._fadeOpacity)
+    this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity)
 
     this._drawTextureMesh(
       texture,
       x, y, drawW, drawH,
-      (sprite.style.opacity ?? 1) * sprite._fadeOpacity,
+      (sprite.style.opacity ?? 1) * sprite.__fadeOpacity,
       false,
       [uvOffsetX, uvOffsetY],
       [uvScaleX, uvScaleY],
@@ -1656,7 +1656,7 @@ export class Renderer {
   ) {
     obj.__tick(timestamp)
 
-    const clip = obj._clip
+    const clip = obj.__clip
     if (!clip) return
 
     const asset = assets[clip.src]
@@ -1665,7 +1665,7 @@ export class Renderer {
       return
     }
 
-    const instances = obj._instances
+    const instances = obj.__instances
     if (instances.length === 0) return
 
     const natW = asset.naturalWidth
@@ -1727,7 +1727,7 @@ export class Renderer {
       this._drawTextureMesh(
         texture,
         ix, iy, iw, ih,
-        (obj.style.opacity ?? 1) * obj._fadeOpacity * opacity,
+        (obj.style.opacity ?? 1) * obj.__fadeOpacity * opacity,
         false, [0, 0], [1, 1],
         inst.z || 0,
         null,

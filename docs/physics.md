@@ -53,16 +53,19 @@
 
 ### 하늘에서 떨어지는 상자 만들기
 ```typescript
+// 중력 설정
+world.gravity = { x: 0, y: -1 };
+
 const box = world.createRectangle({
   attribute: {
-    name: 'fallingBox', // 고유 식별을 위해 name 사용
-    physics: 'dynamic', 
-    restitution: 0.5,   
-    gravityScale: 1.2   
+    physics: 'dynamic',
+    restitution: 0.5,
+    gravityScale: 1.2,
   },
   style: {
-    width: 60, height: 60,
-    margin: '5'         
+    width: 60,
+    height: 60,
+    margin: '5'
   }
 });
 

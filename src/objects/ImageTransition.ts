@@ -9,21 +9,21 @@ export class ImageTransition extends BaseTransition<LeviaImage> {
 
     if (!this.target.attribute?.src || durationMs <= 0 || this.target.attribute.src === newSrc) {
       this.target.attribute.src = newSrc
-      this.target._transitionOldSrc = null
-      this.target._transitionProgress = 0
+      this.target.__transitionOldSrc = null
+      this.target.__transitionProgress = 0
       return this
     }
-    this.target._transitionOldSrc = this.target.attribute.src
-    this.target._transitionProgress = 0
+    this.target.__transitionOldSrc = this.target.attribute.src
+    this.target.__transitionProgress = 0
     this.target.attribute.src = newSrc
 
     this._startTransition(durationMs, 'linear',
       (progress) => {
-        this.target._transitionProgress = progress
+        this.target.__transitionProgress = progress
       },
       () => {
-        this.target._transitionOldSrc = null
-        this.target._transitionProgress = 0
+        this.target.__transitionOldSrc = null
+        this.target.__transitionProgress = 0
       }
     )
     return this

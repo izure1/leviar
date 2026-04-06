@@ -15,7 +15,7 @@ export class Camera<
   D extends Record<string, any> = Record<string, any>
 > extends LeviaObject<CameraAttribute, D> {
   /** @internal */
-  _world?: World;
+  __world?: World;
 
   constructor(options?: LeviaObjectOptions<CameraAttribute, D>) {
     super('camera', options)
@@ -31,8 +31,8 @@ export class Camera<
    * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표. 지정하지 않으면 카메라의 fov가 1:1이 되는 심도(camZ + focalLength)로 계산됩니다.
    */
   canvasToWorld(x: number, y: number, targetZ?: number): { x: number; y: number; z: number } {
-    const w = this._world?.['_canvas']?.width ?? window.innerWidth
-    const h = this._world?.['_canvas']?.height ?? window.innerHeight
+    const w = this.__world?.['_canvas']?.width ?? window.innerWidth
+    const h = this.__world?.['_canvas']?.height ?? window.innerHeight
 
     const screenX = x - w / 2
     const screenY = -(y - h / 2)
@@ -92,8 +92,8 @@ export class Camera<
    * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표
    */
   canvasToLocal(x: number, y: number, targetZ?: number): { x: number; y: number; z: number } {
-    const w = this._world?.['_canvas']?.width ?? window.innerWidth
-    const h = this._world?.['_canvas']?.height ?? window.innerHeight
+    const w = this.__world?.['_canvas']?.width ?? window.innerWidth
+    const h = this.__world?.['_canvas']?.height ?? window.innerHeight
 
     const screenX = x - w / 2
     const screenY = -(y - h / 2)

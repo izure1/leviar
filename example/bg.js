@@ -8332,31 +8332,31 @@ var FadeTransition = class extends BaseTransition {
   start(durationMs, easing, type) {
     if (this._anim) this._anim.stop();
     if (type === "out") {
-      this.target._fadeOpacity = 1;
-      this.target._dirtyTexture = true;
+      this.target.__fadeOpacity = 1;
+      this.target.__dirtyTexture = true;
       this._startTransition(
         durationMs,
         easing,
         (progress) => {
-          this.target._fadeOpacity = 1 - progress;
+          this.target.__fadeOpacity = 1 - progress;
         },
         () => {
           this.target.style.display = "none";
-          this.target._fadeOpacity = 0;
+          this.target.__fadeOpacity = 0;
         }
       );
     } else {
       this.target.style.display = "block";
-      this.target._fadeOpacity = 0;
-      this.target._dirtyTexture = true;
+      this.target.__fadeOpacity = 0;
+      this.target.__dirtyTexture = true;
       this._startTransition(
         durationMs,
         easing,
         (progress) => {
-          this.target._fadeOpacity = progress;
+          this.target.__fadeOpacity = progress;
         },
         () => {
-          this.target._fadeOpacity = 1;
+          this.target.__fadeOpacity = 1;
         }
       );
     }
@@ -8509,7 +8509,7 @@ var LeviaObject = class extends EventEmitter {
   style;
   transform;
   /** matter-js 바디 참조 (PhysicsEngine에서 설정) */
-  _body = null;
+  __body = null;
   /**
    * attribute Proxy의 위임 키에 대한 값을 가져옵니다. (하위 클래스에서 재정의)
    */
@@ -8525,43 +8525,43 @@ var LeviaObject = class extends EventEmitter {
    * Renderer가 매 프레임 기록하는 실제 렌더 크기 (월드 좌표 기준, scale 포함, perspectiveScale 제외)
    * style.width/height 미지정 시 naturalWidth 등의 값이 들어옵니다.
    */
-  _renderedSize = null;
+  __renderedSize = null;
   /** Offscreen Canvas · 텍스처 재생성이 필요함을 나타내는 dirty flag */
-  _dirtyTexture = true;
+  __dirtyTexture = true;
   /** 물리 바디 크기 재확인이 필요함을 나타내는 dirty flag */
-  _dirtyPhysics = false;
+  __dirtyPhysics = false;
   /**
    * 마지막 텍스처 변경 이후 경과한 프레임 수.
    * 새 변경이 오면 0으로 리셋, 임계값 도달 시 텍스처를 업데이트합니다. (디바운스)
    */
-  _textureIdleCount = 0;
+  __textureIdleCount = 0;
   /**
    * 마지막 물리 변경 이후 경과한 프레임 수.
    * 새 변경이 오면 0으로 리셋, 임계값 도달 시 물리 실제 크기를 재확인합니다. (디바운스)
    */
-  _physicsIdleCount = 0;
+  __physicsIdleCount = 0;
   /**
    * 마지막 텍스처 업데이트 이후 경과한 프레임 수.
    * 렌더 후 0으로 리셋, 임계값 도달 시 강제 업데이트합니다. (스로틀)
    */
-  _textureThrottleCount = 0;
+  __textureThrottleCount = 0;
   /**
    * 마지막 물리 업데이트 이후 경과한 프레임 수.
    * 업데이트 후 0으로 리셋, 임계값 도달 시 강제 재확인합니다. (스로틀)
    */
-  _physicsThrottleCount = 0;
+  __physicsThrottleCount = 0;
   /**
    * FadeTransition에 의해 제어되는 렌더링용 내부 투명도.
    */
-  _fadeOpacity = 1;
+  __fadeOpacity = 1;
   /** 부모 객체 (계층 구조) */
   parent = null;
   /** 자식 객체 목록 */
   children = /* @__PURE__ */ new Set();
   /** 로컬 변환 매트릭스 (자신의 position, rotation, scale) */
-  _localMatrix = new Mat4();
+  localMatrix = new Mat4();
   /** 부모의 반영이 끝난 최종 월드 매트릭스 */
-  _worldMatrix = new Mat4();
+  __worldMatrix = new Mat4();
   constructor(type, options, delegatedKeys) {
     super();
     const rawAttribute = {
@@ -8615,37 +8615,37 @@ var LeviaObject = class extends EventEmitter {
       const flags = STYLE_DIRTY_MAP[key];
       if (!flags) return;
       if (flags.includes("texture")) {
-        this._dirtyTexture = true;
-        this._textureIdleCount = 0;
+        this.__dirtyTexture = true;
+        this.__textureIdleCount = 0;
       }
       if (flags.includes("physics")) {
-        this._dirtyPhysics = true;
-        this._physicsIdleCount = 0;
+        this.__dirtyPhysics = true;
+        this.__physicsIdleCount = 0;
       }
     });
     this.on("attrmodified", (key) => {
       const flags = ATTR_DIRTY_MAP[key];
       if (!flags) return;
       if (flags.includes("texture")) {
-        this._dirtyTexture = true;
-        this._textureIdleCount = 0;
+        this.__dirtyTexture = true;
+        this.__textureIdleCount = 0;
       }
       if (flags.includes("physics")) {
-        this._dirtyPhysics = true;
-        this._physicsIdleCount = 0;
+        this.__dirtyPhysics = true;
+        this.__physicsIdleCount = 0;
       }
     });
     this.on("scalemodified", (key) => {
       const flags = SCALE_DIRTY_MAP[key];
       if (!flags) return;
       if (flags.includes("physics")) {
-        this._dirtyPhysics = true;
-        this._physicsIdleCount = 0;
+        this.__dirtyPhysics = true;
+        this.__physicsIdleCount = 0;
       }
     });
     this.on("pivotmodified", () => {
-      this._dirtyPhysics = true;
-      this._physicsIdleCount = 0;
+      this.__dirtyPhysics = true;
+      this.__physicsIdleCount = 0;
     });
   }
   /**
@@ -8693,7 +8693,7 @@ var LeviaObject = class extends EventEmitter {
       }
     }
     this.removeFromParent();
-    const followersToKick = Array.from(this._followers);
+    const followersToKick = Array.from(this.followers);
     for (const follower of followersToKick) {
       this.kick(follower);
       if (removeFollower) {
@@ -8711,18 +8711,18 @@ var LeviaObject = class extends EventEmitter {
     const pos = this.transform.position;
     const rot = this.transform.rotation;
     const scale5 = this.transform.scale;
-    this._localMatrix.identity();
+    this.localMatrix.identity();
     _tmpVec3.set(pos.x, pos.y, -pos.z);
-    this._localMatrix.translate(_tmpVec3);
-    if (rot.z) this._localMatrix.rotate(rot.z * Math.PI / 180, VEC3_Z);
-    if (rot.y) this._localMatrix.rotate(rot.y * Math.PI / 180, VEC3_Y);
-    if (rot.x) this._localMatrix.rotate(rot.x * Math.PI / 180, VEC3_X);
+    this.localMatrix.translate(_tmpVec3);
+    if (rot.z) this.localMatrix.rotate(rot.z * Math.PI / 180, VEC3_Z);
+    if (rot.y) this.localMatrix.rotate(rot.y * Math.PI / 180, VEC3_Y);
+    if (rot.x) this.localMatrix.rotate(rot.x * Math.PI / 180, VEC3_X);
     _tmpVec3.set(scale5.x, scale5.y, scale5.z);
-    this._localMatrix.scale(_tmpVec3);
+    this.localMatrix.scale(_tmpVec3);
     if (this.parent) {
-      this._worldMatrix.multiply(this.parent._worldMatrix, this._localMatrix);
+      this.__worldMatrix.multiply(this.parent.__worldMatrix, this.localMatrix);
     } else {
-      this._worldMatrix.copy(this._localMatrix);
+      this.__worldMatrix.copy(this.localMatrix);
     }
     for (const child of this.children) {
       child.__updateMatrixWorld(force);
@@ -8777,13 +8777,13 @@ var LeviaObject = class extends EventEmitter {
    * 물리 바디에 힘을 적용합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
   applyForce(force) {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn("[LeviaObject] applyForce: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
     if (Matter3) {
-      Matter3.Body.applyForce(this._body, this._body.position, { x: force.x ?? 0, y: force.y ?? 0 });
+      Matter3.Body.applyForce(this.__body, this.__body.position, { x: force.x ?? 0, y: force.y ?? 0 });
     }
     return this;
   }
@@ -8791,13 +8791,13 @@ var LeviaObject = class extends EventEmitter {
    * 물리 바디의 속도를 설정합니다. attribute.physics가 설정된 경우에만 동작합니다.
    */
   setVelocity(velocity) {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn("[LeviaObject] setVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
     if (Matter3) {
-      Matter3.Body.setVelocity(this._body, { x: velocity.x ?? this._body.velocity.x, y: velocity.y ?? this._body.velocity.y });
+      Matter3.Body.setVelocity(this.__body, { x: velocity.x ?? this.__body.velocity.x, y: velocity.y ?? this.__body.velocity.y });
     }
     return this;
   }
@@ -8806,13 +8806,13 @@ var LeviaObject = class extends EventEmitter {
    * @param angularVelocity 각속도 (라디안/초)
    */
   setAngularVelocity(angularVelocity) {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn("[LeviaObject] setAngularVelocity: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
     const Matter3 = globalThis.__Matter__;
     if (Matter3) {
-      Matter3.Body.setAngularVelocity(this._body, angularVelocity);
+      Matter3.Body.setAngularVelocity(this.__body, angularVelocity);
     }
     return this;
   }
@@ -8822,11 +8822,11 @@ var LeviaObject = class extends EventEmitter {
    * @param torque 토크 값 (양수: 시계 방향, 음수: 반시계 방향)
    */
   applyTorque(torque) {
-    if (!this._body) {
+    if (!this.__body) {
       console.warn("[LeviaObject] applyTorque: \uBB3C\uB9AC \uBC14\uB514\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. attribute.physics\uB97C \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    this._body.torque += torque;
+    this.__body.torque += torque;
     return this;
   }
   _followTarget;
@@ -8853,7 +8853,7 @@ var LeviaObject = class extends EventEmitter {
     this.unfollow();
     this._followTarget = target;
     this._followOffset = offset;
-    target._followers.add(this);
+    target["_followers"].add(this);
     this._followListener = () => {
       if (this._followOffset?.x !== void 0) {
         this.transform.position.x = target.transform.position.x + this._followOffset.x;
@@ -8881,7 +8881,7 @@ var LeviaObject = class extends EventEmitter {
   unfollow() {
     if (this._followTarget && this._followListener) {
       this._followTarget.off("positionmodified", this._followListener);
-      this._followTarget._followers.delete(this);
+      this._followTarget["_followers"].delete(this);
       this._followTarget = void 0;
       this._followListener = void 0;
       this._followOffset = void 0;
@@ -8893,7 +8893,7 @@ var LeviaObject = class extends EventEmitter {
    * @param follower 제거할 추적 객체
    */
   kick(follower) {
-    if (this._followers.has(follower)) {
+    if (this["_followers"].has(follower)) {
       follower.unfollow();
     }
     return this;
@@ -8945,7 +8945,7 @@ var LeviaObject = class extends EventEmitter {
 // src/objects/Camera.ts
 var Camera2 = class extends LeviaObject {
   /** @internal */
-  _world;
+  __world;
   constructor(options) {
     super("camera", options);
     if (this.attribute.focalLength === void 0) {
@@ -8959,8 +8959,8 @@ var Camera2 = class extends LeviaObject {
    * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표. 지정하지 않으면 카메라의 fov가 1:1이 되는 심도(camZ + focalLength)로 계산됩니다.
    */
   canvasToWorld(x, y, targetZ) {
-    const w = this._world?.["_canvas"]?.width ?? window.innerWidth;
-    const h = this._world?.["_canvas"]?.height ?? window.innerHeight;
+    const w = this.__world?.["_canvas"]?.width ?? window.innerWidth;
+    const h = this.__world?.["_canvas"]?.height ?? window.innerHeight;
     const screenX = x - w / 2;
     const screenY = -(y - h / 2);
     const camX = this.transform.position.x;
@@ -9014,8 +9014,8 @@ var Camera2 = class extends LeviaObject {
    * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표
    */
   canvasToLocal(x, y, targetZ) {
-    const w = this._world?.["_canvas"]?.width ?? window.innerWidth;
-    const h = this._world?.["_canvas"]?.height ?? window.innerHeight;
+    const w = this.__world?.["_canvas"]?.width ?? window.innerWidth;
+    const h = this.__world?.["_canvas"]?.height ?? window.innerHeight;
     const screenX = x - w / 2;
     const screenY = -(y - h / 2);
     const camZ = this.transform.position.z;
@@ -9070,12 +9070,12 @@ var TextTransition = class extends BaseTransition {
     if (charDurationMs <= 0) {
       this.target.attribute.text = newText;
       this.target._transitionProgress = 1;
-      this.target._dirtyTexture = true;
+      this.target.__dirtyTexture = true;
       return this;
     }
     this.target.attribute.text = newText;
     this.target._transitionProgress = 0;
-    this.target._dirtyTexture = true;
+    this.target.__dirtyTexture = true;
     const pureTextLength = newText.replace(/<[^>]*>/g, "").length;
     const totalDurationMs = pureTextLength * charDurationMs;
     this._startTransition(
@@ -9083,11 +9083,11 @@ var TextTransition = class extends BaseTransition {
       "linear",
       (progress) => {
         this.target._transitionProgress = progress;
-        this.target._dirtyTexture = true;
+        this.target.__dirtyTexture = true;
       },
       () => {
         this.target._transitionProgress = 1;
-        this.target._dirtyTexture = true;
+        this.target.__dirtyTexture = true;
       }
     );
     return this;
@@ -9126,22 +9126,22 @@ var ImageTransition = class extends BaseTransition {
     if (this._anim) this._anim.stop();
     if (!this.target.attribute?.src || durationMs <= 0 || this.target.attribute.src === newSrc) {
       this.target.attribute.src = newSrc;
-      this.target._transitionOldSrc = null;
-      this.target._transitionProgress = 0;
+      this.target.__transitionOldSrc = null;
+      this.target.__transitionProgress = 0;
       return this;
     }
-    this.target._transitionOldSrc = this.target.attribute.src;
-    this.target._transitionProgress = 0;
+    this.target.__transitionOldSrc = this.target.attribute.src;
+    this.target.__transitionProgress = 0;
     this.target.attribute.src = newSrc;
     this._startTransition(
       durationMs,
       "linear",
       (progress) => {
-        this.target._transitionProgress = progress;
+        this.target.__transitionProgress = progress;
       },
       () => {
-        this.target._transitionOldSrc = null;
-        this.target._transitionProgress = 0;
+        this.target.__transitionOldSrc = null;
+        this.target.__transitionProgress = 0;
       }
     );
     return this;
@@ -9151,11 +9151,11 @@ var ImageTransition = class extends BaseTransition {
 // src/objects/LeviaImage.ts
 var LeviaImage = class extends LeviaObject {
   /** 트랜지션용 과거 에셋 키 */
-  _transitionOldSrc = null;
+  __transitionOldSrc = null;
   /** 트랜지션 진행도 (0 ~ 1) */
-  _transitionProgress = 0;
+  __transitionProgress = 0;
   /** 전환 관리자 */
-  _transitioner;
+  __transitioner;
   constructor(options) {
     super("image", options);
   }
@@ -9165,11 +9165,11 @@ var LeviaImage = class extends LeviaObject {
    * @param durationMs 전환에 걸리는 시간(밀리초)
    */
   transition(newSrc, durationMs) {
-    if (!this._transitioner) {
-      this._transitioner = new ImageTransition(this);
+    if (!this.__transitioner) {
+      this.__transitioner = new ImageTransition(this);
     }
-    this._transitioner.start(newSrc, durationMs);
-    return this._transitioner;
+    this.__transitioner.start(newSrc, durationMs);
+    return this.__transitioner;
   }
 };
 
@@ -9177,78 +9177,78 @@ var LeviaImage = class extends LeviaObject {
 var DELEGATED_KEYS = ["src", "currentTime", "playbackRate", "volume"];
 var LeviaVideo = class _LeviaVideo extends LeviaObject {
   /** 연결된 VideoManager */
-  _manager = null;
+  __manager = null;
   /** 현재 재생 중인 클립 이름 */
-  _clipName = null;
+  __clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
-  _clip = null;
-  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
-  _pendingSrc = null;
+  __clip = null;
+  /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
+  __pendingSrc = null;
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
-  _src = null;
+  __src = null;
   /** Renderer에서 활성화된 실제 VideoElement 인스턴스 참조 */
-  _videoElement = null;
+  __videoElement = null;
   /** 재생 중 여부 */
-  _playing = false;
+  __playing = false;
   /** 일시정지 여부 */
-  _paused = false;
+  __paused = false;
   /** 재생 시작 시 시작 위치로 이동해야하는지 여부 (Renderer에서 참조 및 리셋) */
-  _needsSeekToStart = false;
-  /** currentTime setter에서 _videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
-  _pendingSeek = null;
+  __needsSeekToStart = false;
+  /** currentTime setter에서 __videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
+  __pendingSeek = null;
   static DELEGATED_GETTERS = {
-    src: (self) => self._clipName ?? void 0,
-    currentTime: (self) => self._videoElement?.currentTime ?? 0,
-    playbackRate: (self) => self._videoElement?.playbackRate ?? 1,
-    volume: (self) => self._videoElement?.volume ?? 1
+    src: (self) => self.__clipName ?? void 0,
+    currentTime: (self) => self.__videoElement?.currentTime ?? 0,
+    playbackRate: (self) => self.__videoElement?.playbackRate ?? 1,
+    volume: (self) => self.__videoElement?.volume ?? 1
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self._manager) {
+      if (!self.__manager) {
         console.warn("[LeviaVideo] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self._manager.get(value);
+      const clip = self.__manager.get(value);
       if (!clip) {
         console.warn(`[LeviaVideo] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self._clipName = value;
-      self._clip = clip;
-      self._src = clip.src;
-      self._playing = false;
-      self._paused = false;
-      self._needsSeekToStart = true;
-      if (self._videoElement) self._videoElement.currentTime = 0;
-      else self._pendingSeek = 0;
+      self.__clipName = value;
+      self.__clip = clip;
+      self.__src = clip.src;
+      self.__playing = false;
+      self.__paused = false;
+      self.__needsSeekToStart = true;
+      if (self.__videoElement) self.__videoElement.currentTime = 0;
+      else self.__pendingSeek = 0;
     },
     currentTime: (self, value) => {
-      self._needsSeekToStart = false;
-      if (self._videoElement) {
-        self._videoElement.currentTime = value;
+      self.__needsSeekToStart = false;
+      if (self.__videoElement) {
+        self.__videoElement.currentTime = value;
       } else {
-        self._pendingSeek = value;
+        self.__pendingSeek = value;
       }
     },
     playbackRate: (self, value) => {
-      if (self._videoElement) self._videoElement.playbackRate = value;
+      if (self.__videoElement) self.__videoElement.playbackRate = value;
     },
     volume: (self, value) => {
-      if (self._videoElement) self._videoElement.volume = Math.max(0, Math.min(1, value));
+      if (self.__videoElement) self.__videoElement.volume = Math.max(0, Math.min(1, value));
     }
   };
   constructor(options) {
     super("video", options, DELEGATED_KEYS);
-    this._pendingSrc = options?.attribute?.src ?? null;
+    this.__pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * VideoManager를 연결합니다.
    */
   __setManager(manager) {
-    this._manager = manager;
-    if (this._pendingSrc) {
-      this.attribute.src = this._pendingSrc;
-      this._pendingSrc = null;
+    this.__manager = manager;
+    if (this.__pendingSrc) {
+      this.attribute.src = this.__pendingSrc;
+      this.__pendingSrc = null;
     }
     return this;
   }
@@ -9256,12 +9256,12 @@ var LeviaVideo = class _LeviaVideo extends LeviaObject {
    * 저장된 비디오 클립을 재생합니다.
    */
   play() {
-    if (!this._clip) {
+    if (!this.__clip) {
       console.warn("[LeviaVideo] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    this._playing = true;
-    this._paused = false;
+    this.__playing = true;
+    this.__paused = false;
     this.emit("play");
     return this;
   }
@@ -9269,9 +9269,9 @@ var LeviaVideo = class _LeviaVideo extends LeviaObject {
    * 재생을 일시정지합니다.
    */
   pause() {
-    if (!this._playing || this._paused) return this;
-    this._paused = true;
-    this._playing = false;
+    if (!this.__playing || this.__paused) return this;
+    this.__paused = true;
+    this.__playing = false;
     this.emit("pause");
     return this;
   }
@@ -9279,16 +9279,16 @@ var LeviaVideo = class _LeviaVideo extends LeviaObject {
    * 재생을 정지하고 처음으로 되돌립니다. loop=false일 때 'ended'를 emit합니다.
    */
   stop() {
-    const wasPlaying = this._playing;
-    this._playing = false;
-    this._paused = false;
-    this._needsSeekToStart = true;
-    if (this._videoElement) {
-      this._videoElement.currentTime = 0;
+    const wasPlaying = this.__playing;
+    this.__playing = false;
+    this.__paused = false;
+    this.__needsSeekToStart = true;
+    if (this.__videoElement) {
+      this.__videoElement.currentTime = 0;
     } else {
-      this._pendingSeek = 0;
+      this.__pendingSeek = 0;
     }
-    if (wasPlaying && this._clip && !this._clip.loop) {
+    if (wasPlaying && this.__clip && !this.__clip.loop) {
       this.emit("ended");
     }
     return this;
@@ -9297,15 +9297,15 @@ var LeviaVideo = class _LeviaVideo extends LeviaObject {
    * Renderer에서 루프 완료 시 호출 — 'repeat' 이벤트를 emit합니다.
    * @internal
    */
-  _onRepeat() {
+  __onRepeat() {
     this.emit("repeat");
   }
   /**
    * Renderer에서 재생 종료 시 호출 — 'ended' 이벤트를 emit합니다.
    * @internal
    */
-  _onEnded() {
-    this._playing = false;
+  __onEnded() {
+    this.__playing = false;
     this.emit("ended");
   }
   _getDelegatedAttribute(key) {
@@ -9327,68 +9327,68 @@ var LeviaVideo = class _LeviaVideo extends LeviaObject {
 var DELEGATED_KEYS2 = ["src", "currentTime", "playbackRate"];
 var Sprite = class _Sprite extends LeviaObject {
   /** 연결된 SpriteManager */
-  _manager = null;
+  __manager = null;
   /** 현재 재생 중인 클립 이름 */
-  _clipName = null;
+  __clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
-  _clip = null;
-  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
-  _pendingSrc = null;
+  __clip = null;
+  /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
+  __pendingSrc = null;
   /** 커스텀 재생 속도 (fps). undefined면 clip의 frameRate 사용 */
-  _playbackRate;
+  __playbackRate;
   /** 현재 프레임 인덱스 (clip.start 기준 절대 인덱스) */
-  _currentFrame = 0;
+  __currentFrame = 0;
   /** 마지막 프레임 변경 시각 (rAF timestamp) */
-  _lastFrameTime = 0;
+  __lastFrameTime = 0;
   /** 재생 중 여부 */
-  _playing = false;
+  __playing = false;
   /** 일시정지 여부 */
-  _paused = false;
+  __paused = false;
   static DELEGATED_GETTERS = {
-    src: (self) => self._clipName ?? void 0,
-    currentTime: (self) => self._clip ? Math.max(0, self._currentFrame - self._clip.start) : 0,
-    playbackRate: (self) => self._playbackRate ?? (self._clip ? self._clip.frameRate : 0)
+    src: (self) => self.__clipName ?? void 0,
+    currentTime: (self) => self.__clip ? Math.max(0, self.__currentFrame - self.__clip.start) : 0,
+    playbackRate: (self) => self.__playbackRate ?? (self.__clip ? self.__clip.frameRate : 0)
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self._manager) {
+      if (!self.__manager) {
         console.warn("[Sprite] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self._manager.get(value);
+      const clip = self.__manager.get(value);
       if (!clip) {
         console.warn(`[Sprite] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self._clipName = value;
-      self._clip = clip;
-      self._currentFrame = clip.start;
-      self._lastFrameTime = 0;
-      self._playing = false;
-      self._paused = false;
+      self.__clipName = value;
+      self.__clip = clip;
+      self.__currentFrame = clip.start;
+      self.__lastFrameTime = 0;
+      self.__playing = false;
+      self.__paused = false;
     },
     currentTime: (self, value) => {
-      if (!self._clip) return;
-      self._currentFrame = self._clip.start + Math.floor(value);
-      if (self._currentFrame >= self._clip.end) self._currentFrame = self._clip.end - 1;
-      if (self._currentFrame < self._clip.start) self._currentFrame = self._clip.start;
+      if (!self.__clip) return;
+      self.__currentFrame = self.__clip.start + Math.floor(value);
+      if (self.__currentFrame >= self.__clip.end) self.__currentFrame = self.__clip.end - 1;
+      if (self.__currentFrame < self.__clip.start) self.__currentFrame = self.__clip.start;
     },
     playbackRate: (self, value) => {
-      self._playbackRate = value;
+      self.__playbackRate = value;
     }
   };
   constructor(options) {
     super("sprite", options, DELEGATED_KEYS2);
-    this._pendingSrc = options?.attribute?.src ?? null;
+    this.__pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * SpriteManager를 연결합니다.
    */
   __setManager(manager) {
-    this._manager = manager;
-    if (this._pendingSrc) {
-      this.attribute.src = this._pendingSrc;
-      this._pendingSrc = null;
+    this.__manager = manager;
+    if (this.__pendingSrc) {
+      this.attribute.src = this.__pendingSrc;
+      this.__pendingSrc = null;
     }
     return this;
   }
@@ -9396,31 +9396,31 @@ var Sprite = class _Sprite extends LeviaObject {
    * 애니메이션 클립을 재생합니다.
    */
   play() {
-    if (!this._clip) {
+    if (!this.__clip) {
       console.warn("[Sprite] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    if (this._playing && !this._paused) return this;
-    this._playing = true;
-    this._paused = false;
-    this._lastFrameTime = 0;
+    if (this.__playing && !this.__paused) return this;
+    this.__playing = true;
+    this.__paused = false;
+    this.__lastFrameTime = 0;
     this.emit("play");
     return this;
   }
   /** 재생을 일시정지합니다. */
   pause() {
-    if (!this._playing || this._paused) return this;
-    this._paused = true;
+    if (!this.__playing || this.__paused) return this;
+    this.__paused = true;
     this.emit("pause");
     return this;
   }
   /** 애니메이션을 정지하고 처음으로 되돌립니다. */
   stop() {
-    this._playing = false;
-    this._paused = false;
-    if (this._clip) {
-      this._currentFrame = this._clip.start;
-      this._lastFrameTime = 0;
+    this.__playing = false;
+    this.__paused = false;
+    if (this.__clip) {
+      this.__currentFrame = this.__clip.start;
+      this.__lastFrameTime = 0;
     }
     return this;
   }
@@ -9428,24 +9428,24 @@ var Sprite = class _Sprite extends LeviaObject {
    * Renderer에서 매 프레임 호출하여 현재 프레임 인덱스를 업데이트합니다.
    */
   __tick(timestamp) {
-    if (!this._playing || this._paused || !this._clip) return;
-    const { frameRate, start, end, loop } = this._clip;
-    const targetFps = this._playbackRate !== void 0 ? this._playbackRate : frameRate;
+    if (!this.__playing || this.__paused || !this.__clip) return;
+    const { frameRate, start, end, loop } = this.__clip;
+    const targetFps = this.__playbackRate !== void 0 ? this.__playbackRate : frameRate;
     const interval = 1e3 / targetFps;
-    if (this._lastFrameTime === 0) {
-      this._lastFrameTime = timestamp;
+    if (this.__lastFrameTime === 0) {
+      this.__lastFrameTime = timestamp;
       return;
     }
-    if (timestamp - this._lastFrameTime >= interval) {
-      this._currentFrame++;
-      this._lastFrameTime = timestamp;
-      if (this._currentFrame >= end) {
+    if (timestamp - this.__lastFrameTime >= interval) {
+      this.__currentFrame++;
+      this.__lastFrameTime = timestamp;
+      if (this.__currentFrame >= end) {
         if (loop) {
-          this._currentFrame = start;
+          this.__currentFrame = start;
           this.emit("repeat");
         } else {
-          this._currentFrame = end - 1;
-          this._playing = false;
+          this.__currentFrame = end - 1;
+          this.__playing = false;
           this.emit("ended");
         }
       }
@@ -9471,56 +9471,56 @@ var import_matter_js = __toESM(require_matter(), 1);
 var DELEGATED_KEYS3 = ["src"];
 var GRAVITY = 1e-3;
 var Particle = class _Particle extends LeviaObject {
-  _manager = null;
-  _clipName = null;
-  _clip = null;
-  /** 생성자 시점에 _manager가 없어서 보류된 src 값 */
-  _pendingSrc = null;
+  __manager = null;
+  __clipName = null;
+  __clip = null;
+  /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
+  __pendingSrc = null;
   /** 활성 파티클 인스턴스 목록 (Renderer에서 직접 참조) */
-  _instances = [];
-  _playing = false;
-  _lastSpawnTime = 0;
-  _spawnCount = 0;
+  __instances = [];
+  __playing = false;
+  __lastSpawnTime = 0;
+  __spawnCount = 0;
   // loop=false 일 때 총 스폰 횟수 추적
   /** PhysicsEngine 참조 (strict 모드 전용) */
-  _physics = null;
+  __physics = null;
   /** 일시정지 여부 */
-  _paused = false;
+  __paused = false;
   static DELEGATED_GETTERS = {
-    src: (self) => self._clipName ?? void 0
+    src: (self) => self.__clipName ?? void 0
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self._manager) {
+      if (!self.__manager) {
         console.warn("[Particle] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self._manager.get(value);
+      const clip = self.__manager.get(value);
       if (!clip) {
         console.warn(`[Particle] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self._clipName = value;
-      self._clip = clip;
-      self._playing = false;
-      self._paused = false;
-      self._lastSpawnTime = 0;
-      self._spawnCount = 0;
-      self._instances = [];
+      self.__clipName = value;
+      self.__clip = clip;
+      self.__playing = false;
+      self.__paused = false;
+      self.__lastSpawnTime = 0;
+      self.__spawnCount = 0;
+      self.__instances = [];
     }
   };
   constructor(options) {
     super("particle", options, DELEGATED_KEYS3);
-    this._pendingSrc = options?.attribute?.src ?? null;
+    this.__pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * ParticleManager를 연결합니다.
    */
   __setManager(manager) {
-    this._manager = manager;
-    if (this._pendingSrc) {
-      this.attribute.src = this._pendingSrc;
-      this._pendingSrc = null;
+    this.__manager = manager;
+    if (this.__pendingSrc) {
+      this.attribute.src = this.__pendingSrc;
+      this.__pendingSrc = null;
     }
     return this;
   }
@@ -9528,19 +9528,19 @@ var Particle = class _Particle extends LeviaObject {
    * PhysicsEngine을 연결합니다. strict=true 시 필요합니다.
    */
   __setPhysics(physics) {
-    this._physics = physics;
+    this.__physics = physics;
     return this;
   }
   /**
    * 파티클 에미션을 시작합니다.
    */
   play() {
-    if (!this._clip) {
+    if (!this.__clip) {
       console.warn("[Particle] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    this._playing = true;
-    this._paused = false;
+    this.__playing = true;
+    this.__paused = false;
     this.emit("play");
     return this;
   }
@@ -9548,8 +9548,8 @@ var Particle = class _Particle extends LeviaObject {
    * 파티클 에미션을 일시정지합니다.
    */
   pause() {
-    if (!this._playing || this._paused) return this;
-    this._paused = true;
+    if (!this.__playing || this.__paused) return this;
+    this.__paused = true;
     this.emit("pause");
     return this;
   }
@@ -9557,10 +9557,10 @@ var Particle = class _Particle extends LeviaObject {
    * 파티클 에미션을 정지합니다. 이미 생성된 인스턴스는 lifespan까지 유지됩니다.
    */
   stop() {
-    if (!this._playing && !this._paused) return this;
-    const wasLooping = this._clip?.loop ?? false;
-    this._playing = false;
-    this._paused = false;
+    if (!this.__playing && !this.__paused) return this;
+    const wasLooping = this.__clip?.loop ?? false;
+    this.__playing = false;
+    this.__paused = false;
     if (wasLooping) {
       this.emit("repeat");
     } else {
@@ -9573,30 +9573,30 @@ var Particle = class _Particle extends LeviaObject {
    * 인스턴스 생성/업데이트/제거를 처리합니다.
    */
   __tick(timestamp) {
-    if (!this._clip) return;
-    const clip = this._clip;
-    if (this._lastSpawnTime === 0) {
-      this._lastSpawnTime = timestamp;
+    if (!this.__clip) return;
+    const clip = this.__clip;
+    if (this.__lastSpawnTime === 0) {
+      this.__lastSpawnTime = timestamp;
     }
-    if (this._playing && !this._paused) {
-      const elapsed = timestamp - this._lastSpawnTime;
+    if (this.__playing && !this.__paused) {
+      const elapsed = timestamp - this.__lastSpawnTime;
       if (elapsed >= clip.interval) {
         this._spawn(timestamp);
-        this._lastSpawnTime = timestamp;
-        this._spawnCount++;
+        this.__lastSpawnTime = timestamp;
+        this.__spawnCount++;
         if (!clip.loop) {
-          this._playing = false;
+          this.__playing = false;
         }
       }
     }
     const gScale = this.attribute.gravityScale ?? 1;
-    const gX = this._physics ? this._physics.engine.gravity.x * this._physics.engine.gravity.scale : 0;
-    const gY = this._physics ? this._physics.engine.gravity.y * this._physics.engine.gravity.scale : GRAVITY;
+    const gX = this.__physics ? this.__physics.engine.gravity.x * this.__physics.engine.gravity.scale : 0;
+    const gY = this.__physics ? this.__physics.engine.gravity.y * this.__physics.engine.gravity.scale : GRAVITY;
     const alive = [];
-    for (const inst of this._instances) {
+    for (const inst of this.__instances) {
       const age = timestamp - inst.born;
       if (age >= inst.lifespan) {
-        if (inst.body && this._physics) {
+        if (inst.body && this.__physics) {
           this._removeInstanceBody(inst);
         }
         continue;
@@ -9628,10 +9628,10 @@ var Particle = class _Particle extends LeviaObject {
       }
       alive.push(inst);
     }
-    this._instances = alive;
+    this.__instances = alive;
   }
   _spawn(timestamp) {
-    const clip = this._clip;
+    const clip = this.__clip;
     const attr = this.attribute;
     const emX = this.transform.position.x;
     const emY = this.transform.position.y;
@@ -9679,7 +9679,7 @@ var Particle = class _Particle extends LeviaObject {
         angle: 0,
         angularVelocity
       };
-      if (this.attribute.strictPhysics && this._physics) {
+      if (this.attribute.strictPhysics && this.__physics) {
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4;
         const bodyOpts = {
           density: attr.density ?? 1e-3,
@@ -9699,15 +9699,15 @@ var Particle = class _Particle extends LeviaObject {
         if (angularVelocity !== 0) {
           import_matter_js.default.Body.setAngularVelocity(body, angularVelocity * 16);
         }
-        import_matter_js.default.Composite.add(this._physics.engine.world, body);
+        import_matter_js.default.Composite.add(this.__physics.engine.world, body);
         inst.body = body;
       }
-      this._instances.push(inst);
+      this.__instances.push(inst);
     }
   }
   _removeInstanceBody(inst) {
-    if (!inst.body || !this._physics) return;
-    import_matter_js.default.Composite.remove(this._physics.engine.world, inst.body);
+    if (!inst.body || !this.__physics) return;
+    import_matter_js.default.Composite.remove(this.__physics.engine.world, inst.body);
     inst.body = void 0;
   }
   _getDelegatedAttribute(key) {
@@ -9860,7 +9860,7 @@ var PhysicsEngine = class {
       ;
       body.gravityScale = attr.gravityScale;
     }
-    obj._body = body;
+    obj.__body = body;
     this.bodyMap.set(obj.attribute.id, body);
     this.objMap.set(obj.attribute.id, obj);
     import_matter_js2.default.Composite.add(this.engine.world, body);
@@ -9879,7 +9879,7 @@ var PhysicsEngine = class {
     const angularVelocity = prevBody.angularVelocity;
     import_matter_js2.default.Composite.remove(this.engine.world, prevBody);
     this.bodyMap.delete(obj.attribute.id);
-    obj._body = null;
+    obj.__body = null;
     const savedX = obj.transform.position.x;
     const savedY = obj.transform.position.y;
     obj.transform.position.x = pos.x;
@@ -9901,15 +9901,15 @@ var PhysicsEngine = class {
   syncObjectSizes(objects) {
     const EPS = 0.5;
     for (const obj of objects) {
-      if (!obj._body || !obj._renderedSize) continue;
-      obj._physicsThrottleCount++;
-      if (obj._dirtyPhysics) obj._physicsIdleCount++;
-      const shouldCheck = obj._dirtyPhysics && (obj._physicsIdleCount >= PHYSICS_DEBOUNCE_FRAMES || obj._physicsThrottleCount >= PHYSICS_THROTTLE_FRAMES);
+      if (!obj.__body || !obj.__renderedSize) continue;
+      obj.__physicsThrottleCount++;
+      if (obj.__dirtyPhysics) obj.__physicsIdleCount++;
+      const shouldCheck = obj.__dirtyPhysics && (obj.__physicsIdleCount >= PHYSICS_DEBOUNCE_FRAMES || obj.__physicsThrottleCount >= PHYSICS_THROTTLE_FRAMES);
       if (!shouldCheck) continue;
-      obj._dirtyPhysics = false;
-      obj._physicsIdleCount = 0;
-      obj._physicsThrottleCount = 0;
-      const { w, h } = obj._renderedSize;
+      obj.__dirtyPhysics = false;
+      obj.__physicsIdleCount = 0;
+      obj.__physicsThrottleCount = 0;
+      const { w, h } = obj.__renderedSize;
       const last = this.lastSizeMap.get(obj.attribute.id);
       if (last && Math.abs(last.w - w) < EPS && Math.abs(last.h - h) < EPS) continue;
       this.lastSizeMap.set(obj.attribute.id, { w, h });
@@ -9926,21 +9926,21 @@ var PhysicsEngine = class {
     this.bodyMap.delete(obj.attribute.id);
     this.objMap.delete(obj.attribute.id);
     this.lastSizeMap.delete(obj.attribute.id);
-    obj._body = null;
+    obj.__body = null;
   }
   /**
    * 특정 오브젝트에 힘을 적용합니다.
    */
   applyForce(obj, force) {
-    if (!obj._body) return;
-    import_matter_js2.default.Body.applyForce(obj._body, obj._body.position, force);
+    if (!obj.__body) return;
+    import_matter_js2.default.Body.applyForce(obj.__body, obj.__body.position, force);
   }
   /**
    * 특정 오브젝트의 속도를 설정합니다.
    */
   setVelocity(obj, velocity) {
-    if (!obj._body) return;
-    import_matter_js2.default.Body.setVelocity(obj._body, velocity);
+    if (!obj.__body) return;
+    import_matter_js2.default.Body.setVelocity(obj.__body, velocity);
   }
   /**
    * 물리 시뮬레이션을 진행하고, 바디 위치를 LeviaObject에 동기화합니다.
@@ -9994,8 +9994,8 @@ var PhysicsEngine = class {
       const obj = this.objMap.get(id);
       if (!obj) continue;
       const lastSize = this.lastSizeMap.get(id);
-      let baseW = lastSize?.w ?? obj._renderedSize?.w ?? obj.style.width;
-      let baseH = lastSize?.h ?? obj._renderedSize?.h ?? obj.style.height;
+      let baseW = lastSize?.w ?? obj.__renderedSize?.w ?? obj.style.width;
+      let baseH = lastSize?.h ?? obj.__renderedSize?.h ?? obj.style.height;
       if (!lastSize) {
         baseW = (baseW ?? 32) * obj.transform.scale.x;
         baseH = (baseH ?? 32) * obj.transform.scale.y;
@@ -10785,7 +10785,7 @@ var Renderer2 = class {
             rotation: { x: 0, y: 0, z: 0 },
             pivot: { x: 0.5, y: 0.5 }
           },
-          _worldMatrix: new Mat4().translate(new Vec3(0, 0, -100)),
+          __worldMatrix: new Mat4().translate(new Vec3(0, 0, -100)),
           _fadeOpacity: 1,
           _dirtyTexture: true,
           _textureThrottleCount: 0,
@@ -10858,16 +10858,16 @@ var Renderer2 = class {
         }
       }
       const worldSortLogic = (a, b) => {
-        const mA = a._worldMatrix;
-        const mB = b._worldMatrix;
+        const mA = a.__worldMatrix;
+        const mB = b.__worldMatrix;
         const zdiff = -mB[14] - -mA[14];
         return zdiff !== 0 ? zdiff : a.style.zIndex - b.style.zIndex;
       };
       const uiSortLogic = (a, b) => {
         const zIndexDiff = a.style.zIndex - b.style.zIndex;
         if (zIndexDiff !== 0) return zIndexDiff;
-        const mA = a._worldMatrix;
-        const mB = b._worldMatrix;
+        const mA = a.__worldMatrix;
+        const mB = b.__worldMatrix;
         return -mB[14] - -mA[14];
       };
       worldObjects.sort(worldSortLogic);
@@ -10881,7 +10881,7 @@ var Renderer2 = class {
     this._setBlendMode("source-over");
     for (let i = 0, len = this._sortedObjects.length; i < len; i++) {
       const obj = this._sortedObjects[i];
-      const mArr = obj._worldMatrix;
+      const mArr = obj.__worldMatrix;
       if (-mArr[14] <= camZ) continue;
       this._drawObject(obj, assets, timestamp);
     }
@@ -10890,8 +10890,8 @@ var Renderer2 = class {
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
   _drawObject(obj, assets, timestamp) {
     const { style, transform } = obj;
-    const baseW = obj._renderedSize?.w ?? style.width ?? 0;
-    const baseH = obj._renderedSize?.h ?? style.height ?? 0;
+    const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
+    const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
     const w = baseW;
     const h = baseH;
     this._activeObj = obj;
@@ -10936,7 +10936,7 @@ var Renderer2 = class {
     const pivot = obj.transform.pivot;
     const pw = baseW ?? w;
     const ph = baseH ?? h;
-    this._modelMat.copy(obj._worldMatrix);
+    this._modelMat.copy(obj.__worldMatrix);
     if (x !== 0 || y !== 0 || zOffset !== 0) {
       this._tmpVec[0] = x;
       this._tmpVec[1] = y;
@@ -11199,7 +11199,7 @@ var Renderer2 = class {
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor);
     this.shadowProgram.uniforms["uColor"].value = [r, g, b, a];
-    this.shadowProgram.uniforms["uOpacity"].value = style.opacity * obj._fadeOpacity;
+    this.shadowProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
     this.shadowProgram.uniforms["uSize"].value = [quadW, quadH];
     this.shadowProgram.uniforms["uBoxSize"].value = [w, h];
     if (this.shadowProgram.uniforms["uBorderRadius"] && borderRadius && !isEllipse) {
@@ -11232,7 +11232,7 @@ var Renderer2 = class {
   _drawRectangle(obj, x, y, w, h) {
     const { style } = obj;
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
-    const targetOpacity = style.opacity * obj._fadeOpacity;
+    const targetOpacity = style.opacity * obj.__fadeOpacity;
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0);
     this._drawShadow(obj, x, y, w, h, void 0, void 0, false, baseRadius);
     this._drawRectBorders(obj, x, y, w, h, targetOpacity);
@@ -11254,7 +11254,7 @@ var Renderer2 = class {
     const drawEllipse = (ew, eh, color) => {
       const [r, g, b, a] = parseCSSColor(color);
       this.ellipseProgram.uniforms["uColor"].value = [r, g, b, a];
-      this.ellipseProgram.uniforms["uOpacity"].value = style.opacity * obj._fadeOpacity;
+      this.ellipseProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
       this.ellipseProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, ew, eh, 0, w, h);
       this.ellipseProgram.uniforms["uProjectionMatrix"].value = this._projMatrix();
       this.ellipseMesh.draw({ camera: this.camera });
@@ -11273,7 +11273,7 @@ var Renderer2 = class {
     }
     if (style.gradient && w > 0 && h > 0) {
       const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", true);
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj._fadeOpacity);
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj.__fadeOpacity);
     }
   }
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -11286,9 +11286,9 @@ var Renderer2 = class {
     const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null;
     const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
     let entry = this.textCache.get(id);
-    obj._textureThrottleCount++;
-    if (obj._dirtyTexture) obj._textureIdleCount++;
-    const needRender = !entry || obj._dirtyTexture && (obj._textureIdleCount >= TEXTURE_DEBOUNCE_FRAMES || obj._textureThrottleCount >= TEXTURE_THROTTLE_FRAMES);
+    obj.__textureThrottleCount++;
+    if (obj.__dirtyTexture) obj.__textureIdleCount++;
+    const needRender = !entry || obj.__dirtyTexture && (obj.__textureIdleCount >= TEXTURE_DEBOUNCE_FRAMES || obj.__textureThrottleCount >= TEXTURE_THROTTLE_FRAMES);
     if (!entry) {
       const shared = this.textContentCache.get(contentKey);
       if (shared) {
@@ -11296,9 +11296,9 @@ var Renderer2 = class {
         this.textCache.set(id, entry);
         const refCount = this.textContentRefCount.get(contentKey) || 0;
         this.textContentRefCount.set(contentKey, refCount + 1);
-        obj._dirtyTexture = false;
-        obj._textureIdleCount = 0;
-        obj._textureThrottleCount = 0;
+        obj.__dirtyTexture = false;
+        obj.__textureIdleCount = 0;
+        obj.__textureThrottleCount = 0;
       } else {
         const canvas2 = document.createElement("canvas");
         const ctx = canvas2.getContext("2d");
@@ -11334,26 +11334,26 @@ var Renderer2 = class {
       }
       ;
       entry._contentKey = contentKey;
-      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, obj._transitionProgress ?? 1);
+      this._renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, obj.__transitionProgress ?? 1);
       this.textContentCache.set(contentKey, entry);
       if (prevContentKey !== contentKey) {
         const refCount = this.textContentRefCount.get(contentKey) || 0;
         this.textContentRefCount.set(contentKey, refCount + 1);
       }
-      obj._dirtyTexture = false;
-      obj._textureIdleCount = 0;
-      obj._textureThrottleCount = 0;
+      obj.__dirtyTexture = false;
+      obj.__textureIdleCount = 0;
+      obj.__textureThrottleCount = 0;
     }
     const cw = entry.canvas.width;
     const ch = entry.canvas.height;
     if (cw === 0 || ch === 0) return;
-    obj._renderedSize = {
+    obj.__renderedSize = {
       w: cw / TEXT_RENDER_SCALE,
       h: ch / TEXT_RENDER_SCALE
     };
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE;
     this._drawShadow(obj, x, y, cw * displayScale, ch * displayScale);
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj._fadeOpacity, false);
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj.__fadeOpacity, false);
   }
   _renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, transitionProgress = 1) {
     const { canvas: canvas2, ctx } = entry;
@@ -11543,8 +11543,8 @@ var Renderer2 = class {
   // ─── Image ──────────────────────────────────────────────────────────────
   _drawAsset(obj, x, y, w, h, perspectiveScale, assets) {
     const src = obj.attribute?.src;
-    const oldSrc = obj._transitionOldSrc;
-    const progress = obj._transitionProgress ?? 0;
+    const oldSrc = obj.__transitionOldSrc;
+    const progress = obj.__transitionProgress ?? 0;
     const drawAssetInner = (assetSrc, drawOpacity) => {
       const asset = assets[assetSrc];
       if (!asset || !(asset instanceof HTMLImageElement)) {
@@ -11564,43 +11564,43 @@ var Renderer2 = class {
         drawW = w || asset.naturalWidth * perspectiveScale;
         drawH = h || asset.naturalHeight * perspectiveScale;
       }
-      obj._renderedSize = {
+      obj.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
       };
       const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
       this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius);
-      this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity);
+      this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity);
       const texture = this._getOrCreateAssetTexture(assetSrc, asset);
       this._drawTextureMesh(texture, x, y, drawW, drawH, drawOpacity, false, [0, 0], [1, 1], 0, baseRadius);
     };
     if (oldSrc) {
-      drawAssetInner(oldSrc, obj.style.opacity * obj._fadeOpacity * (1 - progress));
+      drawAssetInner(oldSrc, obj.style.opacity * obj.__fadeOpacity * (1 - progress));
       if (src) {
-        drawAssetInner(src, obj.style.opacity * obj._fadeOpacity * progress);
+        drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity * progress);
       }
     } else if (src) {
-      drawAssetInner(src, obj.style.opacity * obj._fadeOpacity);
+      drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity);
     } else {
       this._drawPlaceholder(x, y, w || 60, h || 60);
     }
   }
   // ─── Video ──────────────────────────────────────────────────────────────
   _drawVideo(obj, x, y, w, h, perspectiveScale, assets) {
-    const src = obj._src;
+    const src = obj.__src;
     const asset = src ? assets[src] : void 0;
     if (!asset || !(asset instanceof HTMLVideoElement)) {
       this._drawPlaceholder(x, y, w || 60, h || 60);
       return;
     }
-    obj._videoElement = asset;
-    const clip = obj._clip;
-    if (obj._playing) {
+    obj.__videoElement = asset;
+    const clip = obj.__clip;
+    if (obj.__playing) {
       if (clip) {
         asset.loop = clip.loop;
-        if (obj._needsSeekToStart && clip.start != null) {
+        if (obj.__needsSeekToStart && clip.start != null) {
           asset.currentTime = clip.start / 1e3;
-          obj._needsSeekToStart = false;
+          obj.__needsSeekToStart = false;
         }
       }
       if (asset.paused) asset.play().catch(() => {
@@ -11608,17 +11608,17 @@ var Renderer2 = class {
     } else {
       if (!asset.paused) asset.pause();
     }
-    if (obj._pendingSeek != null) {
-      asset.currentTime = obj._pendingSeek;
-      obj._pendingSeek = null;
+    if (obj.__pendingSeek != null) {
+      asset.currentTime = obj.__pendingSeek;
+      obj.__pendingSeek = null;
     }
     if (clip && clip.end != null && asset.currentTime >= clip.end / 1e3) {
       if (clip.loop) {
         asset.currentTime = (clip.start ?? 0) / 1e3;
-        obj._onRepeat();
+        obj.__onRepeat();
       } else {
         asset.pause();
-        obj._onEnded();
+        obj.__onEnded();
       }
     }
     let drawW, drawH;
@@ -11632,13 +11632,13 @@ var Renderer2 = class {
       drawW = w || asset.videoWidth * perspectiveScale;
       drawH = h || asset.videoHeight * perspectiveScale;
     }
-    obj._renderedSize = {
+    obj.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale
     };
     const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
     this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius);
-    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity);
+    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity);
     let tex = this.videoTextureCache.get(src);
     if (!tex) {
       tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
@@ -11646,12 +11646,12 @@ var Renderer2 = class {
     }
     tex.image = asset;
     tex.needsUpdate = true;
-    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj._fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius);
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius);
   }
   // ─── Sprite ─────────────────────────────────────────────────────────────
   _drawSprite(sprite, x, y, w, h, perspectiveScale, assets, timestamp) {
     sprite.__tick(timestamp);
-    const clip = sprite._clip;
+    const clip = sprite.__clip;
     const src = clip?.src;
     if (!src) return;
     const asset = assets[src];
@@ -11672,19 +11672,19 @@ var Renderer2 = class {
         drawW2 = w || asset.naturalWidth * perspectiveScale;
         drawH2 = h || asset.naturalHeight * perspectiveScale;
       }
-      sprite._renderedSize = {
+      sprite.__renderedSize = {
         w: drawW2 / perspectiveScale,
         h: drawH2 / perspectiveScale
       };
       const baseRadius2 = parseBorderRadius(sprite.style.borderRadius, drawW2, drawH2, 0);
       this._drawShadow(sprite, x, y, drawW2, drawH2, drawW2, drawH2, false, baseRadius2);
-      this._drawRectBorders(sprite, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite._fadeOpacity);
-      this._drawTextureMesh(texture, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite._fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
+      this._drawRectBorders(sprite, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity);
+      this._drawTextureMesh(texture, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
       return;
     }
     const { frameWidth, frameHeight } = clip;
     const sheetCols = Math.floor(asset.naturalWidth / frameWidth);
-    const frameIdx = sprite._currentFrame;
+    const frameIdx = sprite.__currentFrame;
     const col = frameIdx % sheetCols;
     const row = Math.floor(frameIdx / sheetCols);
     const uvScaleX = frameWidth / asset.naturalWidth;
@@ -11702,20 +11702,20 @@ var Renderer2 = class {
       drawW = w || frameWidth * perspectiveScale;
       drawH = h || frameHeight * perspectiveScale;
     }
-    sprite._renderedSize = {
+    sprite.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale
     };
     const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0);
     this._drawShadow(sprite, x, y, drawW, drawH, drawW, drawH, false, baseRadius);
-    this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite._fadeOpacity);
+    this._drawRectBorders(sprite, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity);
     this._drawTextureMesh(
       texture,
       x,
       y,
       drawW,
       drawH,
-      (sprite.style.opacity ?? 1) * sprite._fadeOpacity,
+      (sprite.style.opacity ?? 1) * sprite.__fadeOpacity,
       false,
       [uvOffsetX, uvOffsetY],
       [uvScaleX, uvScaleY],
@@ -11726,14 +11726,14 @@ var Renderer2 = class {
   // ─── Particle (Instanced) ────────────────────────────────────────────────
   _drawParticle(obj, emX, emY, w, h, perspectiveScale, assets, timestamp) {
     obj.__tick(timestamp);
-    const clip = obj._clip;
+    const clip = obj.__clip;
     if (!clip) return;
     const asset = assets[clip.src];
     if (!asset || !(asset instanceof HTMLImageElement)) {
       this._drawPlaceholder(emX, emY, w || 30, h || 30);
       return;
     }
-    const instances = obj._instances;
+    const instances = obj.__instances;
     if (instances.length === 0) return;
     const natW = asset.naturalWidth;
     const natH = asset.naturalHeight;
@@ -11787,7 +11787,7 @@ var Renderer2 = class {
         iy,
         iw,
         ih,
-        (obj.style.opacity ?? 1) * obj._fadeOpacity * opacity,
+        (obj.style.opacity ?? 1) * obj.__fadeOpacity * opacity,
         false,
         [0, 0],
         [1, 1],
@@ -12063,7 +12063,7 @@ var World = class extends EventEmitter {
       return inside;
     };
     const objectsData = Array.from(this.objects).filter((obj) => obj.attribute.type !== "camera" && obj.style.display !== "none" && obj.style.pointerEvents).map((obj) => {
-      const mat = obj._worldMatrix;
+      const mat = obj.__worldMatrix;
       const wx = mat[12], wy = mat[13], wz = -mat[14];
       let dx = wx - camX;
       let dy = wy - camY;
@@ -12094,8 +12094,8 @@ var World = class extends EventEmitter {
       const perspectiveScale = data.dz === 0 ? 1 : focalLength / data.dz;
       const screenX = data.dx * perspectiveScale;
       const screenY = data.dy * perspectiveScale;
-      const baseW = data.obj._renderedSize?.w ?? data.obj.style.width ?? 100;
-      const baseH = data.obj._renderedSize?.h ?? data.obj.style.height ?? 100;
+      const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
+      const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
       const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x);
       const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y);
       const safeRadius = w + h;
@@ -12112,8 +12112,8 @@ var World = class extends EventEmitter {
       const perspectiveScale = dz === 0 ? 1 : focalLength / dz;
       const screenX = dx * perspectiveScale;
       const screenY = dy * perspectiveScale;
-      const baseW = obj._renderedSize?.w ?? style.width ?? 0;
-      const baseH = obj._renderedSize?.h ?? style.height ?? 0;
+      const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
+      const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
       const w = baseW * perspectiveScale * transform.scale.x;
       const h = baseH * perspectiveScale * transform.scale.y;
       if (w <= 0 || h <= 0) continue;
@@ -12252,7 +12252,7 @@ var World = class extends EventEmitter {
   // ─── Object 생성 ─────────────────────────────────────────
   createCamera(options) {
     const cam = new Camera2(options);
-    cam._world = this;
+    cam.__world = this;
     if (options?.transform?.position?.z === void 0) {
       cam.transform.position.z = -(cam.attribute.focalLength ?? 100);
     }
