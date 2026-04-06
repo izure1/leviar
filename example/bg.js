@@ -8972,34 +8972,40 @@ var Camera2 = class extends LeviarObject {
     const focalLength = this.attribute.focalLength ?? 100;
     const tZ = targetZ ?? camZ + focalLength;
     const targetDepth = tZ - camZ;
-    const scale5 = targetDepth / focalLength;
-    let dx = screenX * scale5;
-    let dy = screenY * scale5;
-    let dz = targetDepth;
+    let dirX = screenX;
+    let dirY = screenY;
+    let dirZ = focalLength;
     const radZ = rotZ * Math.PI / 180;
     const radX = rotX * Math.PI / 180;
     const radY = rotY * Math.PI / 180;
     if (radZ !== 0) {
       const c = Math.cos(radZ), s = Math.sin(radZ);
-      const nx = dx * c - dy * s;
-      const ny = dx * s + dy * c;
-      dx = nx;
-      dy = ny;
+      const nx = dirX * c - dirY * s;
+      const ny = dirX * s + dirY * c;
+      dirX = nx;
+      dirY = ny;
     }
     if (radX !== 0) {
       const c = Math.cos(radX), s = Math.sin(radX);
-      const ny = dy * c - dz * s;
-      const nz = dy * s + dz * c;
-      dy = ny;
-      dz = nz;
+      const ny = dirY * c - dirZ * s;
+      const nz = dirY * s + dirZ * c;
+      dirY = ny;
+      dirZ = nz;
     }
     if (radY !== 0) {
       const c = Math.cos(radY), s = Math.sin(radY);
-      const nx = dx * c + dz * s;
-      const nz = -dx * s + dz * c;
-      dx = nx;
-      dz = nz;
+      const nx = dirX * c + dirZ * s;
+      const nz = -dirX * s + dirZ * c;
+      dirX = nx;
+      dirZ = nz;
     }
+    let t = 1;
+    if (dirZ !== 0) {
+      t = (tZ - camZ) / dirZ;
+    }
+    const dx = dirX * t;
+    const dy = dirY * t;
+    const dz = dirZ * t;
     return {
       x: camX + dx,
       y: camY + dy,
@@ -9011,17 +9017,15 @@ var Camera2 = class extends LeviarObject {
    * 결과값은 카메라 내부의 자식(child)으로 배치할 때의 좌표입니다.
    * @param x 캔버스 좌측 상단을 0으로 하는 x 좌표
    * @param y 캔버스 좌측 상단을 0으로 하는 y 좌표
-   * @param targetZ (선택) 투영하고자 하는 월드 공간의 Z 좌표
+   * @param targetZ (선택) 투영하고자 하는 로컬 공간의 Z 좌표. 지정하지 않으면 카메라 초점 거리(focalLength)로 계산됩니다.
    */
   canvasToLocal(x, y, targetZ) {
     const w = this.__world?.["_canvas"]?.width ?? window.innerWidth;
     const h = this.__world?.["_canvas"]?.height ?? window.innerHeight;
     const screenX = x - w / 2;
     const screenY = -(y - h / 2);
-    const camZ = this.transform.position.z;
     const focalLength = this.attribute.focalLength ?? 100;
-    const tZ = targetZ ?? camZ + focalLength;
-    const targetDepth = tZ - camZ;
+    const targetDepth = targetZ ?? focalLength;
     const scale5 = targetDepth / focalLength;
     let dx = screenX * scale5;
     let dy = screenY * scale5;
@@ -10300,7 +10304,8 @@ var shadowFragment = (
 
     if (alpha <= 0.0) discard;
 
-    gl_FragColor = vec4(uColor.rgb, uColor.a * uOpacity * alpha);
+    float finalAlpha = uColor.a * uOpacity * alpha;
+    gl_FragColor = vec4(uColor.rgb * finalAlpha, finalAlpha);
   }
 `
 );

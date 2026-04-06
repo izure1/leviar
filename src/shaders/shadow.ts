@@ -67,6 +67,7 @@ export const shadowFragment = /* glsl */ `
 
     if (alpha <= 0.0) discard;
 
-    gl_FragColor = vec4(uColor.rgb, uColor.a * uOpacity * alpha);
+    float finalAlpha = uColor.a * uOpacity * alpha;
+    gl_FragColor = vec4(uColor.rgb * finalAlpha, finalAlpha);
   }
 `
