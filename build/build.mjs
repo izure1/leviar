@@ -2,6 +2,7 @@ import * as esbuild from 'esbuild'
 import { glob } from 'node:fs/promises'
 
 const watch = process.argv.includes('--watch')
+const buildExample = process.argv.includes('--example')
 
 /** 라이브러리 번들 설정 */
 const libOptions = {
@@ -44,6 +45,14 @@ if (watch) {
   })
 
   console.log(`[levia] dev server: http://localhost:${port}`)
+} else if (buildExample) {
+  const exampleOptions = await getExampleOptions()
+  const result = await esbuild.build(exampleOptions)
+  if (result.errors.length > 0) {
+    console.error('[levia] example build failed')
+    process.exit(1)
+  }
+  console.log('[levia] example build complete')
 } else {
   const result = await esbuild.build(libOptions)
   if (result.errors.length > 0) {

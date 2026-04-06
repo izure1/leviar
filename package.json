@@ -21,6 +21,7 @@
   },
   "scripts": {
     "build": "node ./build/build.mjs && tsc",
+    "build:example": "node ./build/build.mjs --example",
     "dev": "node ./build/build.mjs --watch",
     "typecheck": "tsc --noEmit"
   },
