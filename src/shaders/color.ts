@@ -24,6 +24,11 @@ export const colorFragment = /* glsl */ `
   uniform float uRadius;    // 0 = rectangle, 1 = ellipse (SDF) -- kept for legacy fallback or direct ellipse mapping
   uniform vec4 uBorderRadius; // [TR, BR, TL, BL]
   uniform vec2 uSize;       // 도형 픽셀 크기 (w, h)
+
+  uniform float uIsBorder;
+  uniform vec2 uInnerSize;
+  uniform vec4 uInnerBorderRadius;
+
   varying vec2 vUV;
 
   float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
@@ -40,6 +45,11 @@ export const colorFragment = /* glsl */ `
     } else {
       float d = sdRoundedBox(p, uSize * 0.5, uBorderRadius);
       if (d > 0.0) discard;
+
+      if (uIsBorder > 0.5) {
+        float innerD = sdRoundedBox(p, uInnerSize * 0.5, uInnerBorderRadius);
+        if (innerD <= 0.0) discard;
+      }
     }
     gl_FragColor = vec4(uColor.rgb * uColor.a * uOpacity, uColor.a * uOpacity);
   }
@@ -64,6 +74,11 @@ export const ellipseFragment = /* glsl */ `
   precision highp float;
   uniform vec4 uColor;
   uniform float uOpacity;
+
+  uniform float uIsBorder;
+  uniform vec2 uSize;
+  uniform vec2 uInnerSize;
+
   varying vec2 vUV;
 
   void main() {
@@ -71,6 +86,14 @@ export const ellipseFragment = /* glsl */ `
     vec2 p = vUV * 2.0 - 1.0;
     float d = dot(p, p);  // p.x^2 + p.y^2
     if (d > 1.0) discard;
+
+    if (uIsBorder > 0.5) {
+      vec2 pPix = (vUV - 0.5) * uSize;
+      vec2 scaledP = pPix / (uInnerSize * 0.5);
+      float innerD = dot(scaledP, scaledP);
+      if (innerD <= 1.0) discard;
+    }
+
     gl_FragColor = vec4(uColor.rgb * uColor.a * uOpacity, uColor.a * uOpacity);
   }
 `

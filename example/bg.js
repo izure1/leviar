@@ -10051,6 +10051,11 @@ var colorFragment = (
   uniform float uRadius;    // 0 = rectangle, 1 = ellipse (SDF) -- kept for legacy fallback or direct ellipse mapping
   uniform vec4 uBorderRadius; // [TR, BR, TL, BL]
   uniform vec2 uSize;       // \uB3C4\uD615 \uD53D\uC140 \uD06C\uAE30 (w, h)
+
+  uniform float uIsBorder;
+  uniform vec2 uInnerSize;
+  uniform vec4 uInnerBorderRadius;
+
   varying vec2 vUV;
 
   float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
@@ -10067,6 +10072,11 @@ var colorFragment = (
     } else {
       float d = sdRoundedBox(p, uSize * 0.5, uBorderRadius);
       if (d > 0.0) discard;
+
+      if (uIsBorder > 0.5) {
+        float innerD = sdRoundedBox(p, uInnerSize * 0.5, uInnerBorderRadius);
+        if (innerD <= 0.0) discard;
+      }
     }
     gl_FragColor = vec4(uColor.rgb * uColor.a * uOpacity, uColor.a * uOpacity);
   }
@@ -10094,6 +10104,11 @@ var ellipseFragment = (
   precision highp float;
   uniform vec4 uColor;
   uniform float uOpacity;
+
+  uniform float uIsBorder;
+  uniform vec2 uSize;
+  uniform vec2 uInnerSize;
+
   varying vec2 vUV;
 
   void main() {
@@ -10101,6 +10116,14 @@ var ellipseFragment = (
     vec2 p = vUV * 2.0 - 1.0;
     float d = dot(p, p);  // p.x^2 + p.y^2
     if (d > 1.0) discard;
+
+    if (uIsBorder > 0.5) {
+      vec2 pPix = (vUV - 0.5) * uSize;
+      vec2 scaledP = pPix / (uInnerSize * 0.5);
+      float innerD = dot(scaledP, scaledP);
+      if (innerD <= 1.0) discard;
+    }
+
     gl_FragColor = vec4(uColor.rgb * uColor.a * uOpacity, uColor.a * uOpacity);
   }
 `
@@ -10259,6 +10282,7 @@ var shadowFragment = (
   uniform float uOpacity;
   uniform vec2 uSize;      // Quad size (includes blur padding)
   uniform vec2 uBoxSize;   // Actual object size (w, h)
+  uniform vec2 uOffset;    // [offsetX, offsetY]
   uniform float uBlur;
   uniform float uSpread;
   uniform float uIsEllipse;
@@ -10273,21 +10297,29 @@ var shadowFragment = (
   }
 
   void main() {
-    // p is pixel mapped: center is (0,0)
+    // p is pixel mapped: center of the object is (0,0)
     vec2 p = (vUV - 0.5) * uSize;
-    float d = 0.0;
     
-    // Size of the hard object
+    // Shadow center is offset from the object center
+    // We negate uOffset.y because WebGL UV +y is typically UP, whereas CSS offset +y is DOWN.
+    vec2 shadowP = p - vec2(uOffset.x, -uOffset.y);
+    
+    float d = 0.0;
+    float innerMask = 0.0;
     vec2 radius = uBoxSize * 0.5;
 
     if (uIsEllipse > 0.5) {
       if (radius.x <= 0.0 || radius.y <= 0.0) {
          discard;
       }
-      vec2 scaledP = p / radius; // Distance to ellipse scaled boundary
-      d = (length(scaledP) - 1.0) * min(radius.x, radius.y);
+      vec2 scaledShadowP = shadowP / radius;
+      d = (length(scaledShadowP) - 1.0) * min(radius.x, radius.y);
+      
+      vec2 scaledInnerP = p / radius;
+      innerMask = (length(scaledInnerP) - 1.0) * min(radius.x, radius.y);
     } else {
-      d = sdRoundedBox(p, radius, uBorderRadius);
+      d = sdRoundedBox(shadowP, radius, uBorderRadius);
+      innerMask = sdRoundedBox(p, radius, uBorderRadius);
     }
 
     // Apply shadow spread
@@ -10295,12 +10327,13 @@ var shadowFragment = (
 
     float alpha = 1.0;
     if (uBlur > 0.0) {
-      // CSS box-shadow expands outward by roughly the blur radius.
-      // -uBlur to +uBlur gives a softer, thicker falloff matching standard web drop shadows.
       alpha = 1.0 - smoothstep(-uBlur, uBlur, d);
     } else {
       alpha = step(d, 0.0);
     }
+
+    // Discard pixels that are INSIDE the actual box! (Hollow out the center)
+    if (innerMask <= 0.0) discard;
 
     if (alpha <= 0.0) discard;
 
@@ -10665,6 +10698,9 @@ var Renderer2 = class {
         uRadius: { value: 0 },
         uBorderRadius: { value: [0, 0, 0, 0] },
         uSize: { value: [1, 1] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
+        uInnerBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) }
@@ -10679,6 +10715,9 @@ var Renderer2 = class {
       uniforms: {
         uColor: { value: [1, 1, 1, 1] },
         uOpacity: { value: 1 },
+        uSize: { value: [1, 1] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) }
@@ -10754,6 +10793,7 @@ var Renderer2 = class {
         uOpacity: { value: 1 },
         uSize: { value: [1, 1] },
         uBoxSize: { value: [1, 1] },
+        uOffset: { value: [0, 0] },
         uBlur: { value: 0 },
         uSpread: { value: 0 },
         uIsEllipse: { value: 0 },
@@ -11130,7 +11170,7 @@ var Renderer2 = class {
     this._batchCount = 0;
     this._batchTexture = null;
   }
-  _drawColorMesh(program, x, y, w, h, color, opacity, baseW, baseH, borderRadius = null) {
+  _drawColorMesh(program, x, y, w, h, color, opacity, baseW, baseH, borderRadius = null, isBorder = false, innerW, innerH, innerBorderRadius = null) {
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const [r, g, b, a] = parseCSSColor(color);
@@ -11139,6 +11179,13 @@ var Renderer2 = class {
     if (program.uniforms["uSize"]) program.uniforms["uSize"].value = [w, h];
     if (program.uniforms["uBorderRadius"] && borderRadius) {
       program.uniforms["uBorderRadius"].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]];
+    }
+    if (program.uniforms["uIsBorder"]) program.uniforms["uIsBorder"].value = isBorder ? 1 : 0;
+    if (program.uniforms["uInnerSize"]) program.uniforms["uInnerSize"].value = [innerW ?? 0, innerH ?? 0];
+    if (program.uniforms["uInnerBorderRadius"] && innerBorderRadius) {
+      program.uniforms["uInnerBorderRadius"].value = [innerBorderRadius[1], innerBorderRadius[2], innerBorderRadius[0], innerBorderRadius[3]];
+    } else if (program.uniforms["uInnerBorderRadius"]) {
+      program.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
     }
     program.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, w, h, 0, baseW, baseH);
     program.uniforms["uProjectionMatrix"].value = this._projMatrix();
@@ -11198,8 +11245,8 @@ var Renderer2 = class {
     const spread = style.boxShadowSpread ?? 0;
     const offsetX = style.boxShadowOffsetX ?? 0;
     const offsetY = style.boxShadowOffsetY ?? 0;
-    const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX);
-    const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY);
+    const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX) * 2;
+    const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY) * 2;
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor);
@@ -11207,6 +11254,7 @@ var Renderer2 = class {
     this.shadowProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
     this.shadowProgram.uniforms["uSize"].value = [quadW, quadH];
     this.shadowProgram.uniforms["uBoxSize"].value = [w, h];
+    this.shadowProgram.uniforms["uOffset"].value = [offsetX, offsetY];
     if (this.shadowProgram.uniforms["uBorderRadius"] && borderRadius && !isEllipse) {
       this.shadowProgram.uniforms["uBorderRadius"].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]];
     } else if (this.shadowProgram.uniforms["uBorderRadius"]) {
@@ -11215,7 +11263,7 @@ var Renderer2 = class {
     this.shadowProgram.uniforms["uBlur"].value = blur;
     this.shadowProgram.uniforms["uSpread"].value = spread;
     this.shadowProgram.uniforms["uIsEllipse"].value = isEllipse ? 1 : 0;
-    this.shadowProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x + offsetX, y + offsetY, quadW, quadH, 0, baseW ?? w, baseH ?? h);
+    this.shadowProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, quadW, quadH, 0, baseW ?? w, baseH ?? h);
     this.shadowProgram.uniforms["uProjectionMatrix"].value = this._projMatrix();
     this.shadowMesh.draw({ camera: this.camera });
   }
@@ -11224,13 +11272,21 @@ var Renderer2 = class {
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = style.borderWidth ?? 0;
       const ow = style.outlineWidth;
+      const outerW = w + bw * 2 + ow * 2;
+      const outerH = h + bw * 2 + ow * 2;
+      const innerW = w + bw * 2;
+      const innerH = h + bw * 2;
       const rOut = parseBorderRadius(style.borderRadius, w, h, bw + ow);
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, targetOpacity, w, h, rOut);
+      const rIn = parseBorderRadius(style.borderRadius, w, h, bw);
+      this._drawColorMesh(this.colorProgram, x, y, outerW, outerH, style.outlineColor, targetOpacity, w, h, rOut, true, innerW, innerH, rIn);
     }
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth;
+      const outerW = w + bw * 2;
+      const outerH = h + bw * 2;
       const rBorder = parseBorderRadius(style.borderRadius, w, h, bw);
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity, w, h, rBorder);
+      const rInner = parseBorderRadius(style.borderRadius, w, h, 0);
+      this._drawColorMesh(this.colorProgram, x, y, outerW, outerH, style.borderColor, targetOpacity, w, h, rBorder, true, w, h, rInner);
     }
   }
   // ─── Rectangle ──────────────────────────────────────────────────────────
@@ -11256,10 +11312,13 @@ var Renderer2 = class {
     const { style } = obj;
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
     this._drawShadow(obj, x, y, w, h, void 0, void 0, true);
-    const drawEllipse = (ew, eh, color) => {
+    const drawEllipse = (ew, eh, color, isBorder = false, innerEW = 0, innerEH = 0) => {
       const [r, g, b, a] = parseCSSColor(color);
       this.ellipseProgram.uniforms["uColor"].value = [r, g, b, a];
       this.ellipseProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+      if (this.ellipseProgram.uniforms["uSize"]) this.ellipseProgram.uniforms["uSize"].value = [ew, eh];
+      if (this.ellipseProgram.uniforms["uIsBorder"]) this.ellipseProgram.uniforms["uIsBorder"].value = isBorder ? 1 : 0;
+      if (this.ellipseProgram.uniforms["uInnerSize"]) this.ellipseProgram.uniforms["uInnerSize"].value = [innerEW, innerEH];
       this.ellipseProgram.uniforms["uModelMatrix"].value = this._makeModelMatrix(x, y, ew, eh, 0, w, h);
       this.ellipseProgram.uniforms["uProjectionMatrix"].value = this._projMatrix();
       this.ellipseMesh.draw({ camera: this.camera });
@@ -11267,14 +11326,20 @@ var Renderer2 = class {
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = style.borderWidth ?? 0;
       const ow = style.outlineWidth;
-      drawEllipse(w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor);
+      const outerW = w + bw * 2 + ow * 2;
+      const outerH = h + bw * 2 + ow * 2;
+      const innerW = w + bw * 2;
+      const innerH = h + bw * 2;
+      drawEllipse(outerW, outerH, style.outlineColor, true, innerW, innerH);
     }
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth;
-      drawEllipse(w + bw * 2, h + bw * 2, style.borderColor);
+      const outerW = w + bw * 2;
+      const outerH = h + bw * 2;
+      drawEllipse(outerW, outerH, style.borderColor, true, w, h);
     }
     if (style.color) {
-      drawEllipse(w, h, style.color);
+      drawEllipse(w, h, style.color, false);
     }
     if (style.gradient && w > 0 && h > 0) {
       const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", true);

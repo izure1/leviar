@@ -22,6 +22,7 @@ export const shadowFragment = /* glsl */ `
   uniform float uOpacity;
   uniform vec2 uSize;      // Quad size (includes blur padding)
   uniform vec2 uBoxSize;   // Actual object size (w, h)
+  uniform vec2 uOffset;    // [offsetX, offsetY]
   uniform float uBlur;
   uniform float uSpread;
   uniform float uIsEllipse;
@@ -36,21 +37,29 @@ export const shadowFragment = /* glsl */ `
   }
 
   void main() {
-    // p is pixel mapped: center is (0,0)
+    // p is pixel mapped: center of the object is (0,0)
     vec2 p = (vUV - 0.5) * uSize;
-    float d = 0.0;
     
-    // Size of the hard object
+    // Shadow center is offset from the object center
+    // We negate uOffset.y because WebGL UV +y is typically UP, whereas CSS offset +y is DOWN.
+    vec2 shadowP = p - vec2(uOffset.x, -uOffset.y);
+    
+    float d = 0.0;
+    float innerMask = 0.0;
     vec2 radius = uBoxSize * 0.5;
 
     if (uIsEllipse > 0.5) {
       if (radius.x <= 0.0 || radius.y <= 0.0) {
          discard;
       }
-      vec2 scaledP = p / radius; // Distance to ellipse scaled boundary
-      d = (length(scaledP) - 1.0) * min(radius.x, radius.y);
+      vec2 scaledShadowP = shadowP / radius;
+      d = (length(scaledShadowP) - 1.0) * min(radius.x, radius.y);
+      
+      vec2 scaledInnerP = p / radius;
+      innerMask = (length(scaledInnerP) - 1.0) * min(radius.x, radius.y);
     } else {
-      d = sdRoundedBox(p, radius, uBorderRadius);
+      d = sdRoundedBox(shadowP, radius, uBorderRadius);
+      innerMask = sdRoundedBox(p, radius, uBorderRadius);
     }
 
     // Apply shadow spread
@@ -58,12 +67,13 @@ export const shadowFragment = /* glsl */ `
 
     float alpha = 1.0;
     if (uBlur > 0.0) {
-      // CSS box-shadow expands outward by roughly the blur radius.
-      // -uBlur to +uBlur gives a softer, thicker falloff matching standard web drop shadows.
       alpha = 1.0 - smoothstep(-uBlur, uBlur, d);
     } else {
       alpha = step(d, 0.0);
     }
+
+    // Discard pixels that are INSIDE the actual box! (Hollow out the center)
+    if (innerMask <= 0.0) discard;
 
     if (alpha <= 0.0) discard;
 

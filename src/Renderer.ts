@@ -335,6 +335,9 @@ export class Renderer {
         uRadius: { value: 0 },
         uBorderRadius: { value: [0, 0, 0, 0] },
         uSize: { value: [1, 1] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
+        uInnerBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
@@ -350,6 +353,9 @@ export class Renderer {
       uniforms: {
         uColor: { value: [1, 1, 1, 1] },
         uOpacity: { value: 1 },
+        uSize: { value: [1, 1] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
@@ -431,6 +437,7 @@ export class Renderer {
         uOpacity: { value: 1 },
         uSize: { value: [1, 1] },
         uBoxSize: { value: [1, 1] },
+        uOffset: { value: [0, 0] },
         uBlur: { value: 0 },
         uSpread: { value: 0 },
         uIsEllipse: { value: 0 },
@@ -877,7 +884,10 @@ export class Renderer {
     x: number, y: number, w: number, h: number,
     color: string, opacity: number,
     baseW?: number, baseH?: number,
-    borderRadius: [number, number, number, number] | null = null
+    borderRadius: [number, number, number, number] | null = null,
+    isBorder: boolean = false,
+    innerW?: number, innerH?: number,
+    innerBorderRadius: [number, number, number, number] | null = null
   ) {
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over');
@@ -887,6 +897,13 @@ export class Renderer {
     if (program.uniforms['uSize']) program.uniforms['uSize'].value = [w, h]
     if (program.uniforms['uBorderRadius'] && borderRadius) {
       program.uniforms['uBorderRadius'].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]]
+    }
+    if (program.uniforms['uIsBorder']) program.uniforms['uIsBorder'].value = isBorder ? 1 : 0;
+    if (program.uniforms['uInnerSize']) program.uniforms['uInnerSize'].value = [innerW ?? 0, innerH ?? 0];
+    if (program.uniforms['uInnerBorderRadius'] && innerBorderRadius) {
+      program.uniforms['uInnerBorderRadius'].value = [innerBorderRadius[1], innerBorderRadius[2], innerBorderRadius[0], innerBorderRadius[3]]
+    } else if (program.uniforms['uInnerBorderRadius']) {
+      program.uniforms['uInnerBorderRadius'].value = [0, 0, 0, 0]
     }
     program.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h, 0, baseW, baseH)
     program.uniforms['uProjectionMatrix'].value = this._projMatrix()
@@ -964,9 +981,9 @@ export class Renderer {
     const offsetX = style.boxShadowOffsetX ?? 0
     const offsetY = style.boxShadowOffsetY ?? 0
 
-    // Quad size should generously contain the blur, spread and origin
-    const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX)
-    const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY)
+    // Quad size should generously contain the blur, spread and offset (double offset to keep quad centered on original object)
+    const quadW = w + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetX) * 2
+    const quadH = h + (blur * 2 + Math.abs(spread)) * 1.5 + Math.abs(offsetY) * 2
 
     this._flushBatch()
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
@@ -976,6 +993,7 @@ export class Renderer {
     this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
     this.shadowProgram.uniforms['uSize'].value = [quadW, quadH]
     this.shadowProgram.uniforms['uBoxSize'].value = [w, h]
+    this.shadowProgram.uniforms['uOffset'].value = [offsetX, offsetY]
     if (this.shadowProgram.uniforms['uBorderRadius'] && borderRadius && !isEllipse) {
       this.shadowProgram.uniforms['uBorderRadius'].value = [borderRadius[1], borderRadius[2], borderRadius[0], borderRadius[3]]
     } else if (this.shadowProgram.uniforms['uBorderRadius']) {
@@ -985,7 +1003,7 @@ export class Renderer {
     this.shadowProgram.uniforms['uSpread'].value = spread
     this.shadowProgram.uniforms['uIsEllipse'].value = isEllipse ? 1 : 0
 
-    this.shadowProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x + offsetX, y + offsetY, quadW, quadH, 0, baseW ?? w, baseH ?? h)
+    this.shadowProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, quadW, quadH, 0, baseW ?? w, baseH ?? h)
     this.shadowProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
     this.shadowMesh.draw({ camera: this.camera })
@@ -997,15 +1015,23 @@ export class Renderer {
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = (style.borderWidth ?? 0)
       const ow = style.outlineWidth!
+      const outerW = w + bw * 2 + ow * 2
+      const outerH = h + bw * 2 + ow * 2
+      const innerW = w + bw * 2
+      const innerH = h + bw * 2
       const rOut = parseBorderRadius(style.borderRadius, w, h, bw + ow)
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor, targetOpacity, w, h, rOut)
+      const rIn = parseBorderRadius(style.borderRadius, w, h, bw)
+      this._drawColorMesh(this.colorProgram, x, y, outerW, outerH, style.outlineColor, targetOpacity, w, h, rOut, true, innerW, innerH, rIn)
     }
 
     // 테두리 (border)
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth!
+      const outerW = w + bw * 2
+      const outerH = h + bw * 2
       const rBorder = parseBorderRadius(style.borderRadius, w, h, bw)
-      this._drawColorMesh(this.colorProgram, x, y, w + bw * 2, h + bw * 2, style.borderColor, targetOpacity, w, h, rBorder)
+      const rInner = parseBorderRadius(style.borderRadius, w, h, 0)
+      this._drawColorMesh(this.colorProgram, x, y, outerW, outerH, style.borderColor, targetOpacity, w, h, rBorder, true, w, h, rInner)
     }
   }
 
@@ -1044,10 +1070,13 @@ export class Renderer {
 
     this._drawShadow(obj, x, y, w, h, undefined, undefined, true)
 
-    const drawEllipse = (ew: number, eh: number, color: string) => {
+    const drawEllipse = (ew: number, eh: number, color: string, isBorder: boolean = false, innerEW: number = 0, innerEH: number = 0) => {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
       this.ellipseProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
+      if (this.ellipseProgram.uniforms['uSize']) this.ellipseProgram.uniforms['uSize'].value = [ew, eh];
+      if (this.ellipseProgram.uniforms['uIsBorder']) this.ellipseProgram.uniforms['uIsBorder'].value = isBorder ? 1 : 0;
+      if (this.ellipseProgram.uniforms['uInnerSize']) this.ellipseProgram.uniforms['uInnerSize'].value = [innerEW, innerEH];
       this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh, 0, w, h)
       this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.ellipseMesh.draw({ camera: this.camera })
@@ -1057,18 +1086,24 @@ export class Renderer {
     if (style.outlineColor && (style.outlineWidth ?? 0) > 0) {
       const bw = (style.borderWidth ?? 0)
       const ow = style.outlineWidth!
-      drawEllipse(w + bw * 2 + ow * 2, h + bw * 2 + ow * 2, style.outlineColor)
+      const outerW = w + bw * 2 + ow * 2
+      const outerH = h + bw * 2 + ow * 2
+      const innerW = w + bw * 2
+      const innerH = h + bw * 2
+      drawEllipse(outerW, outerH, style.outlineColor, true, innerW, innerH)
     }
 
     // 테두리 (border)
     if (style.borderColor && (style.borderWidth ?? 0) > 0) {
       const bw = style.borderWidth!
-      drawEllipse(w + bw * 2, h + bw * 2, style.borderColor)
+      const outerW = w + bw * 2
+      const outerH = h + bw * 2
+      drawEllipse(outerW, outerH, style.borderColor, true, w, h)
     }
 
     // 본체 color
     if (style.color) {
-      drawEllipse(w, h, style.color)
+      drawEllipse(w, h, style.color, false)
     }
 
     // 그라디언트 레이어 — ellipse 형태에 맞게 원형 클리핑 포함
