@@ -64,65 +64,65 @@ export class Particle<
   D extends Record<string, any> = Record<string, any>
 > extends LeviarObject<ParticleAttribute, D> {
 
-  private __manager: ParticleManager | null = null
-  private __clipName: string | null = null
+  private manager: ParticleManager | null = null
+  private clipName: string | null = null
   __clip: ParticleClip | null = null
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  private __pendingSrc: string | null = null
+  private pendingSrc: string | null = null
 
   /** 활성 파티클 인스턴스 목록 (Renderer에서 직접 참조) */
   __instances: ParticleInstance[] = []
 
-  private __playing: boolean = false
-  private __lastSpawnTime: number = 0
-  private __spawnCount: number = 0   // loop=false 일 때 총 스폰 횟수 추적
+  private playing: boolean = false
+  private lastSpawnTime: number = 0
+  private spawnCount: number = 0   // loop=false 일 때 총 스폰 횟수 추적
 
   /** PhysicsEngine 참조 (strict 모드 전용) */
-  private __physics: PhysicsEngine | null = null
+  private physics: PhysicsEngine | null = null
 
   /** 일시정지 여부 */
-  private __paused: boolean = false
+  private paused: boolean = false
 
   private static readonly DELEGATED_GETTERS: Record<string, (self: Particle) => any> = {
-    src: (self) => self.__clipName ?? undefined,
+    src: (self) => self.clipName ?? undefined,
   }
 
   private static readonly DELEGATED_SETTERS: Record<string, (self: Particle, value: any) => void> = {
     src: (self, value: string) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn('[Particle] __setManager()를 먼저 호출하십시오.')
         return
       }
-      const clip = self.__manager.get(value)
+      const clip = self.manager.get(value)
       if (!clip) {
         console.warn(`[Particle] 클립 '${value}'을 찾을 수 없습니다.`)
         return
       }
-      self.__clipName = value
+      self.clipName = value
       self.__clip = clip
-      self.__playing = false
-      self.__paused = false
-      self.__lastSpawnTime = 0
-      self.__spawnCount = 0
+      self.playing = false
+      self.paused = false
+      self.lastSpawnTime = 0
+      self.spawnCount = 0
       self.__instances = []
     },
   }
 
   constructor(options?: ParticleOptions<D>) {
     super('particle', options, DELEGATED_KEYS)
-    // src setter는 __manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
+    // src setter는 manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.
-    this.__pendingSrc = (options?.attribute as any)?.src ?? null
+    this.pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
    * ParticleManager를 연결합니다.
    */
   __setManager(manager: ParticleManager): this {
-    this.__manager = manager
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc
-      this.__pendingSrc = null
+    this.manager = manager
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc
+      this.pendingSrc = null
     }
     return this
   }
@@ -131,7 +131,7 @@ export class Particle<
    * PhysicsEngine을 연결합니다. strict=true 시 필요합니다.
    */
   __setPhysics(physics: PhysicsEngine): this {
-    this.__physics = physics
+    this.physics = physics
     return this
   }
 
@@ -143,8 +143,8 @@ export class Particle<
       console.warn('[Particle] src 속성을 먼저 설정하십시오.')
       return this
     }
-    this.__playing = true
-    this.__paused = false
+    this.playing = true
+    this.paused = false
     this.emit('play')
     return this
   }
@@ -153,8 +153,8 @@ export class Particle<
    * 파티클 에미션을 일시정지합니다.
    */
   pause(): this {
-    if (!this.__playing || this.__paused) return this
-    this.__paused = true
+    if (!this.playing || this.paused) return this
+    this.paused = true
     this.emit('pause')
     return this
   }
@@ -163,10 +163,10 @@ export class Particle<
    * 파티클 에미션을 정지합니다. 이미 생성된 인스턴스는 lifespan까지 유지됩니다.
    */
   stop(): this {
-    if (!this.__playing && !this.__paused) return this
+    if (!this.playing && !this.paused) return this
     const wasLooping = this.__clip?.loop ?? false
-    this.__playing = false
-    this.__paused = false
+    this.playing = false
+    this.paused = false
     if (wasLooping) {
       this.emit('repeat')
     } else {
@@ -185,21 +185,21 @@ export class Particle<
     const clip = this.__clip
 
     // 최초 호출 시 기준 시간 설정
-    if (this.__lastSpawnTime === 0) {
-      this.__lastSpawnTime = timestamp
+    if (this.lastSpawnTime === 0) {
+      this.lastSpawnTime = timestamp
     }
 
     // ─── 스폰 처리 ───────────────────────────────────────
-    if (this.__playing && !this.__paused) {
-      const elapsed = timestamp - this.__lastSpawnTime
+    if (this.playing && !this.paused) {
+      const elapsed = timestamp - this.lastSpawnTime
       if (elapsed >= clip.interval) {
         this._spawn(timestamp)
-        this.__lastSpawnTime = timestamp
-        this.__spawnCount++
+        this.lastSpawnTime = timestamp
+        this.spawnCount++
 
         // loop=false 이면 1회 스폰 후 에미션 정지
         if (!clip.loop) {
-          this.__playing = false
+          this.playing = false
         }
       }
     }
@@ -207,15 +207,15 @@ export class Particle<
     // ─── 인스턴스 업데이트 & 제거 ────────────────────────
     // 비물리 모드라도 월드의 물리엔진 중력 가속도와 객체의 gravityScale을 추적하여 반영합니다.
     const gScale = this.attribute.gravityScale ?? 1
-    const gX = this.__physics ? (this.__physics.engine.gravity.x * this.__physics.engine.gravity.scale) : 0
-    const gY = this.__physics ? (this.__physics.engine.gravity.y * this.__physics.engine.gravity.scale) : GRAVITY
+    const gX = this.physics ? (this.physics.engine.gravity.x * this.physics.engine.gravity.scale) : 0
+    const gY = this.physics ? (this.physics.engine.gravity.y * this.physics.engine.gravity.scale) : GRAVITY
 
     const alive: ParticleInstance[] = []
     for (const inst of this.__instances) {
       const age = timestamp - inst.born
       if (age >= inst.lifespan) {
         // 만료 → strict 모드이면 바디 제거
-        if (inst.body && this.__physics) {
+        if (inst.body && this.physics) {
           this._removeInstanceBody(inst)
         }
         continue
@@ -320,7 +320,7 @@ export class Particle<
         angularVelocity,
       }
 
-      if (this.attribute.strictPhysics && this.__physics) {
+      if (this.attribute.strictPhysics && this.physics) {
         // strict 모드: 스폰 오프셋을 적용한 world 좌표에 바디 생성
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4
         const bodyOpts: any = {
@@ -343,7 +343,7 @@ export class Particle<
         if (angularVelocity !== 0) {
           Matter.Body.setAngularVelocity(body, angularVelocity * 16)
         }
-        Matter.Composite.add(this.__physics.engine.world, body)
+        Matter.Composite.add(this.physics.engine.world, body)
         inst.body = body
       }
 
@@ -352,8 +352,8 @@ export class Particle<
   }
 
   private _removeInstanceBody(inst: ParticleInstance) {
-    if (!inst.body || !this.__physics) return
-    Matter.Composite.remove(this.__physics.engine.world, inst.body)
+    if (!inst.body || !this.physics) return
+    Matter.Composite.remove(this.physics.engine.world, inst.body)
     inst.body = undefined
   }
 

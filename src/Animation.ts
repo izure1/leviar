@@ -171,20 +171,20 @@ function resolveAllTargets(current: Record<string, any>, raw: DeepRecord): Recor
 export type AnimationCallback = (state: Record<string, any>) => void
 
 export class Animation extends EventEmitter<AnimationEvents> {
-  private _initialTarget: DeepRecord
-  private _rafId: number | null = null
-  private _startTime: number | null = null
-  private _pausedElapsed: number = 0
-  private _isPaused: boolean = false
-  private _duration: number = 0
-  private _easingFn: (t: number) => number = easings.linear
-  private _callback: AnimationCallback | null = null
-  private _from: Record<string, any> = {}
-  private _to: Record<string, any> = {}
+  private initialTarget: DeepRecord
+  private rafId: number | null = null
+  private startTime: number | null = null
+  private pausedElapsed: number = 0
+  private isPaused: boolean = false
+  private duration: number = 0
+  private easingFn: (t: number) => number = easings.linear
+  private callback: AnimationCallback | null = null
+  private from: Record<string, any> = {}
+  private to: Record<string, any> = {}
 
   constructor(target: DeepRecord) {
     super()
-    this._initialTarget = target
+    this.initialTarget = target
   }
 
   /**
@@ -195,15 +195,15 @@ export class Animation extends EventEmitter<AnimationEvents> {
    */
   start(callback: AnimationCallback, duration: number, easing: EasingType = 'linear'): this {
     this.stop()
-    this._callback = callback
-    this._duration = duration
-    this._easingFn = easings[easing] ?? easings.linear
+    this.callback = callback
+    this.duration = duration
+    this.easingFn = easings[easing] ?? easings.linear
 
     // initialTarget의 복합 연산자 기준이 되는 시작값은 0으로 간주
-    this._from = snapshotNumbers({}, this._initialTarget)
-    this._to = resolveAllTargets({}, this._initialTarget)
-    this._pausedElapsed = 0
-    this._isPaused = false
+    this.from = snapshotNumbers({}, this.initialTarget)
+    this.to = resolveAllTargets({}, this.initialTarget)
+    this.pausedElapsed = 0
+    this.isPaused = false
 
     this.emit('start')
     this._tick(null)
@@ -211,57 +211,57 @@ export class Animation extends EventEmitter<AnimationEvents> {
   }
 
   pause(): this {
-    if (this._isPaused || this._startTime === null) return this
-    this._isPaused = true
-    this._pausedElapsed += performance.now() - this._startTime
-    if (this._rafId != null) {
-      cancelAnimationFrame(this._rafId)
-      this._rafId = null
+    if (this.isPaused || this.startTime === null) return this
+    this.isPaused = true
+    this.pausedElapsed += performance.now() - this.startTime
+    if (this.rafId != null) {
+      cancelAnimationFrame(this.rafId)
+      this.rafId = null
     }
     this.emit('pause')
     return this
   }
 
   resume(): this {
-    if (!this._isPaused) return this
-    this._isPaused = false
-    this._startTime = null  // _tick에서 재설정
+    if (!this.isPaused) return this
+    this.isPaused = false
+    this.startTime = null  // _tick에서 재설정
     this.emit('resume')
     this._tick(null)
     return this
   }
 
   stop(): this {
-    if (this._rafId != null) {
-      cancelAnimationFrame(this._rafId)
-      this._rafId = null
+    if (this.rafId != null) {
+      cancelAnimationFrame(this.rafId)
+      this.rafId = null
       this.emit('stop')
     }
-    this._startTime = null
-    this._pausedElapsed = 0
-    this._isPaused = false
+    this.startTime = null
+    this.pausedElapsed = 0
+    this.isPaused = false
     return this
   }
 
   private _tick(timestamp: number | null) {
     const now = timestamp ?? performance.now()
 
-    if (this._startTime === null) {
-      this._startTime = now - this._pausedElapsed
+    if (this.startTime === null) {
+      this.startTime = now - this.pausedElapsed
     }
 
-    const elapsed = now - this._startTime
-    const rawT = Math.min(elapsed / this._duration, 1)
-    const easedT = this._easingFn(rawT)
+    const elapsed = now - this.startTime
+    const rawT = Math.min(elapsed / this.duration, 1)
+    const easedT = this.easingFn(rawT)
 
-    const state = interpolate(this._from, this._to, easedT, this._initialTarget)
-    this._callback?.(state)
+    const state = interpolate(this.from, this.to, easedT, this.initialTarget)
+    this.callback?.(state)
     this.emit('update', state)
 
     if (rawT < 1) {
-      this._rafId = requestAnimationFrame((ts) => this._tick(ts))
+      this.rafId = requestAnimationFrame((ts) => this._tick(ts))
     } else {
-      this._rafId = null
+      this.rafId = null
       this.emit('end')
     }
   }
@@ -287,12 +287,12 @@ export function animateObject(
   const anim = new Animation(rawTarget)
 
     // internal override: start()를 source 기반으로 재정의
-    ; (anim as any)._from = from
-    ; (anim as any)._to = to
-    ; (anim as any)._duration = duration
-    ; (anim as any)._easingFn = easingFn
-    ; (anim as any)._pausedElapsed = 0
-    ; (anim as any)._isPaused = false
+    ; (anim as any).from = from
+    ; (anim as any).to = to
+    ; (anim as any).duration = duration
+    ; (anim as any).easingFn = easingFn
+    ; (anim as any).pausedElapsed = 0
+    ; (anim as any).isPaused = false
 
   const tick = (timestamp: number | null) => {
     const now = timestamp ?? performance.now()
@@ -305,14 +305,14 @@ export function animateObject(
     applyInterpolated(source, from, to, easedT, rawTarget)
 
     if (rawT < 1) {
-      (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
+      (anim as any).rafId = requestAnimationFrame((ts) => tick(ts))
     } else {
-      (anim as any)._rafId = null
+      (anim as any).rafId = null
       anim.emit('end')
     }
   }
 
-  (anim as any)._rafId = requestAnimationFrame((ts) => tick(ts))
+  (anim as any).rafId = requestAnimationFrame((ts) => tick(ts))
 
   return anim
 }

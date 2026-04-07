@@ -14,16 +14,16 @@ export class Sprite<
   D extends Record<string, any> = Record<string, any>
 > extends LeviarObject<SpriteAttribute, D> {
   /** 연결된 SpriteManager */
-  private __manager: SpriteManager | null = null
+  private manager: SpriteManager | null = null
 
   /** 현재 재생 중인 클립 이름 */
-  private __clipName: string | null = null
+  private clipName: string | null = null
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   __clip: SpriteClip | null = null
 
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  private __pendingSrc: string | null = null
+  private pendingSrc: string | null = null
 
   /** 커스텀 재생 속도 (fps). undefined면 clip의 frameRate 사용 */
   __playbackRate?: number
@@ -41,23 +41,23 @@ export class Sprite<
   __paused: boolean = false
 
   private static readonly DELEGATED_GETTERS: Record<string, (self: Sprite) => any> = {
-    src: (self) => self.__clipName ?? undefined,
+    src: (self) => self.clipName ?? undefined,
     currentTime: (self) => self.__clip ? Math.max(0, self.__currentFrame - self.__clip.start) : 0,
     playbackRate: (self) => self.__playbackRate ?? (self.__clip ? self.__clip.frameRate : 0),
   }
 
   private static readonly DELEGATED_SETTERS: Record<string, (self: Sprite, value: any) => void> = {
     src: (self, value: string) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn('[Sprite] __setManager()를 먼저 호출하십시오.')
         return
       }
-      const clip = self.__manager.get(value)
+      const clip = self.manager.get(value)
       if (!clip) {
         console.warn(`[Sprite] 클립 '${value}'을 찾을 수 없습니다.`)
         return
       }
-      self.__clipName = value
+      self.clipName = value
       self.__clip = clip
       self.__currentFrame = clip.start
       self.__lastFrameTime = 0
@@ -79,17 +79,17 @@ export class Sprite<
     super('sprite', options, DELEGATED_KEYS)
     // src setter는 __manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.
-    this.__pendingSrc = (options?.attribute as any)?.src ?? null
+    this.pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
    * SpriteManager를 연결합니다.
    */
   __setManager(manager: SpriteManager): this {
-    this.__manager = manager
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc
-      this.__pendingSrc = null
+    this.manager = manager
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc
+      this.pendingSrc = null
     }
     return this
   }

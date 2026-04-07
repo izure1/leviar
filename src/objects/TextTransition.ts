@@ -9,13 +9,13 @@ export class TextTransition extends BaseTransition<Text> {
 
     if (charDurationMs <= 0) {
       this.target.attribute.text = newText
-      this.target._transitionProgress = 1
+      this.target.__transitionProgress = 1
       this.target.__dirtyTexture = true
       return this
     }
 
     this.target.attribute.text = newText
-    this.target._transitionProgress = 0
+    this.target.__transitionProgress = 0
     this.target.__dirtyTexture = true
 
     // 마크업 태그를 제외한 순수 글자 수 바탕으로 총 시간 계산
@@ -24,11 +24,11 @@ export class TextTransition extends BaseTransition<Text> {
 
     this._startTransition(totalDurationMs, 'linear',
       (progress) => {
-        this.target._transitionProgress = progress
+        this.target.__transitionProgress = progress
         this.target.__dirtyTexture = true
       },
       () => {
-        this.target._transitionProgress = 1
+        this.target.__transitionProgress = 1
         this.target.__dirtyTexture = true
       }
     )

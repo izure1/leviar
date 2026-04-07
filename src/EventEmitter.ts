@@ -8,7 +8,7 @@ interface ListenerEntry {
 }
 
 export class EventEmitter<TEvents extends Record<string, any> = EventMap> {
-  private _listeners: Map<string, ListenerEntry[]> = new Map()
+  private listeners: Map<string, ListenerEntry[]> = new Map()
 
   /**
    * 이벤트 리스너를 등록합니다. 스페이스로 구분하여 여러 이벤트를 동시에 등록할 수 있습니다.
@@ -18,8 +18,8 @@ export class EventEmitter<TEvents extends Record<string, any> = EventMap> {
   on(event: string, callback: EventCallback<any[]>): this {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue
-      if (!this._listeners.has(ev)) this._listeners.set(ev, [])
-      this._listeners.get(ev)!.push({ cb: callback, once: false })
+      if (!this.listeners.has(ev)) this.listeners.set(ev, [])
+      this.listeners.get(ev)!.push({ cb: callback, once: false })
     }
     return this
   }
@@ -32,7 +32,7 @@ export class EventEmitter<TEvents extends Record<string, any> = EventMap> {
   off(event: string, callback: EventCallback<any[]>): this {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue
-      const list = this._listeners.get(ev)
+      const list = this.listeners.get(ev)
       if (!list) continue
       const idx = list.findIndex(e => e.cb === callback)
       if (idx !== -1) list.splice(idx, 1)
@@ -48,8 +48,8 @@ export class EventEmitter<TEvents extends Record<string, any> = EventMap> {
   once(event: string, callback: EventCallback<any[]>): this {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue
-      if (!this._listeners.has(ev)) this._listeners.set(ev, [])
-      this._listeners.get(ev)!.push({ cb: callback, once: true })
+      if (!this.listeners.has(ev)) this.listeners.set(ev, [])
+      this.listeners.get(ev)!.push({ cb: callback, once: true })
     }
     return this
   }
@@ -62,7 +62,7 @@ export class EventEmitter<TEvents extends Record<string, any> = EventMap> {
   emit(event: string, ...args: any[]): this {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue
-      const list = this._listeners.get(ev)
+      const list = this.listeners.get(ev)
       if (!list || list.length === 0) continue
 
       // once 항목은 실행 후 제거

@@ -10,10 +10,10 @@ export class Text<
   D extends Record<string, any> = Record<string, any>
 > extends LeviarObject<TextAttribute, D> {
   /** 트랜지션 진행도 (0 ~ 1, 1이면 완료 또는 미실행) */
-  _transitionProgress: number = 1
+  __transitionProgress: number = 1
 
   /** 전환 관리자 */
-  private _transitioner?: TextTransition
+  private transitioner?: TextTransition
 
   constructor(options?: LeviarObjectOptions<TextAttribute, D>) {
     super('text', options)
@@ -25,10 +25,10 @@ export class Text<
    * @param charDurationMs 글자 1개당 나타나는데 걸리는 시간(밀리초)
    */
   transition(newText: string, charDurationMs: number): TextTransition {
-    if (!this._transitioner) {
-      this._transitioner = new TextTransition(this)
+    if (!this.transitioner) {
+      this.transitioner = new TextTransition(this)
     }
-    this._transitioner.start(newText, charDurationMs)
-    return this._transitioner
+    this.transitioner.start(newText, charDurationMs)
+    return this.transitioner
   }
 }

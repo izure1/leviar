@@ -7994,19 +7994,19 @@ var Texture = class {
 
 // src/EventEmitter.ts
 var EventEmitter = class {
-  _listeners = /* @__PURE__ */ new Map();
+  listeners = /* @__PURE__ */ new Map();
   on(event, callback) {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue;
-      if (!this._listeners.has(ev)) this._listeners.set(ev, []);
-      this._listeners.get(ev).push({ cb: callback, once: false });
+      if (!this.listeners.has(ev)) this.listeners.set(ev, []);
+      this.listeners.get(ev).push({ cb: callback, once: false });
     }
     return this;
   }
   off(event, callback) {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue;
-      const list = this._listeners.get(ev);
+      const list = this.listeners.get(ev);
       if (!list) continue;
       const idx = list.findIndex((e) => e.cb === callback);
       if (idx !== -1) list.splice(idx, 1);
@@ -8016,15 +8016,15 @@ var EventEmitter = class {
   once(event, callback) {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue;
-      if (!this._listeners.has(ev)) this._listeners.set(ev, []);
-      this._listeners.get(ev).push({ cb: callback, once: true });
+      if (!this.listeners.has(ev)) this.listeners.set(ev, []);
+      this.listeners.get(ev).push({ cb: callback, once: true });
     }
     return this;
   }
   emit(event, ...args) {
     for (const ev of event.trim().split(/\s+/)) {
       if (!ev) continue;
-      const list = this._listeners.get(ev);
+      const list = this.listeners.get(ev);
       if (!list || list.length === 0) continue;
       const toRemove = [];
       for (let i = 0; i < list.length; i++) {
@@ -8154,19 +8154,19 @@ function resolveAllTargets(current, raw) {
   return resolved;
 }
 var Animation = class extends EventEmitter {
-  _initialTarget;
-  _rafId = null;
-  _startTime = null;
-  _pausedElapsed = 0;
-  _isPaused = false;
-  _duration = 0;
-  _easingFn = easings.linear;
-  _callback = null;
-  _from = {};
-  _to = {};
+  initialTarget;
+  rafId = null;
+  startTime = null;
+  pausedElapsed = 0;
+  isPaused = false;
+  duration = 0;
+  easingFn = easings.linear;
+  callback = null;
+  from = {};
+  to = {};
   constructor(target) {
     super();
-    this._initialTarget = target;
+    this.initialTarget = target;
   }
   /**
    * 애니메이션을 시작합니다.
@@ -8176,62 +8176,62 @@ var Animation = class extends EventEmitter {
    */
   start(callback, duration, easing = "linear") {
     this.stop();
-    this._callback = callback;
-    this._duration = duration;
-    this._easingFn = easings[easing] ?? easings.linear;
-    this._from = snapshotNumbers({}, this._initialTarget);
-    this._to = resolveAllTargets({}, this._initialTarget);
-    this._pausedElapsed = 0;
-    this._isPaused = false;
+    this.callback = callback;
+    this.duration = duration;
+    this.easingFn = easings[easing] ?? easings.linear;
+    this.from = snapshotNumbers({}, this.initialTarget);
+    this.to = resolveAllTargets({}, this.initialTarget);
+    this.pausedElapsed = 0;
+    this.isPaused = false;
     this.emit("start");
     this._tick(null);
     return this;
   }
   pause() {
-    if (this._isPaused || this._startTime === null) return this;
-    this._isPaused = true;
-    this._pausedElapsed += performance.now() - this._startTime;
-    if (this._rafId != null) {
-      cancelAnimationFrame(this._rafId);
-      this._rafId = null;
+    if (this.isPaused || this.startTime === null) return this;
+    this.isPaused = true;
+    this.pausedElapsed += performance.now() - this.startTime;
+    if (this.rafId != null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
     this.emit("pause");
     return this;
   }
   resume() {
-    if (!this._isPaused) return this;
-    this._isPaused = false;
-    this._startTime = null;
+    if (!this.isPaused) return this;
+    this.isPaused = false;
+    this.startTime = null;
     this.emit("resume");
     this._tick(null);
     return this;
   }
   stop() {
-    if (this._rafId != null) {
-      cancelAnimationFrame(this._rafId);
-      this._rafId = null;
+    if (this.rafId != null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
       this.emit("stop");
     }
-    this._startTime = null;
-    this._pausedElapsed = 0;
-    this._isPaused = false;
+    this.startTime = null;
+    this.pausedElapsed = 0;
+    this.isPaused = false;
     return this;
   }
   _tick(timestamp) {
     const now = timestamp ?? performance.now();
-    if (this._startTime === null) {
-      this._startTime = now - this._pausedElapsed;
+    if (this.startTime === null) {
+      this.startTime = now - this.pausedElapsed;
     }
-    const elapsed = now - this._startTime;
-    const rawT = Math.min(elapsed / this._duration, 1);
-    const easedT = this._easingFn(rawT);
-    const state = interpolate(this._from, this._to, easedT, this._initialTarget);
-    this._callback?.(state);
+    const elapsed = now - this.startTime;
+    const rawT = Math.min(elapsed / this.duration, 1);
+    const easedT = this.easingFn(rawT);
+    const state = interpolate(this.from, this.to, easedT, this.initialTarget);
+    this.callback?.(state);
     this.emit("update", state);
     if (rawT < 1) {
-      this._rafId = requestAnimationFrame((ts) => this._tick(ts));
+      this.rafId = requestAnimationFrame((ts) => this._tick(ts));
     } else {
-      this._rafId = null;
+      this.rafId = null;
       this.emit("end");
     }
   }
@@ -8242,12 +8242,12 @@ function animateObject(source, rawTarget, duration, easing = "linear") {
   const easingFn = easings[easing] ?? easings.linear;
   let startTime = null;
   const anim = new Animation(rawTarget);
-  anim._from = from;
-  anim._to = to;
-  anim._duration = duration;
-  anim._easingFn = easingFn;
-  anim._pausedElapsed = 0;
-  anim._isPaused = false;
+  anim.from = from;
+  anim.to = to;
+  anim.duration = duration;
+  anim.easingFn = easingFn;
+  anim.pausedElapsed = 0;
+  anim.isPaused = false;
   const tick = (timestamp) => {
     const now = timestamp ?? performance.now();
     if (startTime === null) startTime = now;
@@ -8256,13 +8256,13 @@ function animateObject(source, rawTarget, duration, easing = "linear") {
     const easedT = easingFn(rawT);
     applyInterpolated(source, from, to, easedT, rawTarget);
     if (rawT < 1) {
-      anim._rafId = requestAnimationFrame((ts) => tick(ts));
+      anim.rafId = requestAnimationFrame((ts) => tick(ts));
     } else {
-      anim._rafId = null;
+      anim.rafId = null;
       anim.emit("end");
     }
   };
-  anim._rafId = requestAnimationFrame((ts) => tick(ts));
+  anim.rafId = requestAnimationFrame((ts) => tick(ts));
   return anim;
 }
 function applyInterpolated(source, from, to, t, raw) {
@@ -9073,12 +9073,12 @@ var TextTransition = class extends BaseTransition {
     if (this._anim) this._anim.stop();
     if (charDurationMs <= 0) {
       this.target.attribute.text = newText;
-      this.target._transitionProgress = 1;
+      this.target.__transitionProgress = 1;
       this.target.__dirtyTexture = true;
       return this;
     }
     this.target.attribute.text = newText;
-    this.target._transitionProgress = 0;
+    this.target.__transitionProgress = 0;
     this.target.__dirtyTexture = true;
     const pureTextLength = newText.replace(/<[^>]*>/g, "").length;
     const totalDurationMs = pureTextLength * charDurationMs;
@@ -9086,11 +9086,11 @@ var TextTransition = class extends BaseTransition {
       totalDurationMs,
       "linear",
       (progress) => {
-        this.target._transitionProgress = progress;
+        this.target.__transitionProgress = progress;
         this.target.__dirtyTexture = true;
       },
       () => {
-        this.target._transitionProgress = 1;
+        this.target.__transitionProgress = 1;
         this.target.__dirtyTexture = true;
       }
     );
@@ -9101,9 +9101,9 @@ var TextTransition = class extends BaseTransition {
 // src/objects/Text.ts
 var Text = class extends LeviarObject {
   /** 트랜지션 진행도 (0 ~ 1, 1이면 완료 또는 미실행) */
-  _transitionProgress = 1;
+  __transitionProgress = 1;
   /** 전환 관리자 */
-  _transitioner;
+  transitioner;
   constructor(options) {
     super("text", options);
   }
@@ -9113,11 +9113,11 @@ var Text = class extends LeviarObject {
    * @param charDurationMs 글자 1개당 나타나는데 걸리는 시간(밀리초)
    */
   transition(newText, charDurationMs) {
-    if (!this._transitioner) {
-      this._transitioner = new TextTransition(this);
+    if (!this.transitioner) {
+      this.transitioner = new TextTransition(this);
     }
-    this._transitioner.start(newText, charDurationMs);
-    return this._transitioner;
+    this.transitioner.start(newText, charDurationMs);
+    return this.transitioner;
   }
 };
 
@@ -9159,7 +9159,7 @@ var LeviarImage = class extends LeviarObject {
   /** 트랜지션 진행도 (0 ~ 1) */
   __transitionProgress = 0;
   /** 전환 관리자 */
-  __transitioner;
+  transitioner;
   constructor(options) {
     super("image", options);
   }
@@ -9169,11 +9169,11 @@ var LeviarImage = class extends LeviarObject {
    * @param durationMs 전환에 걸리는 시간(밀리초)
    */
   transition(newSrc, durationMs) {
-    if (!this.__transitioner) {
-      this.__transitioner = new ImageTransition(this);
+    if (!this.transitioner) {
+      this.transitioner = new ImageTransition(this);
     }
-    this.__transitioner.start(newSrc, durationMs);
-    return this.__transitioner;
+    this.transitioner.start(newSrc, durationMs);
+    return this.transitioner;
   }
 };
 
@@ -9181,13 +9181,13 @@ var LeviarImage = class extends LeviarObject {
 var DELEGATED_KEYS = ["src", "currentTime", "playbackRate", "volume"];
 var LeviarVideo = class _LeviarVideo extends LeviarObject {
   /** 연결된 VideoManager */
-  __manager = null;
+  manager = null;
   /** 현재 재생 중인 클립 이름 */
-  __clipName = null;
+  clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   __clip = null;
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  __pendingSrc = null;
+  pendingSrc = null;
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
   __src = null;
   /** Renderer에서 활성화된 실제 VideoElement 인스턴스 참조 */
@@ -9201,23 +9201,23 @@ var LeviarVideo = class _LeviarVideo extends LeviarObject {
   /** currentTime setter에서 __videoElement가 null일 때 대기 중인 seek 값 (Renderer에서 적용 후 null로 리셋) */
   __pendingSeek = null;
   static DELEGATED_GETTERS = {
-    src: (self) => self.__clipName ?? void 0,
+    src: (self) => self.clipName ?? void 0,
     currentTime: (self) => self.__videoElement?.currentTime ?? 0,
     playbackRate: (self) => self.__videoElement?.playbackRate ?? 1,
     volume: (self) => self.__videoElement?.volume ?? 1
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn("[LeviarVideo] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self.__manager.get(value);
+      const clip = self.manager.get(value);
       if (!clip) {
         console.warn(`[LeviarVideo] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self.__clipName = value;
+      self.clipName = value;
       self.__clip = clip;
       self.__src = clip.src;
       self.__playing = false;
@@ -9243,16 +9243,16 @@ var LeviarVideo = class _LeviarVideo extends LeviarObject {
   };
   constructor(options) {
     super("video", options, DELEGATED_KEYS);
-    this.__pendingSrc = options?.attribute?.src ?? null;
+    this.pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * VideoManager를 연결합니다.
    */
   __setManager(manager) {
-    this.__manager = manager;
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc;
-      this.__pendingSrc = null;
+    this.manager = manager;
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc;
+      this.pendingSrc = null;
     }
     return this;
   }
@@ -9331,13 +9331,13 @@ var LeviarVideo = class _LeviarVideo extends LeviarObject {
 var DELEGATED_KEYS2 = ["src", "currentTime", "playbackRate"];
 var Sprite = class _Sprite extends LeviarObject {
   /** 연결된 SpriteManager */
-  __manager = null;
+  manager = null;
   /** 현재 재생 중인 클립 이름 */
-  __clipName = null;
+  clipName = null;
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   __clip = null;
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  __pendingSrc = null;
+  pendingSrc = null;
   /** 커스텀 재생 속도 (fps). undefined면 clip의 frameRate 사용 */
   __playbackRate;
   /** 현재 프레임 인덱스 (clip.start 기준 절대 인덱스) */
@@ -9349,22 +9349,22 @@ var Sprite = class _Sprite extends LeviarObject {
   /** 일시정지 여부 */
   __paused = false;
   static DELEGATED_GETTERS = {
-    src: (self) => self.__clipName ?? void 0,
+    src: (self) => self.clipName ?? void 0,
     currentTime: (self) => self.__clip ? Math.max(0, self.__currentFrame - self.__clip.start) : 0,
     playbackRate: (self) => self.__playbackRate ?? (self.__clip ? self.__clip.frameRate : 0)
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn("[Sprite] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self.__manager.get(value);
+      const clip = self.manager.get(value);
       if (!clip) {
         console.warn(`[Sprite] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self.__clipName = value;
+      self.clipName = value;
       self.__clip = clip;
       self.__currentFrame = clip.start;
       self.__lastFrameTime = 0;
@@ -9383,16 +9383,16 @@ var Sprite = class _Sprite extends LeviarObject {
   };
   constructor(options) {
     super("sprite", options, DELEGATED_KEYS2);
-    this.__pendingSrc = options?.attribute?.src ?? null;
+    this.pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * SpriteManager를 연결합니다.
    */
   __setManager(manager) {
-    this.__manager = manager;
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc;
-      this.__pendingSrc = null;
+    this.manager = manager;
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc;
+      this.pendingSrc = null;
     }
     return this;
   }
@@ -9475,56 +9475,56 @@ var import_matter_js = __toESM(require_matter(), 1);
 var DELEGATED_KEYS3 = ["src"];
 var GRAVITY = 1e-3;
 var Particle = class _Particle extends LeviarObject {
-  __manager = null;
-  __clipName = null;
+  manager = null;
+  clipName = null;
   __clip = null;
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  __pendingSrc = null;
+  pendingSrc = null;
   /** 활성 파티클 인스턴스 목록 (Renderer에서 직접 참조) */
   __instances = [];
-  __playing = false;
-  __lastSpawnTime = 0;
-  __spawnCount = 0;
+  playing = false;
+  lastSpawnTime = 0;
+  spawnCount = 0;
   // loop=false 일 때 총 스폰 횟수 추적
   /** PhysicsEngine 참조 (strict 모드 전용) */
-  __physics = null;
+  physics = null;
   /** 일시정지 여부 */
-  __paused = false;
+  paused = false;
   static DELEGATED_GETTERS = {
-    src: (self) => self.__clipName ?? void 0
+    src: (self) => self.clipName ?? void 0
   };
   static DELEGATED_SETTERS = {
     src: (self, value) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn("[Particle] __setManager()\uB97C \uBA3C\uC800 \uD638\uCD9C\uD558\uC2ED\uC2DC\uC624.");
         return;
       }
-      const clip = self.__manager.get(value);
+      const clip = self.manager.get(value);
       if (!clip) {
         console.warn(`[Particle] \uD074\uB9BD '${value}'\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
         return;
       }
-      self.__clipName = value;
+      self.clipName = value;
       self.__clip = clip;
-      self.__playing = false;
-      self.__paused = false;
-      self.__lastSpawnTime = 0;
-      self.__spawnCount = 0;
+      self.playing = false;
+      self.paused = false;
+      self.lastSpawnTime = 0;
+      self.spawnCount = 0;
       self.__instances = [];
     }
   };
   constructor(options) {
     super("particle", options, DELEGATED_KEYS3);
-    this.__pendingSrc = options?.attribute?.src ?? null;
+    this.pendingSrc = options?.attribute?.src ?? null;
   }
   /**
    * ParticleManager를 연결합니다.
    */
   __setManager(manager) {
-    this.__manager = manager;
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc;
-      this.__pendingSrc = null;
+    this.manager = manager;
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc;
+      this.pendingSrc = null;
     }
     return this;
   }
@@ -9532,7 +9532,7 @@ var Particle = class _Particle extends LeviarObject {
    * PhysicsEngine을 연결합니다. strict=true 시 필요합니다.
    */
   __setPhysics(physics) {
-    this.__physics = physics;
+    this.physics = physics;
     return this;
   }
   /**
@@ -9543,8 +9543,8 @@ var Particle = class _Particle extends LeviarObject {
       console.warn("[Particle] src \uC18D\uC131\uC744 \uBA3C\uC800 \uC124\uC815\uD558\uC2ED\uC2DC\uC624.");
       return this;
     }
-    this.__playing = true;
-    this.__paused = false;
+    this.playing = true;
+    this.paused = false;
     this.emit("play");
     return this;
   }
@@ -9552,8 +9552,8 @@ var Particle = class _Particle extends LeviarObject {
    * 파티클 에미션을 일시정지합니다.
    */
   pause() {
-    if (!this.__playing || this.__paused) return this;
-    this.__paused = true;
+    if (!this.playing || this.paused) return this;
+    this.paused = true;
     this.emit("pause");
     return this;
   }
@@ -9561,10 +9561,10 @@ var Particle = class _Particle extends LeviarObject {
    * 파티클 에미션을 정지합니다. 이미 생성된 인스턴스는 lifespan까지 유지됩니다.
    */
   stop() {
-    if (!this.__playing && !this.__paused) return this;
+    if (!this.playing && !this.paused) return this;
     const wasLooping = this.__clip?.loop ?? false;
-    this.__playing = false;
-    this.__paused = false;
+    this.playing = false;
+    this.paused = false;
     if (wasLooping) {
       this.emit("repeat");
     } else {
@@ -9579,28 +9579,28 @@ var Particle = class _Particle extends LeviarObject {
   __tick(timestamp) {
     if (!this.__clip) return;
     const clip = this.__clip;
-    if (this.__lastSpawnTime === 0) {
-      this.__lastSpawnTime = timestamp;
+    if (this.lastSpawnTime === 0) {
+      this.lastSpawnTime = timestamp;
     }
-    if (this.__playing && !this.__paused) {
-      const elapsed = timestamp - this.__lastSpawnTime;
+    if (this.playing && !this.paused) {
+      const elapsed = timestamp - this.lastSpawnTime;
       if (elapsed >= clip.interval) {
         this._spawn(timestamp);
-        this.__lastSpawnTime = timestamp;
-        this.__spawnCount++;
+        this.lastSpawnTime = timestamp;
+        this.spawnCount++;
         if (!clip.loop) {
-          this.__playing = false;
+          this.playing = false;
         }
       }
     }
     const gScale = this.attribute.gravityScale ?? 1;
-    const gX = this.__physics ? this.__physics.engine.gravity.x * this.__physics.engine.gravity.scale : 0;
-    const gY = this.__physics ? this.__physics.engine.gravity.y * this.__physics.engine.gravity.scale : GRAVITY;
+    const gX = this.physics ? this.physics.engine.gravity.x * this.physics.engine.gravity.scale : 0;
+    const gY = this.physics ? this.physics.engine.gravity.y * this.physics.engine.gravity.scale : GRAVITY;
     const alive = [];
     for (const inst of this.__instances) {
       const age = timestamp - inst.born;
       if (age >= inst.lifespan) {
-        if (inst.body && this.__physics) {
+        if (inst.body && this.physics) {
           this._removeInstanceBody(inst);
         }
         continue;
@@ -9683,7 +9683,7 @@ var Particle = class _Particle extends LeviarObject {
         angle: 0,
         angularVelocity
       };
-      if (this.attribute.strictPhysics && this.__physics) {
+      if (this.attribute.strictPhysics && this.physics) {
         const pw = this.style.width ? Math.min(this.style.width, this.style.height ?? this.style.width) / 4 : 4;
         const bodyOpts = {
           density: attr.density ?? 1e-3,
@@ -9703,15 +9703,15 @@ var Particle = class _Particle extends LeviarObject {
         if (angularVelocity !== 0) {
           import_matter_js.default.Body.setAngularVelocity(body, angularVelocity * 16);
         }
-        import_matter_js.default.Composite.add(this.__physics.engine.world, body);
+        import_matter_js.default.Composite.add(this.physics.engine.world, body);
         inst.body = body;
       }
       this.__instances.push(inst);
     }
   }
   _removeInstanceBody(inst) {
-    if (!inst.body || !this.__physics) return;
-    import_matter_js.default.Composite.remove(this.__physics.engine.world, inst.body);
+    if (!inst.body || !this.physics) return;
+    import_matter_js.default.Composite.remove(this.physics.engine.world, inst.body);
     inst.body = void 0;
   }
   _getDelegatedAttribute(key) {

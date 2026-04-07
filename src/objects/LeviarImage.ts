@@ -15,7 +15,7 @@ export class LeviarImage<
   __transitionProgress: number = 0
 
   /** 전환 관리자 */
-  private __transitioner?: ImageTransition
+  private transitioner?: ImageTransition
 
   constructor(options?: LeviarObjectOptions<ImageAttribute, D>) {
     super('image', options)
@@ -27,10 +27,10 @@ export class LeviarImage<
    * @param durationMs 전환에 걸리는 시간(밀리초)
    */
   transition(newSrc: string, durationMs: number): ImageTransition {
-    if (!this.__transitioner) {
-      this.__transitioner = new ImageTransition(this)
+    if (!this.transitioner) {
+      this.transitioner = new ImageTransition(this)
     }
-    this.__transitioner.start(newSrc, durationMs)
-    return this.__transitioner
+    this.transitioner.start(newSrc, durationMs)
+    return this.transitioner
   }
 }

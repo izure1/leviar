@@ -16,16 +16,16 @@ export class LeviarVideo<
   D extends Record<string, any> = Record<string, any>
 > extends LeviarObject<VideoAttribute, D> {
   /** 연결된 VideoManager */
-  private __manager: VideoManager | null = null
+  private manager: VideoManager | null = null
 
   /** 현재 재생 중인 클립 이름 */
-  private __clipName: string | null = null
+  private clipName: string | null = null
 
   /** 현재 클립 정보 (Renderer에서 직접 참조) */
   __clip: VideoClip | null = null
 
   /** 생성자 시점에 __manager가 없어서 보류된 src 값 */
-  private __pendingSrc: string | null = null
+  private pendingSrc: string | null = null
 
   /** 현재 재생할 에셋 키 (Renderer에서 직접 참조) */
   __src: string | null = null
@@ -46,7 +46,7 @@ export class LeviarVideo<
   __pendingSeek: number | null = null
 
   private static readonly DELEGATED_GETTERS: Record<string, (self: LeviarVideo) => any> = {
-    src: (self) => self.__clipName ?? undefined,
+    src: (self) => self.clipName ?? undefined,
     currentTime: (self) => self.__videoElement?.currentTime ?? 0,
     playbackRate: (self) => self.__videoElement?.playbackRate ?? 1.0,
     volume: (self) => self.__videoElement?.volume ?? 1.0,
@@ -54,16 +54,16 @@ export class LeviarVideo<
 
   private static readonly DELEGATED_SETTERS: Record<string, (self: LeviarVideo, value: any) => void> = {
     src: (self, value: string) => {
-      if (!self.__manager) {
+      if (!self.manager) {
         console.warn('[LeviarVideo] __setManager()를 먼저 호출하십시오.')
         return
       }
-      const clip = self.__manager.get(value)
+      const clip = self.manager.get(value)
       if (!clip) {
         console.warn(`[LeviarVideo] 클립 '${value}'을 찾을 수 없습니다.`)
         return
       }
-      self.__clipName = value
+      self.clipName = value
       self.__clip = clip
       self.__src = clip.src
       self.__playing = false
@@ -92,17 +92,17 @@ export class LeviarVideo<
     super('video', options, DELEGATED_KEYS)
     // src setter는 __manager에 의존하므로 생성자 시점에 처리할 수 없습니다.
     // __setManager() 호출 시 자동으로 적용됩니다.
-    this.__pendingSrc = (options?.attribute as any)?.src ?? null
+    this.pendingSrc = (options?.attribute as any)?.src ?? null
   }
 
   /**
    * VideoManager를 연결합니다.
    */
   __setManager(manager: VideoManager): this {
-    this.__manager = manager
-    if (this.__pendingSrc) {
-      this.attribute.src = this.__pendingSrc
-      this.__pendingSrc = null
+    this.manager = manager
+    if (this.pendingSrc) {
+      this.attribute.src = this.pendingSrc
+      this.pendingSrc = null
     }
     return this
   }

@@ -11,9 +11,6 @@ import {
 } from 'ogl'
 import type { OGLRenderingContext } from 'ogl'
 
-const AXIS_X = new OglVec3(1, 0, 0)
-const AXIS_Y = new OglVec3(0, 1, 0)
-const AXIS_Z = new OglVec3(0, 0, 1)
 import { colorVertex, colorFragment, ellipseVertex, ellipseFragment } from './shaders/color.js'
 import { textureVertex, textureFragment } from './shaders/texture.js'
 import { instancedVertex, instancedFragment } from './shaders/instanced.js'
@@ -28,6 +25,10 @@ import type { LeviarImage } from './objects/LeviarImage.js'
 import type { LeviarVideo } from './objects/LeviarVideo.js'
 import type { Particle } from './objects/Particle.js'
 import type { LoadedAssets } from './types.js'
+
+const AXIS_X = new OglVec3(1, 0, 0)
+const AXIS_Y = new OglVec3(0, 1, 0)
+const AXIS_Z = new OglVec3(0, 0, 1)
 
 // ─── Quad 지오메트리 헬퍼 ────────────────────────────────────────────────────
 
