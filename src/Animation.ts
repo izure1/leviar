@@ -1,5 +1,6 @@
 import type { EasingType, AnimationEvents } from './types.js'
 import { EventEmitter } from './EventEmitter.js'
+import { interpolateColor } from './utils/colorUtils.js'
 
 // ============================================================
 // Easing Functions
@@ -97,14 +98,20 @@ const easings: Record<EasingType, (t: number) => number> = {
 // Compound Operator Parsing
 // ============================================================
 
-/** 복합 대입 연산자 문자열을 파싱하여 최종 목표값을 계산합니다. */
-function resolveTarget(current: number, raw: number | string): number {
+function resolveTarget(current: number | string, raw: number | string): number | string {
   if (typeof raw === 'number') return raw
-  if (raw.startsWith('+=')) return current + parseFloat(raw.slice(2))
-  if (raw.startsWith('-=')) return current - parseFloat(raw.slice(2))
-  if (raw.startsWith('*=')) return current * parseFloat(raw.slice(2))
-  if (raw.startsWith('/=')) return current / parseFloat(raw.slice(2))
-  return parseFloat(raw)
+  if (typeof raw === 'string') {
+    if (raw.startsWith('+=')) return (typeof current === 'number' ? current : parseFloat(current)) + parseFloat(raw.slice(2))
+    if (raw.startsWith('-=')) return (typeof current === 'number' ? current : parseFloat(current)) - parseFloat(raw.slice(2))
+    if (raw.startsWith('*=')) return (typeof current === 'number' ? current : parseFloat(current)) * parseFloat(raw.slice(2))
+    if (raw.startsWith('/=')) return (typeof current === 'number' ? current : parseFloat(current)) / parseFloat(raw.slice(2))
+    
+    const parsed = parseFloat(raw)
+    if (!isNaN(parsed) && raw.trim() === parsed.toString()) return parsed
+    
+    return raw
+  }
+  return raw
 }
 
 // ============================================================
@@ -122,7 +129,11 @@ function snapshotNumbers(source: Record<string, any>, target: DeepRecord): Recor
     if (tVal != null && typeof tVal === 'object' && !Array.isArray(tVal)) {
       snapshot[key] = snapshotNumbers(sVal ?? {}, tVal)
     } else if (typeof tVal === 'number' || typeof tVal === 'string') {
-      snapshot[key] = typeof sVal === 'number' ? sVal : 0
+      if (typeof sVal === 'number' || typeof sVal === 'string') {
+        snapshot[key] = sVal
+      } else {
+        snapshot[key] = typeof tVal === 'number' ? 0 : ''
+      }
     }
   }
   return snapshot
@@ -144,6 +155,13 @@ function interpolate(
       result[key] = interpolate(fromVal ?? {}, toVal, t, raw)
     } else if (typeof toVal === 'number' && typeof fromVal === 'number') {
       result[key] = fromVal + (toVal - fromVal) * t
+    } else if (typeof toVal === 'string' && typeof fromVal === 'string') {
+      const colorInterp = interpolateColor(fromVal, toVal, t)
+      if (colorInterp) {
+        result[key] = colorInterp
+      } else {
+        result[key] = t < 0.5 ? fromVal : toVal
+      }
     }
   }
   return result
@@ -158,7 +176,7 @@ function resolveAllTargets(current: Record<string, any>, raw: DeepRecord): Recor
     if (rVal != null && typeof rVal === 'object' && !Array.isArray(rVal)) {
       resolved[key] = resolveAllTargets(cVal ?? {}, rVal)
     } else if (typeof rVal === 'number' || typeof rVal === 'string') {
-      resolved[key] = resolveTarget(typeof cVal === 'number' ? cVal : 0, rVal)
+      resolved[key] = resolveTarget(cVal !== undefined ? cVal : (typeof rVal === 'number' ? 0 : ''), rVal)
     }
   }
   return resolved
@@ -333,6 +351,13 @@ function applyInterpolated(
       applyInterpolated(source[key], fromVal ?? {}, toVal, t, (raw as any)[key])
     } else if (typeof toVal === 'number' && typeof fromVal === 'number') {
       source[key] = fromVal + (toVal - fromVal) * t
+    } else if (typeof toVal === 'string' && typeof fromVal === 'string') {
+      const colorInterp = interpolateColor(fromVal, toVal, t)
+      if (colorInterp) {
+        source[key] = colorInterp
+      } else {
+        source[key] = t < 0.5 ? fromVal : toVal
+      }
     }
   }
 }

@@ -8039,6 +8039,147 @@ var EventEmitter = class {
   }
 };
 
+// src/utils/colorUtils.ts
+function parseColor(color) {
+  const c = color.trim().toLowerCase();
+  if (c.startsWith("#")) {
+    let hex = c.substring(1);
+    if (hex.length === 3 || hex.length === 4) {
+      hex = Array.from(hex).map((char) => char + char).join("");
+    }
+    if (hex.length === 6) hex += "ff";
+    if (hex.length !== 8) return null;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const a = parseInt(hex.substring(6, 8), 16) / 255;
+    return [r, g, b, a];
+  }
+  const rgbMatch = c.match(/^rgba?\(([^)]+)\)/);
+  if (rgbMatch) {
+    const parts = rgbMatch[1].split(/,|\s+/).filter(Boolean);
+    if (parts.length < 3) return null;
+    let tempParts = [];
+    const cleaned = rgbMatch[1].replace(/[,/]/g, " ").split(/\s+/).filter(Boolean);
+    const r = parseComp(cleaned[0], 255);
+    const g = parseComp(cleaned[1], 255);
+    const b = parseComp(cleaned[2], 255);
+    const a = cleaned.length > 3 ? parseComp(cleaned[3], 1) : 1;
+    return [r, g, b, a];
+  }
+  const hslMatch = c.match(/^hsla?\(([^)]+)\)/);
+  if (hslMatch) {
+    const cleaned = hslMatch[1].replace(/[,/]/g, " ").split(/\s+/).filter(Boolean);
+    if (cleaned.length < 3) return null;
+    let h = parseFloat(cleaned[0]);
+    if (cleaned[0].endsWith("turn")) h = parseFloat(cleaned[0]) * 360;
+    else if (cleaned[0].endsWith("rad")) h = parseFloat(cleaned[0]) * 180 / Math.PI;
+    const s = parseComp(cleaned[1], 1);
+    const l = parseComp(cleaned[2], 1);
+    const a = cleaned.length > 3 ? parseComp(cleaned[3], 1) : 1;
+    const rgb = hslToRgb(h / 360, s, l);
+    return [rgb[0], rgb[1], rgb[2], a];
+  }
+  return null;
+}
+function parseComp(val, max) {
+  if (val.endsWith("%")) {
+    return parseFloat(val) / 100 * max;
+  }
+  return parseFloat(val);
+}
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p2, q2, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p2 + (q2 - p2) * 6 * t;
+      if (t < 1 / 2) return q2;
+      if (t < 2 / 3) return p2 + (q2 - p2) * (2 / 3 - t) * 6;
+      return p2;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+function formatColor(rgba) {
+  const r = Math.round(rgba[0]);
+  const g = Math.round(rgba[1]);
+  const b = Math.round(rgba[2]);
+  const a = rgba[3];
+  if (a === 1) {
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+}
+function interpolateColor(from, to, t) {
+  const fromRGBA = parseColor(from);
+  const toRGBA = parseColor(to);
+  if (fromRGBA && toRGBA) {
+    const result = [
+      fromRGBA[0] + (toRGBA[0] - fromRGBA[0]) * t,
+      fromRGBA[1] + (toRGBA[1] - fromRGBA[1]) * t,
+      fromRGBA[2] + (toRGBA[2] - fromRGBA[2]) * t,
+      fromRGBA[3] + (toRGBA[3] - fromRGBA[3]) * t
+    ];
+    return formatColor(result);
+  }
+  if (from.includes(",") || to.includes(",")) {
+    const fromParts = from.split(/,(?![^(]*\))/).map((x) => x.trim());
+    const toParts = to.split(/,(?![^(]*\))/).map((x) => x.trim());
+    if (fromParts.length === toParts.length && fromParts.length > 0) {
+      const resultParts = [];
+      let success = true;
+      for (let i = 0; i < fromParts.length; i++) {
+        const fStr = fromParts[i];
+        const tStr = toParts[i];
+        const angleMatchF = fStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
+        const angleMatchT = tStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
+        if (angleMatchF && angleMatchT && angleMatchF[2] === angleMatchT[2]) {
+          const v = parseFloat(angleMatchF[1]) + (parseFloat(angleMatchT[1]) - parseFloat(angleMatchF[1])) * t;
+          resultParts.push(`${v}${angleMatchF[2]}`);
+          continue;
+        }
+        const stopRegex = /^(.+?)(?:\s+(-?\d*\.?\d+%?))?$/;
+        const fMatch = fStr.match(stopRegex);
+        const tMatch = tStr.match(stopRegex);
+        if (fMatch && tMatch) {
+          const fColorStr = fMatch[1];
+          const tColorStr = tMatch[1];
+          const fPos = fMatch[2] || "";
+          const tPos = tMatch[2] || "";
+          const interpolatedColor = interpolateColor(fColorStr, tColorStr, t);
+          if (interpolatedColor) {
+            let interpolatedPos = fPos;
+            if (fPos.endsWith("%") && tPos.endsWith("%")) {
+              const fv = parseFloat(fPos);
+              const tv = parseFloat(tPos);
+              interpolatedPos = `${fv + (tv - fv) * t}%`;
+            }
+            if (interpolatedPos) resultParts.push(`${interpolatedColor} ${interpolatedPos}`);
+            else resultParts.push(`${interpolatedColor}`);
+            continue;
+          }
+        }
+        success = false;
+        break;
+      }
+      if (success) {
+        return resultParts.join(", ");
+      }
+    }
+  }
+  return null;
+}
+
 // src/Animation.ts
 var easings = {
   linear: (t) => t,
@@ -8107,11 +8248,16 @@ var easings = {
 };
 function resolveTarget(current, raw) {
   if (typeof raw === "number") return raw;
-  if (raw.startsWith("+=")) return current + parseFloat(raw.slice(2));
-  if (raw.startsWith("-=")) return current - parseFloat(raw.slice(2));
-  if (raw.startsWith("*=")) return current * parseFloat(raw.slice(2));
-  if (raw.startsWith("/=")) return current / parseFloat(raw.slice(2));
-  return parseFloat(raw);
+  if (typeof raw === "string") {
+    if (raw.startsWith("+=")) return (typeof current === "number" ? current : parseFloat(current)) + parseFloat(raw.slice(2));
+    if (raw.startsWith("-=")) return (typeof current === "number" ? current : parseFloat(current)) - parseFloat(raw.slice(2));
+    if (raw.startsWith("*=")) return (typeof current === "number" ? current : parseFloat(current)) * parseFloat(raw.slice(2));
+    if (raw.startsWith("/=")) return (typeof current === "number" ? current : parseFloat(current)) / parseFloat(raw.slice(2));
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && raw.trim() === parsed.toString()) return parsed;
+    return raw;
+  }
+  return raw;
 }
 function snapshotNumbers(source, target) {
   const snapshot = {};
@@ -8121,7 +8267,11 @@ function snapshotNumbers(source, target) {
     if (tVal != null && typeof tVal === "object" && !Array.isArray(tVal)) {
       snapshot[key] = snapshotNumbers(sVal ?? {}, tVal);
     } else if (typeof tVal === "number" || typeof tVal === "string") {
-      snapshot[key] = typeof sVal === "number" ? sVal : 0;
+      if (typeof sVal === "number" || typeof sVal === "string") {
+        snapshot[key] = sVal;
+      } else {
+        snapshot[key] = typeof tVal === "number" ? 0 : "";
+      }
     }
   }
   return snapshot;
@@ -8136,6 +8286,13 @@ function interpolate(from, to, t, rawTarget) {
       result[key] = interpolate(fromVal ?? {}, toVal, t, raw);
     } else if (typeof toVal === "number" && typeof fromVal === "number") {
       result[key] = fromVal + (toVal - fromVal) * t;
+    } else if (typeof toVal === "string" && typeof fromVal === "string") {
+      const colorInterp = interpolateColor(fromVal, toVal, t);
+      if (colorInterp) {
+        result[key] = colorInterp;
+      } else {
+        result[key] = t < 0.5 ? fromVal : toVal;
+      }
     }
   }
   return result;
@@ -8148,7 +8305,7 @@ function resolveAllTargets(current, raw) {
     if (rVal != null && typeof rVal === "object" && !Array.isArray(rVal)) {
       resolved[key] = resolveAllTargets(cVal ?? {}, rVal);
     } else if (typeof rVal === "number" || typeof rVal === "string") {
-      resolved[key] = resolveTarget(typeof cVal === "number" ? cVal : 0, rVal);
+      resolved[key] = resolveTarget(cVal !== void 0 ? cVal : typeof rVal === "number" ? 0 : "", rVal);
     }
   }
   return resolved;
@@ -8274,6 +8431,13 @@ function applyInterpolated(source, from, to, t, raw) {
       applyInterpolated(source[key], fromVal ?? {}, toVal, t, raw[key]);
     } else if (typeof toVal === "number" && typeof fromVal === "number") {
       source[key] = fromVal + (toVal - fromVal) * t;
+    } else if (typeof toVal === "string" && typeof fromVal === "string") {
+      const colorInterp = interpolateColor(fromVal, toVal, t);
+      if (colorInterp) {
+        source[key] = colorInterp;
+      } else {
+        source[key] = t < 0.5 ? fromVal : toVal;
+      }
     }
   }
 }
