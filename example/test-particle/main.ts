@@ -128,4 +128,26 @@ const floor = world.createRectangle({
 })
 floor.style.opacity = 0.3
 
+// ────────────────────────────────────────────────────────
+// ③ 회전하는 객체 내부의 파티클 중력 테스트
+// ────────────────────────────────────────────────────────
+
+const rotatingBox = world.createRectangle({
+  style: { width: 100, height: 100, borderWidth: 2, borderColor: '#aaa' },
+  transform: { position: { x: 0, y: -H / 4, z: Z } }
+})
+
+const pGravity = world.createParticle({
+  style: { width: 16, height: 16, blendMode: 'lighter' },
+  transform: { position: { x: 0, y: 0, z: Z } },
+  attribute: { strictPhysics: true, restitution: 0.5, friction: 0.1, density: 0.001, gravityScale: 1.0, collisionCategory: 0x0001, collisionMask: 0x0002 },
+})
+pGravity.attribute.src = 'star-strict'
+rotatingBox.addChild(pGravity)
+pGravity.play()
+
+world.on('update', () => {
+  rotatingBox.transform.rotation.z += 2
+})
+
 world.start()
