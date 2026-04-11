@@ -71,20 +71,15 @@ const box = world.createRectangle({
   style: { width: 100, height: 100, color: '#f1c40f' }
 });
 
-const anim = box.animate({
+box.animate({
   style: { opacity: 0 },
   transform: { rotation: { z: '+=360' } }, // 360도 회전
   dataset: { score: 100 }               // 유저 데이터도 부드럽게 증가 가능
-}, 2000, 'easeInOutBack');
-
-// 애니메이션이 끝나면 객체 삭제
-anim.on('end', () => {
+}, 2000, 'easeInOutBack').on('end', () => {
+  // 애니메이션이 끝나면 객체 삭제
   box.remove();
-});
-
-// 매 프레임 진행률 콘솔 출력
-anim.on('update', (state) => {
+}).on('update', (state) => {
+  // 매 프레임 진행률 콘솔 출력
   console.log(`진행도: ${Math.floor(state.progress * 100)}%`);
 });
 ```
-

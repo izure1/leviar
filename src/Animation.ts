@@ -1,4 +1,5 @@
 import type { EasingType, AnimationEvents } from './types.js'
+export type { EasingType } from './types.js'
 import { EventEmitter } from './EventEmitter.js'
 import { interpolateColor } from './utils/colorUtils.js'
 
@@ -6,7 +7,7 @@ import { interpolateColor } from './utils/colorUtils.js'
 // Easing Functions
 // ============================================================
 
-const easings: Record<EasingType, (t: number) => number> = {
+export const easings: Record<EasingType, (t: number) => number> = {
   linear: (t) => t,
 
   easeIn: (t) => t * t,
@@ -105,10 +106,10 @@ function resolveTarget(current: number | string, raw: number | string): number |
     if (raw.startsWith('-=')) return (typeof current === 'number' ? current : parseFloat(current)) - parseFloat(raw.slice(2))
     if (raw.startsWith('*=')) return (typeof current === 'number' ? current : parseFloat(current)) * parseFloat(raw.slice(2))
     if (raw.startsWith('/=')) return (typeof current === 'number' ? current : parseFloat(current)) / parseFloat(raw.slice(2))
-    
+
     const parsed = parseFloat(raw)
     if (!isNaN(parsed) && raw.trim() === parsed.toString()) return parsed
-    
+
     return raw
   }
   return raw
@@ -261,7 +262,7 @@ export class Animation extends EventEmitter<AnimationEvents> {
     return this
   }
 
-  private _tick(timestamp: number | null) {
+  private _tick(timestamp: number | null): void {
     const now = timestamp ?? performance.now()
 
     if (this.startTime === null) {
@@ -361,6 +362,3 @@ function applyInterpolated(
     }
   }
 }
-
-export { easings }
-export type { EasingType }
