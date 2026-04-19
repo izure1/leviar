@@ -4,6 +4,8 @@ import { Animation } from '../Animation.js'
 
 export abstract class BaseTransition<T = any> extends EventEmitter<AnimationEvents> {
   protected _anim: Animation | null = null
+  private _onUpdate: ((progress: number) => void) | null = null
+  private _onComplete: (() => void) | null = null
   public target: T
 
   constructor(target: T) {
@@ -13,6 +15,9 @@ export abstract class BaseTransition<T = any> extends EventEmitter<AnimationEven
 
   protected _startTransition(durationMs: number, easing: EasingType | undefined, onUpdate: (progress: number) => void, onComplete: () => void) {
     if (this._anim) this._anim.stop()
+
+    this._onUpdate = onUpdate
+    this._onComplete = onComplete
 
     this.emit('start')
 
@@ -24,6 +29,8 @@ export abstract class BaseTransition<T = any> extends EventEmitter<AnimationEven
 
     this._anim.on('end', () => {
       this._anim = null
+      this._onUpdate = null
+      this._onComplete = null
       onComplete()
       this.emit('end')
     })
@@ -33,7 +40,15 @@ export abstract class BaseTransition<T = any> extends EventEmitter<AnimationEven
     if (this._anim) {
       this._anim.stop()
       this._anim = null
-      this.emit('stop')
+
+      const onUpdate = this._onUpdate
+      const onComplete = this._onComplete
+      this._onUpdate = null
+      this._onComplete = null
+
+      onUpdate?.(1)
+      onComplete?.()
+      this.emit('end')
     }
     return this
   }
