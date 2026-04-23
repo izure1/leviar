@@ -8445,6 +8445,8 @@ function applyInterpolated(source, from, to, t, raw) {
 // src/objects/BaseTransition.ts
 var BaseTransition = class extends EventEmitter {
   _anim = null;
+  _onUpdate = null;
+  _onComplete = null;
   target;
   constructor(target) {
     super();
@@ -8452,6 +8454,8 @@ var BaseTransition = class extends EventEmitter {
   }
   _startTransition(durationMs, easing, onUpdate, onComplete) {
     if (this._anim) this._anim.stop();
+    this._onUpdate = onUpdate;
+    this._onComplete = onComplete;
     this.emit("start");
     this._anim = new Animation({ progress: 1 });
     this._anim.start((state) => {
@@ -8460,6 +8464,8 @@ var BaseTransition = class extends EventEmitter {
     }, durationMs, easing || "linear");
     this._anim.on("end", () => {
       this._anim = null;
+      this._onUpdate = null;
+      this._onComplete = null;
       onComplete();
       this.emit("end");
     });
@@ -8468,7 +8474,13 @@ var BaseTransition = class extends EventEmitter {
     if (this._anim) {
       this._anim.stop();
       this._anim = null;
-      this.emit("stop");
+      const onUpdate = this._onUpdate;
+      const onComplete = this._onComplete;
+      this._onUpdate = null;
+      this._onComplete = null;
+      onUpdate?.(1);
+      onComplete?.();
+      this.emit("end");
     }
     return this;
   }
@@ -8496,13 +8508,14 @@ var FadeTransition = class extends BaseTransition {
   start(durationMs, easing, type) {
     if (this._anim) this._anim.stop();
     if (type === "out") {
-      this.target.__fadeOpacity = 1;
+      const fromOpacity = this.target.__fadeOpacity;
       this.target.__dirtyTexture = true;
       this._startTransition(
         durationMs,
         easing,
         (progress) => {
-          this.target.__fadeOpacity = 1 - progress;
+          this.target.__fadeOpacity = fromOpacity * (1 - progress);
+          this.target.__dirtyTexture = true;
         },
         () => {
           this.target.style.display = "none";
@@ -8511,13 +8524,14 @@ var FadeTransition = class extends BaseTransition {
       );
     } else {
       this.target.style.display = "block";
-      this.target.__fadeOpacity = 0;
+      const fromOpacity = this.target.__fadeOpacity;
       this.target.__dirtyTexture = true;
       this._startTransition(
         durationMs,
         easing,
         (progress) => {
-          this.target.__fadeOpacity = progress;
+          this.target.__fadeOpacity = fromOpacity + (1 - fromOpacity) * progress;
+          this.target.__dirtyTexture = true;
         },
         () => {
           this.target.__fadeOpacity = 1;
@@ -12918,7 +12932,7 @@ var World = class extends EventEmitter {
       if (axis === "z") this.renderer.markSortDirty();
     });
     obj.on("cssmodified", (key) => {
-      if (key === "zIndex") this.renderer.markSortDirty();
+      if (key === "zIndex" || key === "display") this.renderer.markSortDirty();
     });
   }
   _tryAddPhysics(obj, w, h) {
