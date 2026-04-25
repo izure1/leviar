@@ -10919,10 +10919,12 @@ function parseGradientStops(gradient) {
   const stopsStr = degMatch ? gradient.slice(degMatch[0].length) : gradient;
   if (degMatch) direction = parseFloat(degMatch[1]);
   const stops = [];
-  const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+([\d.]+)%/g;
+  const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+(-?[\d.]+)%/g;
   let m;
   while ((m = re.exec(stopsStr)) != null) {
-    stops.push({ offset: parseFloat(m[2]) / 100, color: m[1] });
+    const rawOffset = parseFloat(m[2]) / 100;
+    const clampedOffset = Math.max(0, Math.min(1, rawOffset));
+    stops.push({ offset: clampedOffset, color: m[1] });
   }
   return { direction, stops };
 }
