@@ -128,10 +128,12 @@ function parseGradientStops(gradient: string): GradientParsed {
   if (degMatch) direction = parseFloat(degMatch[1])
 
   const stops: { offset: number; color: string }[] = []
-  const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+([\d.]+)%/g
+  const re = /((?:rgba?|hsla?)\([^)]+\)|#[0-9a-fA-F]+|[a-zA-Z]+)\s+(-?[\d.]+)%/g
   let m: RegExpExecArray | null
   while ((m = re.exec(stopsStr)) != null) {
-    stops.push({ offset: parseFloat(m[2]) / 100, color: m[1] })
+    const rawOffset = parseFloat(m[2]) / 100
+    const clampedOffset = Math.max(0, Math.min(1, rawOffset))
+    stops.push({ offset: clampedOffset, color: m[1] })
   }
   return { direction, stops }
 }
