@@ -26,21 +26,27 @@ const sun = world.createEllipse({
     style: { color: '#000', fontSize: 20, fontWeight: 'bold' },
     transform: { position: { x: 0, y: 0, z: 0 } }
   })
-)
+).on('click', () => {
+  sun.fadeOut(1000)
+})
 
 // 2. 지구 (태양의 자식)
 const earth = world.createEllipse({
-  style: { color: '#0077ff', width: 40, height: 40, boxShadowColor: '#0077ff', boxShadowSpread: 10, boxShadowBlur: 10 },
+  style: { color: '#0077ff', width: 40, height: 40, boxShadowColor: '#0077ff', boxShadowSpread: 10, boxShadowBlur: 10, opacity: 0.75 },
   // 태양으로부터 x축으로 200만큼 떨어져 있습니다.
   transform: { position: { x: 200, y: 0, z: 0 } }
+}).on('click', () => {
+  earth.fadeOut(1000)
 })
 sun.addChild(earth) // 지구를 태양에 종속
 
 // 3. 달 (지구의 자식 - 자식에 자식을 넣기!)
 const moon = world.createEllipse({ // 달을 rectangle로 시연
-  style: { color: '#dddddd', width: 15, height: 15, boxShadowColor: '#ffffff', boxShadowSpread: 5, boxShadowBlur: 5 },
+  style: { color: '#dddddd', width: 15, height: 15, boxShadowColor: '#ffffff', boxShadowSpread: 5, boxShadowBlur: 5, opacity: 0.75 },
   // 지구로부터 x축으로 60만큼 떨어져 있습니다.
   transform: { position: { x: 60, y: 0, z: 0 } }
+}).on('click', () => {
+  moon.fadeOut(1000)
 })
 earth.addChild(moon) // 달을 지구에 종속
 

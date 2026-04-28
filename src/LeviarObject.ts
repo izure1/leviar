@@ -207,6 +207,11 @@ export abstract class LeviarObject<
   /** 부모의 반영이 끝난 최종 월드 매트릭스 */
   __worldMatrix: Mat4 = new Mat4()
 
+  /** 계층 구조에 의해 누적 계산된 최종 투명도 */
+  __worldOpacity: number = 1
+  /** 계층 구조에 의해 누적 계산된 최종 display 속성 */
+  __worldDisplay: string = 'block'
+
   constructor(type: string, options?: LeviarObjectOptions<T, D>, delegatedKeys?: string[]) {
     super()
 
@@ -388,8 +393,12 @@ export abstract class LeviarObject<
     // 2. 부모가 존재할 경우 월드 매트릭스 상속 계산 (world = parent.world * local)
     if (this.parent) {
       this.__worldMatrix.multiply(this.parent.__worldMatrix, this.localMatrix)
+      this.__worldOpacity = this.parent.__worldOpacity * this.style.opacity * this.__fadeOpacity
+      this.__worldDisplay = (this.parent.__worldDisplay === 'none' || this.style.display === 'none') ? 'none' : this.style.display
     } else {
       this.__worldMatrix.copy(this.localMatrix)
+      this.__worldOpacity = this.style.opacity * this.__fadeOpacity
+      this.__worldDisplay = this.style.display
     }
 
     // 3. 하위 자식 목록에 대해 재귀 갱신 (preserve-3d 구조)

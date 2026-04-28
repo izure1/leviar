@@ -8740,6 +8740,10 @@ var LeviarObject = class extends EventEmitter {
   localMatrix = new Mat4();
   /** 부모의 반영이 끝난 최종 월드 매트릭스 */
   __worldMatrix = new Mat4();
+  /** 계층 구조에 의해 누적 계산된 최종 투명도 */
+  __worldOpacity = 1;
+  /** 계층 구조에 의해 누적 계산된 최종 display 속성 */
+  __worldDisplay = "block";
   constructor(type, options, delegatedKeys) {
     super();
     const rawAttribute = {
@@ -8899,8 +8903,12 @@ var LeviarObject = class extends EventEmitter {
     this.localMatrix.scale(_tmpVec3);
     if (this.parent) {
       this.__worldMatrix.multiply(this.parent.__worldMatrix, this.localMatrix);
+      this.__worldOpacity = this.parent.__worldOpacity * this.style.opacity * this.__fadeOpacity;
+      this.__worldDisplay = this.parent.__worldDisplay === "none" || this.style.display === "none" ? "none" : this.style.display;
     } else {
       this.__worldMatrix.copy(this.localMatrix);
+      this.__worldOpacity = this.style.opacity * this.__fadeOpacity;
+      this.__worldDisplay = this.style.display;
     }
     for (const child of this.children) {
       child.__updateMatrixWorld(force);
@@ -11321,7 +11329,7 @@ var Renderer2 = class {
       const worldObjects = [];
       const uiObjects = [];
       for (const o of objects) {
-        if (o.attribute.type === "camera" || o.style.display === "none") {
+        if (o.attribute.type === "camera" || o.__worldDisplay === "none") {
           continue;
         }
         let isUI = false;
@@ -11692,7 +11700,7 @@ var Renderer2 = class {
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor);
     this.shadowProgram.uniforms["uColor"].value = [r, g, b, a];
-    this.shadowProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+    this.shadowProgram.uniforms["uOpacity"].value = obj.__worldOpacity;
     this.shadowProgram.uniforms["uSize"].value = [quadW, quadH];
     this.shadowProgram.uniforms["uBoxSize"].value = [w, h];
     this.shadowProgram.uniforms["uOffset"].value = [offsetX, offsetY];
@@ -11728,7 +11736,7 @@ var Renderer2 = class {
     const prog = this.alphaShadowProgram;
     prog.uniforms["uTexture"].value = texture;
     prog.uniforms["uColor"].value = [r, g, b, a];
-    prog.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+    prog.uniforms["uOpacity"].value = obj.__worldOpacity;
     prog.uniforms["uQuadSize"].value = [quadW, quadH];
     prog.uniforms["uImageSize"].value = [drawW, drawH];
     prog.uniforms["uOffset"].value = [offsetX, offsetY];
@@ -11799,7 +11807,7 @@ var Renderer2 = class {
   _drawRectangle(obj, x, y, w, h) {
     const { style } = obj;
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
-    const targetOpacity = style.opacity * obj.__fadeOpacity;
+    const targetOpacity = obj.__worldOpacity;
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0);
     this._drawShadow(obj, x, y, w, h, void 0, void 0, false, baseRadius);
     this._drawRectBorders(obj, x, y, w, h, targetOpacity);
@@ -11821,7 +11829,7 @@ var Renderer2 = class {
     const drawEllipse = (ew, eh, color, isBorder = false, innerEW = 0, innerEH = 0) => {
       const [r, g, b, a] = parseCSSColor(color);
       this.ellipseProgram.uniforms["uColor"].value = [r, g, b, a];
-      this.ellipseProgram.uniforms["uOpacity"].value = style.opacity * obj.__fadeOpacity;
+      this.ellipseProgram.uniforms["uOpacity"].value = obj.__worldOpacity;
       if (this.ellipseProgram.uniforms["uSize"]) this.ellipseProgram.uniforms["uSize"].value = [ew, eh];
       if (this.ellipseProgram.uniforms["uIsBorder"]) this.ellipseProgram.uniforms["uIsBorder"].value = isBorder ? 1 : 0;
       if (this.ellipseProgram.uniforms["uInnerSize"]) this.ellipseProgram.uniforms["uInnerSize"].value = [innerEW, innerEH];
@@ -11849,7 +11857,7 @@ var Renderer2 = class {
     }
     if (style.gradient && w > 0 && h > 0) {
       const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? "linear", true);
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj.__fadeOpacity);
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, obj.__worldOpacity);
     }
   }
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -11929,7 +11937,7 @@ var Renderer2 = class {
     };
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE;
     this._drawShadow(obj, x, y, cw * displayScale, ch * displayScale);
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj.__fadeOpacity, false);
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, obj.__worldOpacity, false);
   }
   _renderTextToCanvas(entry, rawText, style, baseFontSize, maxW, maxH, transitionProgress = 1) {
     const { canvas: canvas2, ctx } = entry;
@@ -12147,16 +12155,16 @@ var Renderer2 = class {
       const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
       const texture = this._getOrCreateAssetTexture(assetSrc, asset);
       this._drawAlphaShadow(obj, x, y, drawW, drawH, texture);
-      this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.style.opacity * obj.__fadeOpacity);
+      this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.__worldOpacity);
       this._drawTextureMesh(texture, x, y, drawW, drawH, drawOpacity, false, [0, 0], [1, 1], 0, baseRadius);
     };
     if (oldSrc) {
-      drawAssetInner(oldSrc, obj.style.opacity * obj.__fadeOpacity * (1 - progress));
+      drawAssetInner(oldSrc, obj.__worldOpacity * (1 - progress));
       if (src) {
-        drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity * progress);
+        drawAssetInner(src, obj.__worldOpacity * progress);
       }
     } else if (src) {
-      drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity);
+      drawAssetInner(src, obj.__worldOpacity);
     } else {
       this._drawPlaceholder(x, y, w || 60, h || 60);
     }
@@ -12214,7 +12222,7 @@ var Renderer2 = class {
     };
     const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0);
     this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius);
-    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity);
+    this._drawRectBorders(obj, x, y, drawW, drawH, obj.__worldOpacity);
     let tex = this.videoTextureCache.get(src);
     if (!tex) {
       tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
@@ -12222,7 +12230,7 @@ var Renderer2 = class {
     }
     tex.image = asset;
     tex.needsUpdate = true;
-    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius);
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius);
   }
   // ─── Sprite ─────────────────────────────────────────────────────────────
   _drawSprite(sprite, x, y, w, h, perspectiveScale, assets, timestamp) {
@@ -12254,8 +12262,8 @@ var Renderer2 = class {
       };
       const baseRadius2 = parseBorderRadius(sprite.style.borderRadius, drawW2, drawH2, 0);
       this._drawAlphaShadow(sprite, x, y, drawW2, drawH2, texture);
-      this._drawAlphaImageBorders(sprite, x, y, drawW2, drawH2, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity);
-      this._drawTextureMesh(texture, x, y, drawW2, drawH2, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
+      this._drawAlphaImageBorders(sprite, x, y, drawW2, drawH2, texture, sprite.__worldOpacity);
+      this._drawTextureMesh(texture, x, y, drawW2, drawH2, sprite.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius2);
       return;
     }
     const { frameWidth, frameHeight } = clip;
@@ -12284,14 +12292,14 @@ var Renderer2 = class {
     };
     const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0);
     this._drawAlphaShadow(sprite, x, y, drawW, drawH, texture, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
-    this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
+    this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, sprite.__worldOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY]);
     this._drawTextureMesh(
       texture,
       x,
       y,
       drawW,
       drawH,
-      (sprite.style.opacity ?? 1) * sprite.__fadeOpacity,
+      sprite.__worldOpacity,
       false,
       [uvOffsetX, uvOffsetY],
       [uvScaleX, uvScaleY],
@@ -12363,7 +12371,7 @@ var Renderer2 = class {
         iy,
         iw,
         ih,
-        (obj.style.opacity ?? 1) * obj.__fadeOpacity * opacity,
+        obj.__worldOpacity * opacity,
         false,
         [0, 0],
         [1, 1],

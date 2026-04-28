@@ -614,7 +614,7 @@ export class Renderer {
       for (const o of objects) {
         if (
           o.attribute.type === 'camera' ||
-          o.style.display === 'none'
+          o.__worldDisplay === 'none'
         ) {
           continue
         }
@@ -1054,7 +1054,7 @@ export class Renderer {
 
     const [r, g, b, a] = parseCSSColor(style.boxShadowColor)
     this.shadowProgram.uniforms['uColor'].value = [r, g, b, a]
-    this.shadowProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
+    this.shadowProgram.uniforms['uOpacity'].value = obj.__worldOpacity
     this.shadowProgram.uniforms['uSize'].value = [quadW, quadH]
     this.shadowProgram.uniforms['uBoxSize'].value = [w, h]
     this.shadowProgram.uniforms['uOffset'].value = [offsetX, offsetY]
@@ -1105,7 +1105,7 @@ export class Renderer {
     const prog = this.alphaShadowProgram
     prog.uniforms['uTexture'].value = texture
     prog.uniforms['uColor'].value = [r, g, b, a]
-    prog.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
+    prog.uniforms['uOpacity'].value = obj.__worldOpacity
     prog.uniforms['uQuadSize'].value = [quadW, quadH]
     prog.uniforms['uImageSize'].value = [drawW, drawH]
     prog.uniforms['uOffset'].value = [offsetX, offsetY]
@@ -1198,7 +1198,7 @@ export class Renderer {
     const { style } = obj
     if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
 
-    const targetOpacity = style.opacity * obj.__fadeOpacity
+    const targetOpacity = obj.__worldOpacity
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0)
 
     this._drawShadow(obj, x, y, w, h, undefined, undefined, false, baseRadius)
@@ -1230,7 +1230,7 @@ export class Renderer {
     const drawEllipse = (ew: number, eh: number, color: string, isBorder: boolean = false, innerEW: number = 0, innerEH: number = 0) => {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
-      this.ellipseProgram.uniforms['uOpacity'].value = style.opacity * obj.__fadeOpacity
+      this.ellipseProgram.uniforms['uOpacity'].value = obj.__worldOpacity
       if (this.ellipseProgram.uniforms['uSize']) this.ellipseProgram.uniforms['uSize'].value = [ew, eh];
       if (this.ellipseProgram.uniforms['uIsBorder']) this.ellipseProgram.uniforms['uIsBorder'].value = isBorder ? 1 : 0;
       if (this.ellipseProgram.uniforms['uInnerSize']) this.ellipseProgram.uniforms['uInnerSize'].value = [innerEW, innerEH];
@@ -1266,7 +1266,7 @@ export class Renderer {
     // 그라디언트 레이어 — ellipse 형태에 맞게 원형 클리핑 포함
     if (style.gradient && w > 0 && h > 0) {
       const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', true)
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, style.opacity * obj.__fadeOpacity)
+      if (tex) this._drawTextureMesh(tex, x, y, w, h, obj.__worldOpacity)
     }
   }
 
@@ -1377,7 +1377,7 @@ export class Renderer {
     // canvas는 TEXT_RENDER_SCALE 기준, 표시는 perspectiveScale 기준으로 보정
     const displayScale = perspectiveScale / TEXT_RENDER_SCALE
     this._drawShadow(obj, x, y, cw * displayScale, ch * displayScale)
-    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, style.opacity * obj.__fadeOpacity, false)
+    this._drawTextureMesh(entry.texture, x, y, cw * displayScale, ch * displayScale, obj.__worldOpacity, false)
   }
 
   private _renderTextToCanvas(
@@ -1657,18 +1657,18 @@ export class Renderer {
 
       // 알파채널 경계 기반 shadow → outline → 이미지 본체 순서로 렌더링
       this._drawAlphaShadow(obj, x, y, drawW, drawH, texture)
-      this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.style.opacity * obj.__fadeOpacity)
+      this._drawAlphaImageBorders(obj, x, y, drawW, drawH, texture, obj.__worldOpacity)
       this._drawTextureMesh(texture, x, y, drawW, drawH, drawOpacity, false, [0, 0], [1, 1], 0, baseRadius)
     }
 
     // 트랜지션 중이면 이전 이미지와 새 이미지를 모두 그린다
     if (oldSrc) {
-      drawAssetInner(oldSrc, obj.style.opacity * obj.__fadeOpacity * (1 - progress))
+      drawAssetInner(oldSrc, obj.__worldOpacity * (1 - progress))
       if (src) {
-        drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity * progress)
+        drawAssetInner(src, obj.__worldOpacity * progress)
       }
     } else if (src) {
-      drawAssetInner(src, obj.style.opacity * obj.__fadeOpacity)
+      drawAssetInner(src, obj.__worldOpacity)
     } else {
       this._drawPlaceholder(x, y, w || 60, h || 60)
     }
@@ -1739,7 +1739,7 @@ export class Renderer {
 
     const baseRadius = parseBorderRadius(obj.style.borderRadius, drawW, drawH, 0)
     this._drawShadow(obj, x, y, drawW, drawH, drawW, drawH, false, baseRadius)
-    this._drawRectBorders(obj, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity)
+    this._drawRectBorders(obj, x, y, drawW, drawH, obj.__worldOpacity)
 
     // 비디오 텍스처는 매 프레임 업데이트
     let tex = this.videoTextureCache.get(src!)
@@ -1750,7 +1750,7 @@ export class Renderer {
     tex.image = asset
     tex.needsUpdate = true
 
-    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.style.opacity * obj.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
+    this._drawTextureMesh(tex, x, y, drawW, drawH, obj.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius)
   }
 
   // ─── Sprite ─────────────────────────────────────────────────────────────
@@ -1789,8 +1789,8 @@ export class Renderer {
       }
       const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0)
       this._drawAlphaShadow(sprite, x, y, drawW, drawH, texture)
-      this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity)
-      this._drawTextureMesh(texture, x, y, drawW, drawH, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, false, [0, 0], [1, 1], 0, baseRadius)
+      this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, sprite.__worldOpacity)
+      this._drawTextureMesh(texture, x, y, drawW, drawH, sprite.__worldOpacity, false, [0, 0], [1, 1], 0, baseRadius)
       return
     }
 
@@ -1823,12 +1823,12 @@ export class Renderer {
     }
     const baseRadius = parseBorderRadius(sprite.style.borderRadius, drawW, drawH, 0)
     this._drawAlphaShadow(sprite, x, y, drawW, drawH, texture, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY])
-    this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, (sprite.style.opacity ?? 1) * sprite.__fadeOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY])
+    this._drawAlphaImageBorders(sprite, x, y, drawW, drawH, texture, sprite.__worldOpacity, [uvOffsetX, uvOffsetY], [uvScaleX, uvScaleY])
 
     this._drawTextureMesh(
       texture,
       x, y, drawW, drawH,
-      (sprite.style.opacity ?? 1) * sprite.__fadeOpacity,
+      sprite.__worldOpacity,
       false,
       [uvOffsetX, uvOffsetY],
       [uvScaleX, uvScaleY],
@@ -1920,7 +1920,7 @@ export class Renderer {
       this._drawTextureMesh(
         texture,
         ix, iy, iw, ih,
-        (obj.style.opacity ?? 1) * obj.__fadeOpacity * opacity,
+        obj.__worldOpacity * opacity,
         false, [0, 0], [1, 1],
         inst.z || 0,
         null,
