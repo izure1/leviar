@@ -27,6 +27,64 @@ const text = world.createText({
 })
 box.addChild(text)
 
+// ─── Text: minWidth / maxWidth / minHeight / maxHeight ────────────────────────
+
+function label(t: string, x: number, y: number) {
+  world.createText({
+    attribute: { text: t },
+    style: { color: '#666', fontSize: 13, fontFamily: 'sans-serif' },
+    transform: { position: { x, y, z: 0 } },
+  })
+}
+
+// ① maxWidth → word-wrap 경계 (width 없이)
+label('① maxWidth → word-wrap', -350, -250)
+world.createRectangle({
+  style: { color: '#13132a', width: 220, height: 80, borderColor: '#7ec8e3', borderWidth: 1 },
+  transform: { position: { x: -350, y: -190, z: 0 } },
+})
+world.createText({
+  attribute: { text: 'maxWidth wraps this long sentence automatically.' },
+  style: { color: '#7ec8e3', fontSize: 15, fontFamily: 'sans-serif', maxWidth: 220, zIndex: 1 },
+  transform: { position: { x: -350, y: -190, z: 0 } },
+})
+
+// ② minWidth → 짧은 텍스트도 최소 폭 보장, textAlign: center 동작 확인
+label('② minWidth + center align', -350, -80)
+world.createRectangle({
+  style: { color: '#13132a', width: 200, height: 40, borderColor: '#f4a261', borderWidth: 1 },
+  transform: { position: { x: -350, y: -35, z: 0 } },
+})
+world.createText({
+  attribute: { text: 'Hi' },
+  style: { color: '#f4a261', fontSize: 18, fontFamily: 'sans-serif', minWidth: 200, textAlign: 'center', zIndex: 1 },
+  transform: { position: { x: -350, y: -35, z: 0 } },
+})
+
+// ③ maxHeight → 초과 라인 클리핑
+label('③ maxHeight → clip', -350, 60)
+world.createRectangle({
+  style: { color: '#13132a', width: 220, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
+  transform: { position: { x: -350, y: 105, z: 0 } },
+})
+world.createText({
+  attribute: { text: 'Line 1\nLine 2\nLine 3 clipped\nLine 4 clipped' },
+  style: { color: '#2ec4b6', fontSize: 17, fontFamily: 'sans-serif', width: 220, maxHeight: 50, zIndex: 1 },
+  transform: { position: { x: -350, y: 105, z: 0 } },
+})
+
+// ④ minHeight → 텍스트가 짧아도 캔버스 높이 최소 보장
+label('④ minHeight → expand canvas', -350, 200)
+world.createRectangle({
+  style: { color: '#13132a', width: 220, height: 80, borderColor: '#e71d36', borderWidth: 1 },
+  transform: { position: { x: -350, y: 250, z: 0 } },
+})
+world.createText({
+  attribute: { text: 'Short' },
+  style: { color: '#e71d36', fontSize: 18, fontFamily: 'sans-serif', minHeight: 80, zIndex: 1 },
+  transform: { position: { x: -350, y: 250, z: 0 } },
+})
+
 world.start()
 
 // UI 로직

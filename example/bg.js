@@ -11882,9 +11882,9 @@ var Renderer2 = class {
     const id = obj.attribute.id;
     const rawText = attribute.text ?? "";
     const baseFontSize = style.fontSize ?? 16;
-    const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : null;
-    const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null;
-    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
+    const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : style.maxWidth != null ? style.maxWidth * TEXT_RENDER_SCALE : null;
+    const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : style.maxHeight != null ? style.maxHeight * TEXT_RENDER_SCALE : null;
+    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ""}|${style.fontWeight ?? ""}|${style.fontStyle ?? ""}|${style.color ?? ""}|${style.borderColor ?? ""}|${style.borderWidth ?? 0}|${style.textAlign ?? ""}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ""}|${maxH ?? ""}|${style.minWidth ?? ""}|${style.minHeight ?? ""}|${style.textShadowColor ?? ""}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`;
     let entry = this.textCache.get(id);
     obj.__textureThrottleCount++;
     if (obj.__dirtyTexture) obj.__textureIdleCount++;
@@ -12045,8 +12045,10 @@ var Renderer2 = class {
       }
       return w;
     });
-    const containerW = maxW ?? Math.max(...measuredWidths, 0);
+    const naturalW = maxW ?? Math.max(...measuredWidths, 0);
+    const containerW = style.minWidth != null ? Math.max(naturalW, style.minWidth * TEXT_RENDER_SCALE) : naturalW;
     const totalH = renderLines.reduce((s, r) => s + r.lineH, 0);
+    const clampedH = style.minHeight != null ? Math.max(maxH ?? totalH, style.minHeight * TEXT_RENDER_SCALE) : maxH ?? totalH;
     let maxBorderWidth = 0;
     let maxShadowBlur = shadowBlur;
     let maxShadowOffsetX = Math.abs(shadowOffsetX);
@@ -12061,8 +12063,8 @@ var Renderer2 = class {
         maxShadowOffsetY = Math.max(maxShadowOffsetY, Math.abs((span.style.textShadowOffsetY ?? style.textShadowOffsetY ?? 0) * TEXT_RENDER_SCALE));
       }
     }
-    const canvasW = Math.ceil(maxW ?? containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
-    const canvasH = Math.ceil(maxH ?? totalH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
+    const canvasW = Math.ceil(containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2;
+    const canvasH = Math.ceil(clampedH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2;
     canvas2.width = canvasW;
     canvas2.height = canvasH;
     ctx.clearRect(0, 0, canvasW, canvasH);

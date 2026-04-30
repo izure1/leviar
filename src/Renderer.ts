@@ -1290,11 +1290,21 @@ export class Renderer {
 
     // 2x supersampling: z 애니메이션 중 canvas 재생성 없이 화질 확보
     const baseFontSize = (style.fontSize ?? 16)
-    const maxW = style.width != null ? style.width * TEXT_RENDER_SCALE : null
-    const maxH = style.height != null ? style.height * TEXT_RENDER_SCALE : null
+    // width → 고정 폭(wrap + canvas), maxWidth → wrap 경계(canvas는 자연 폭 이하)
+    const maxW = style.width != null
+      ? style.width * TEXT_RENDER_SCALE
+      : style.maxWidth != null
+        ? style.maxWidth * TEXT_RENDER_SCALE
+        : null
+    // height → 고정 높이(클리핑), maxHeight → 상한 클리핑
+    const maxH = style.height != null
+      ? style.height * TEXT_RENDER_SCALE
+      : style.maxHeight != null
+        ? style.maxHeight * TEXT_RENDER_SCALE
+        : null
 
     // content 기반 캐시 키 — 렌더링 결과가 동일한 조건들을 조합
-    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ''}|${style.fontWeight ?? ''}|${style.fontStyle ?? ''}|${style.color ?? ''}|${style.borderColor ?? ''}|${style.borderWidth ?? 0}|${style.textAlign ?? ''}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ''}|${maxH ?? ''}|${style.textShadowColor ?? ''}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`
+    const contentKey = `${rawText}|${baseFontSize}|${style.fontFamily ?? ''}|${style.fontWeight ?? ''}|${style.fontStyle ?? ''}|${style.color ?? ''}|${style.borderColor ?? ''}|${style.borderWidth ?? 0}|${style.textAlign ?? ''}|${style.lineHeight ?? 1}|${style.letterSpacing ?? 0}|${maxW ?? ''}|${maxH ?? ''}|${style.minWidth ?? ''}|${style.minHeight ?? ''}|${style.textShadowColor ?? ''}|${style.textShadowBlur ?? 0}|${style.textShadowOffsetX ?? 0}|${style.textShadowOffsetY ?? 0}`
 
     let entry = this.textCache.get(id)
 
@@ -1507,8 +1517,18 @@ export class Renderer {
       return w
     })
 
-    const containerW = maxW ?? Math.max(...measuredWidths, 0)
+    // 자연 폭: maxW(=width or maxWidth)가 있으면 그걸 상한으로, 없으면 실측 최대 폭
+    const naturalW = maxW ?? Math.max(...measuredWidths, 0)
+    // minWidth 적용: 텍스트가 짧아도 캔버스 폭 최소 보장 (wrap에는 영향 없음)
+    const containerW = style.minWidth != null
+      ? Math.max(naturalW, style.minWidth * TEXT_RENDER_SCALE)
+      : naturalW
+
     const totalH = renderLines.reduce((s, r) => s + r.lineH, 0)
+    // minHeight 적용: 줄이 적어도 캔버스 높이 최소 보장
+    const clampedH = style.minHeight != null
+      ? Math.max(maxH ?? totalH, style.minHeight * TEXT_RENDER_SCALE)
+      : (maxH ?? totalH)
 
     let maxBorderWidth = 0
     let maxShadowBlur = shadowBlur
@@ -1526,8 +1546,8 @@ export class Renderer {
       }
     }
 
-    const canvasW = Math.ceil(maxW ?? containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2
-    const canvasH = Math.ceil(maxH ?? totalH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2
+    const canvasW = Math.ceil(containerW) + maxShadowBlur * 2 + maxShadowOffsetX + maxBorderWidth * 2
+    const canvasH = Math.ceil(clampedH) + maxShadowBlur * 2 + maxShadowOffsetY + maxBorderWidth * 2
 
     canvas.width = canvasW
     canvas.height = canvasH
