@@ -4,6 +4,11 @@ const world = new World()
 const cam = world.createCamera({ transform: { position: { z: -100 } } })
 world.camera = cam
 
+// 에셋 미리 로드
+await world.loader.load({
+  'test': '../asset/image/berry.png'
+})
+
 const box = world.createRectangle({
   style: {
     width: 200,
@@ -83,6 +88,41 @@ world.createText({
   attribute: { text: 'Short' },
   style: { color: '#e71d36', fontSize: 18, fontFamily: 'sans-serif', minHeight: 80, zIndex: 1 },
   transform: { position: { x: -350, y: 250, z: 0 } },
+})
+
+// ─── Image: min/max constraints (Aspect Ratio Preservation) ─────────────────
+
+label('⑤ Image maxWidth → keep aspect ratio', 350, -250)
+world.createRectangle({
+  style: { color: 'transparent', width: 100, height: 100, borderColor: '#7ec8e3', borderWidth: 1 },
+  transform: { position: { x: 350, y: -190, z: 0 } },
+})
+world.createImage({
+  attribute: { src: 'test' },
+  style: { maxWidth: 100 },
+  transform: { position: { x: 350, y: -190, z: 0 } }
+})
+
+label('⑥ Image maxHeight → keep aspect ratio', 350, -80)
+world.createRectangle({
+  style: { color: 'transparent', width: 200, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
+  transform: { position: { x: 350, y: -35, z: 0 } },
+})
+world.createImage({
+  attribute: { src: 'test' },
+  style: { maxHeight: 50 },
+  transform: { position: { x: 350, y: -35, z: 0 } }
+})
+
+label('⑦ Image minWidth + minHeight (Aspect ratio scaling)', 350, 60)
+world.createRectangle({
+  style: { color: 'transparent', width: 300, height: 150, borderColor: '#f4a261', borderWidth: 1 },
+  transform: { position: { x: 350, y: 165, z: 0 } },
+})
+world.createImage({
+  attribute: { src: 'test' },
+  style: { minWidth: 300, minHeight: 150 }, // Both constraints applied, the more restrictive one drives scale up
+  transform: { position: { x: 350, y: 165, z: 0 } }
 })
 
 world.start()

@@ -1667,16 +1667,37 @@ export class Renderer {
       }
 
       let drawW: number, drawH: number;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (asset.naturalHeight / asset.naturalWidth);
-      } else if (!w && h) {
-        drawW = h * (asset.naturalWidth / asset.naturalHeight);
-        drawH = h;
+      const reqW = obj.style.width
+      const reqH = obj.style.height
+      const natW = asset.naturalWidth
+      const natH = asset.naturalHeight
+
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (natH / natW);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (natW / natH);
       } else {
-        drawW = w || asset.naturalWidth * perspectiveScale;
-        drawH = h || asset.naturalHeight * perspectiveScale;
+        drawW = reqW || natW;
+        drawH = reqH || natH;
       }
+
+      // min/max clamping (비율 유지)
+      const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth)
+      const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight)
+
+      if (clampedW !== drawW || clampedH !== drawH) {
+        // 둘 다 클램핑 대상이면 더 많이 줄여야 하는 축을 기준으로 비율 축소
+        const ratioW = clampedW / drawW
+        const ratioH = clampedH / drawH
+        const minRatio = Math.min(ratioW, ratioH)
+        drawW *= minRatio
+        drawH *= minRatio
+      }
+
+      drawW *= perspectiveScale
+      drawH *= perspectiveScale
 
       obj.__renderedSize = {
         w: drawW / perspectiveScale,
@@ -1750,18 +1771,36 @@ export class Renderer {
     }
 
     // style.width/height 미지정 시 videoSize에 perspectiveScale 적용
-    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
     let drawW: number, drawH: number;
-    if (w && !h) {
-      drawW = w;
-      drawH = w * (asset.videoHeight / asset.videoWidth);
-    } else if (!w && h) {
-      drawW = h * (asset.videoWidth / asset.videoHeight);
-      drawH = h;
+    const reqW = obj.style.width
+    const reqH = obj.style.height
+    const natW = asset.videoWidth
+    const natH = asset.videoHeight
+
+    if (reqW && !reqH) {
+      drawW = reqW;
+      drawH = reqW * (natH / natW);
+    } else if (!reqW && reqH) {
+      drawH = reqH;
+      drawW = reqH * (natW / natH);
     } else {
-      drawW = w || asset.videoWidth * perspectiveScale;
-      drawH = h || asset.videoHeight * perspectiveScale;
+      drawW = reqW || natW;
+      drawH = reqH || natH;
     }
+
+    const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth)
+    const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight)
+
+    if (clampedW !== drawW || clampedH !== drawH) {
+      const ratioW = clampedW / drawW
+      const ratioH = clampedH / drawH
+      const minRatio = Math.min(ratioW, ratioH)
+      drawW *= minRatio
+      drawH *= minRatio
+    }
+
+    drawW *= perspectiveScale
+    drawH *= perspectiveScale
 
     obj.__renderedSize = {
       w: drawW / perspectiveScale,
@@ -1802,18 +1841,37 @@ export class Renderer {
     const texture = this._getOrCreateAssetTexture(src, asset)
 
     if (!clip) {
-      // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
       let drawW: number, drawH: number;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (asset.naturalHeight / asset.naturalWidth);
-      } else if (!w && h) {
-        drawW = h * (asset.naturalWidth / asset.naturalHeight);
-        drawH = h;
+      const reqW = sprite.style.width
+      const reqH = sprite.style.height
+      const natW = asset.naturalWidth
+      const natH = asset.naturalHeight
+
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (natH / natW);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (natW / natH);
       } else {
-        drawW = w || asset.naturalWidth * perspectiveScale;
-        drawH = h || asset.naturalHeight * perspectiveScale;
+        drawW = reqW || natW;
+        drawH = reqH || natH;
       }
+
+      const clampedW = clampSize(drawW, sprite.style.minWidth, sprite.style.maxWidth)
+      const clampedH = clampSize(drawH, sprite.style.minHeight, sprite.style.maxHeight)
+
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW
+        const ratioH = clampedH / drawH
+        const minRatio = Math.min(ratioW, ratioH)
+        drawW *= minRatio
+        drawH *= minRatio
+      }
+
+      drawW *= perspectiveScale
+      drawH *= perspectiveScale
+
       sprite.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale,
@@ -1835,18 +1893,34 @@ export class Renderer {
     const uvOffsetX = col * uvScaleX
     const uvOffsetY = 1.0 - (row + 1) * uvScaleY
 
-    // scale은 _worldMatrix에 이미 포함되어 있으므로 여기서 곱하지 않음
     let drawW: number, drawH: number;
-    if (w && !h) {
-      drawW = w;
-      drawH = w * (frameHeight / frameWidth);
-    } else if (!w && h) {
-      drawW = h * (frameWidth / frameHeight);
-      drawH = h;
+    const reqW = sprite.style.width
+    const reqH = sprite.style.height
+
+    if (reqW && !reqH) {
+      drawW = reqW;
+      drawH = reqW * (frameHeight / frameWidth);
+    } else if (!reqW && reqH) {
+      drawH = reqH;
+      drawW = reqH * (frameWidth / frameHeight);
     } else {
-      drawW = w || frameWidth * perspectiveScale;
-      drawH = h || frameHeight * perspectiveScale;
+      drawW = reqW || frameWidth;
+      drawH = reqH || frameHeight;
     }
+
+    const clampedW = clampSize(drawW, sprite.style.minWidth, sprite.style.maxWidth)
+    const clampedH = clampSize(drawH, sprite.style.minHeight, sprite.style.maxHeight)
+
+    if (clampedW !== drawW || clampedH !== drawH) {
+      const ratioW = clampedW / drawW
+      const ratioH = clampedH / drawH
+      const minRatio = Math.min(ratioW, ratioH)
+      drawW *= minRatio
+      drawH *= minRatio
+    }
+
+    drawW *= perspectiveScale
+    drawH *= perspectiveScale
 
     sprite.__renderedSize = {
       w: drawW / perspectiveScale,

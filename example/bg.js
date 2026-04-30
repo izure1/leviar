@@ -12156,16 +12156,31 @@ var Renderer2 = class {
         return;
       }
       let drawW, drawH;
-      if (w && !h) {
-        drawW = w;
-        drawH = w * (asset.naturalHeight / asset.naturalWidth);
-      } else if (!w && h) {
-        drawW = h * (asset.naturalWidth / asset.naturalHeight);
-        drawH = h;
+      const reqW = obj.style.width;
+      const reqH = obj.style.height;
+      const natW = asset.naturalWidth;
+      const natH = asset.naturalHeight;
+      if (reqW && !reqH) {
+        drawW = reqW;
+        drawH = reqW * (natH / natW);
+      } else if (!reqW && reqH) {
+        drawH = reqH;
+        drawW = reqH * (natW / natH);
       } else {
-        drawW = w || asset.naturalWidth * perspectiveScale;
-        drawH = h || asset.naturalHeight * perspectiveScale;
+        drawW = reqW || natW;
+        drawH = reqH || natH;
       }
+      const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+      const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+      if (clampedW !== drawW || clampedH !== drawH) {
+        const ratioW = clampedW / drawW;
+        const ratioH = clampedH / drawH;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW *= minRatio;
+        drawH *= minRatio;
+      }
+      drawW *= perspectiveScale;
+      drawH *= perspectiveScale;
       obj.__renderedSize = {
         w: drawW / perspectiveScale,
         h: drawH / perspectiveScale
@@ -12224,16 +12239,31 @@ var Renderer2 = class {
       }
     }
     let drawW, drawH;
-    if (w && !h) {
-      drawW = w;
-      drawH = w * (asset.videoHeight / asset.videoWidth);
-    } else if (!w && h) {
-      drawW = h * (asset.videoWidth / asset.videoHeight);
-      drawH = h;
+    const reqW = obj.style.width;
+    const reqH = obj.style.height;
+    const natW = asset.videoWidth;
+    const natH = asset.videoHeight;
+    if (reqW && !reqH) {
+      drawW = reqW;
+      drawH = reqW * (natH / natW);
+    } else if (!reqW && reqH) {
+      drawH = reqH;
+      drawW = reqH * (natW / natH);
     } else {
-      drawW = w || asset.videoWidth * perspectiveScale;
-      drawH = h || asset.videoHeight * perspectiveScale;
+      drawW = reqW || natW;
+      drawH = reqH || natH;
     }
+    const clampedW = clampSize(drawW, obj.style.minWidth, obj.style.maxWidth);
+    const clampedH = clampSize(drawH, obj.style.minHeight, obj.style.maxHeight);
+    if (clampedW !== drawW || clampedH !== drawH) {
+      const ratioW = clampedW / drawW;
+      const ratioH = clampedH / drawH;
+      const minRatio = Math.min(ratioW, ratioH);
+      drawW *= minRatio;
+      drawH *= minRatio;
+    }
+    drawW *= perspectiveScale;
+    drawH *= perspectiveScale;
     obj.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale
@@ -12264,16 +12294,31 @@ var Renderer2 = class {
     const texture = this._getOrCreateAssetTexture(src, asset);
     if (!clip) {
       let drawW2, drawH2;
-      if (w && !h) {
-        drawW2 = w;
-        drawH2 = w * (asset.naturalHeight / asset.naturalWidth);
-      } else if (!w && h) {
-        drawW2 = h * (asset.naturalWidth / asset.naturalHeight);
-        drawH2 = h;
+      const reqW2 = sprite.style.width;
+      const reqH2 = sprite.style.height;
+      const natW = asset.naturalWidth;
+      const natH = asset.naturalHeight;
+      if (reqW2 && !reqH2) {
+        drawW2 = reqW2;
+        drawH2 = reqW2 * (natH / natW);
+      } else if (!reqW2 && reqH2) {
+        drawH2 = reqH2;
+        drawW2 = reqH2 * (natW / natH);
       } else {
-        drawW2 = w || asset.naturalWidth * perspectiveScale;
-        drawH2 = h || asset.naturalHeight * perspectiveScale;
+        drawW2 = reqW2 || natW;
+        drawH2 = reqH2 || natH;
       }
+      const clampedW2 = clampSize(drawW2, sprite.style.minWidth, sprite.style.maxWidth);
+      const clampedH2 = clampSize(drawH2, sprite.style.minHeight, sprite.style.maxHeight);
+      if (clampedW2 !== drawW2 || clampedH2 !== drawH2) {
+        const ratioW = clampedW2 / drawW2;
+        const ratioH = clampedH2 / drawH2;
+        const minRatio = Math.min(ratioW, ratioH);
+        drawW2 *= minRatio;
+        drawH2 *= minRatio;
+      }
+      drawW2 *= perspectiveScale;
+      drawH2 *= perspectiveScale;
       sprite.__renderedSize = {
         w: drawW2 / perspectiveScale,
         h: drawH2 / perspectiveScale
@@ -12294,16 +12339,29 @@ var Renderer2 = class {
     const uvOffsetX = col * uvScaleX;
     const uvOffsetY = 1 - (row + 1) * uvScaleY;
     let drawW, drawH;
-    if (w && !h) {
-      drawW = w;
-      drawH = w * (frameHeight / frameWidth);
-    } else if (!w && h) {
-      drawW = h * (frameWidth / frameHeight);
-      drawH = h;
+    const reqW = sprite.style.width;
+    const reqH = sprite.style.height;
+    if (reqW && !reqH) {
+      drawW = reqW;
+      drawH = reqW * (frameHeight / frameWidth);
+    } else if (!reqW && reqH) {
+      drawH = reqH;
+      drawW = reqH * (frameWidth / frameHeight);
     } else {
-      drawW = w || frameWidth * perspectiveScale;
-      drawH = h || frameHeight * perspectiveScale;
+      drawW = reqW || frameWidth;
+      drawH = reqH || frameHeight;
     }
+    const clampedW = clampSize(drawW, sprite.style.minWidth, sprite.style.maxWidth);
+    const clampedH = clampSize(drawH, sprite.style.minHeight, sprite.style.maxHeight);
+    if (clampedW !== drawW || clampedH !== drawH) {
+      const ratioW = clampedW / drawW;
+      const ratioH = clampedH / drawH;
+      const minRatio = Math.min(ratioW, ratioH);
+      drawW *= minRatio;
+      drawH *= minRatio;
+    }
+    drawW *= perspectiveScale;
+    drawH *= perspectiveScale;
     sprite.__renderedSize = {
       w: drawW / perspectiveScale,
       h: drawH / perspectiveScale
