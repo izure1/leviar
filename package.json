@@ -1,6 +1,6 @@
 {
   "name": "leviar",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "WebGL 2.5D rendering engine with parallax scrolling",
   "license": "MIT",
   "repository": "https://github.com/izure1/leviar",
