@@ -32,6 +32,15 @@ const AXIS_X = new OglVec3(1, 0, 0)
 const AXIS_Y = new OglVec3(0, 1, 0)
 const AXIS_Z = new OglVec3(0, 0, 1)
 
+// ─── 크기 제약 헬퍼 ──────────────────────────────────────────────────────────
+
+function clampSize(value: number, min: number | undefined, max: number | undefined): number {
+  let result = value
+  if (min !== undefined) result = Math.max(result, min)
+  if (max !== undefined) result = Math.min(result, max)
+  return result
+}
+
 // ─── Quad 지오메트리 헬퍼 ────────────────────────────────────────────────────
 
 function createQuadGeometry(gl: OGLRenderingContext) {
@@ -690,8 +699,10 @@ export class Renderer {
   ) {
     const { style, transform } = obj
 
-    const baseW = obj.__renderedSize?.w ?? style.width ?? 0
-    const baseH = obj.__renderedSize?.h ?? style.height ?? 0
+    const rawW = obj.__renderedSize?.w ?? style.width ?? 0
+    const rawH = obj.__renderedSize?.h ?? style.height ?? 0
+    const baseW = clampSize(rawW, style.minWidth, style.maxWidth)
+    const baseH = clampSize(rawH, style.minHeight, style.maxHeight)
 
     // 변환(Scale 등)은 이미 _worldMatrix 내부에 계층적으로 완전 곱해져 있으므로
     // 기본 메시 구성은 스케일 1 수준인 base값만 던져주어 중복 연산을 배제합니다.

@@ -23,6 +23,13 @@ const AXIS_X = new OglVec3(1, 0, 0)
 const AXIS_Y = new OglVec3(0, 1, 0)
 const AXIS_Z = new OglVec3(0, 0, 1)
 
+function clampSize(value: number, min: number | undefined, max: number | undefined): number {
+  let result = value
+  if (min !== undefined) result = Math.max(result, min)
+  if (max !== undefined) result = Math.min(result, max)
+  return result
+}
+
 export interface WorldOptions {
   /** 캔버스 엘리먼트. 지정하지 않으면 자동으로 생성합니다. */
   canvas?: HTMLCanvasElement
@@ -279,8 +286,10 @@ export class World extends EventEmitter<WorldEvents> {
         const screenY = data.dy * perspectiveScale
 
         // 실제 크기가 아직 0이면(예: 이미지 로드 전) 무조건 패스
-        const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100
-        const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100
+        const rawBaseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100
+        const rawBaseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100
+        const baseW = clampSize(rawBaseW, data.obj.style.minWidth, data.obj.style.maxWidth)
+        const baseH = clampSize(rawBaseH, data.obj.style.minHeight, data.obj.style.maxHeight)
         const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x)
         const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y)
 
@@ -304,8 +313,10 @@ export class World extends EventEmitter<WorldEvents> {
       const screenX = dx * perspectiveScale
       const screenY = dy * perspectiveScale
 
-      const baseW = obj.__renderedSize?.w ?? style.width ?? 0
-      const baseH = obj.__renderedSize?.h ?? style.height ?? 0
+      const rawBaseW = obj.__renderedSize?.w ?? style.width ?? 0
+      const rawBaseH = obj.__renderedSize?.h ?? style.height ?? 0
+      const baseW = clampSize(rawBaseW, style.minWidth, style.maxWidth)
+      const baseH = clampSize(rawBaseH, style.minHeight, style.maxHeight)
       const w = baseW * perspectiveScale * transform.scale.x
       const h = baseH * perspectiveScale * transform.scale.y
 
@@ -611,12 +622,12 @@ export class World extends EventEmitter<WorldEvents> {
 
     // 크기에 영향을 주는 속성 변경 시 물리 바디를 재생성합니다.
     const resizeBody = () => {
-      const sw = (obj.style.width ?? w ?? 32) * obj.transform.scale.x
-      const sh = (obj.style.height ?? h ?? 32) * obj.transform.scale.y
+      const sw = clampSize(obj.style.width ?? w ?? 32, obj.style.minWidth, obj.style.maxWidth) * obj.transform.scale.x
+      const sh = clampSize(obj.style.height ?? h ?? 32, obj.style.minHeight, obj.style.maxHeight) * obj.transform.scale.y
       this.physics.updateBodySize(obj, sw, sh)
     }
 
-    const CSS_RESIZE_KEYS = new Set(['width', 'height', 'borderWidth', 'margin'])
+    const CSS_RESIZE_KEYS = new Set(['width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'borderWidth', 'margin'])
     obj.on('cssmodified', (key) => {
       if (CSS_RESIZE_KEYS.has(key)) resizeBody()
     })

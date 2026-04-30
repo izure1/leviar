@@ -57,6 +57,10 @@ export interface Style {
   opacity: number
   width?: number
   height?: number
+  minWidth?: number
+  maxWidth?: number
+  minHeight?: number
+  maxHeight?: number
   blur?: number
   borderColor?: string
   borderWidth?: number

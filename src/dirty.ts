@@ -34,6 +34,10 @@ export const STYLE_DIRTY_MAP: Readonly<Record<string, DirtyKind[]>> = {
   letterSpacing: ['texture', 'physics'],
   width: ['texture', 'physics'],
   height: ['texture', 'physics'],
+  minWidth: ['texture', 'physics'],
+  maxWidth: ['texture', 'physics'],
+  minHeight: ['texture', 'physics'],
+  maxHeight: ['texture', 'physics'],
   borderWidth: ['texture', 'physics'],
   // 물리 바디만 재계산
   margin: ['physics'],
