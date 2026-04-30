@@ -9,6 +9,8 @@
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
 | `width` / `height` | `number` | 가로/세로 크기(px). 한쪽 생략 시 비율 유지, 둘 다 생략 시 원본 크기. |
+| `minWidth` / `minHeight` | `number` | 최소 가로/세로 크기(px). |
+| `maxWidth` / `maxHeight` | `number` | 최대 가로/세로 크기(px). |
 | `display` | `'block' \| 'none'` | 화면 출력 여부. `'none'` 시 화면에서 사라지고 물리 충돌에서도 제외됨. |
 | `opacity` | `number` (0 ~ 1.0) | 불투명도. (0: 투명, 1: 불투명) |
 | `zIndex` | `number` | 레이어 순서. 높을수록 앞에 그려짐. (기본값: 0) |
