@@ -8568,6 +8568,10 @@ var STYLE_DIRTY_MAP = {
   letterSpacing: ["texture", "physics"],
   width: ["texture", "physics"],
   height: ["texture", "physics"],
+  minWidth: ["texture", "physics"],
+  maxWidth: ["texture", "physics"],
+  minHeight: ["texture", "physics"],
+  maxHeight: ["texture", "physics"],
   borderWidth: ["texture", "physics"],
   // 물리 바디만 재계산
   margin: ["physics"]
@@ -8614,6 +8618,10 @@ function makeStyle(partial) {
     opacity: partial?.opacity ?? 1,
     width: partial?.width,
     height: partial?.height,
+    minWidth: partial?.minWidth,
+    maxWidth: partial?.maxWidth,
+    minHeight: partial?.minHeight,
+    maxHeight: partial?.maxHeight,
     blur: partial?.blur,
     borderColor: partial?.borderColor,
     borderWidth: partial?.borderWidth,
@@ -10841,6 +10849,12 @@ function parseBorderRadius(value, w, h, bw = 0) {
 var AXIS_X = new Vec3(1, 0, 0);
 var AXIS_Y = new Vec3(0, 1, 0);
 var AXIS_Z = new Vec3(0, 0, 1);
+function clampSize(value, min, max) {
+  let result = value;
+  if (min !== void 0) result = Math.max(result, min);
+  if (max !== void 0) result = Math.min(result, max);
+  return result;
+}
 function createQuadGeometry(gl) {
   return new Geometry(gl, {
     position: {
@@ -11382,8 +11396,10 @@ var Renderer2 = class {
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
   _drawObject(obj, assets, timestamp) {
     const { style, transform } = obj;
-    const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-    const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+    const rawW = obj.__renderedSize?.w ?? style.width ?? 0;
+    const rawH = obj.__renderedSize?.h ?? style.height ?? 0;
+    const baseW = clampSize(rawW, style.minWidth, style.maxWidth);
+    const baseH = clampSize(rawH, style.minHeight, style.maxHeight);
     const w = baseW;
     const h = baseH;
     this._activeObj = obj;
@@ -12478,6 +12494,12 @@ var Renderer2 = class {
 var AXIS_X2 = new Vec3(1, 0, 0);
 var AXIS_Y2 = new Vec3(0, 1, 0);
 var AXIS_Z2 = new Vec3(0, 0, 1);
+function clampSize2(value, min, max) {
+  let result = value;
+  if (min !== void 0) result = Math.max(result, min);
+  if (max !== void 0) result = Math.min(result, max);
+  return result;
+}
 function wrapMouseEvent(e) {
   const wrapped = e;
   if (wrapped._propagationStopped !== void 0) return wrapped;
@@ -12678,8 +12700,10 @@ var World = class extends EventEmitter {
       const perspectiveScale = data.dz === 0 ? 1 : focalLength / data.dz;
       const screenX = data.dx * perspectiveScale;
       const screenY = data.dy * perspectiveScale;
-      const baseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
-      const baseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+      const rawBaseW = data.obj.__renderedSize?.w ?? data.obj.style.width ?? 100;
+      const rawBaseH = data.obj.__renderedSize?.h ?? data.obj.style.height ?? 100;
+      const baseW = clampSize2(rawBaseW, data.obj.style.minWidth, data.obj.style.maxWidth);
+      const baseH = clampSize2(rawBaseH, data.obj.style.minHeight, data.obj.style.maxHeight);
       const w = baseW * perspectiveScale * Math.abs(data.obj.transform.scale.x);
       const h = baseH * perspectiveScale * Math.abs(data.obj.transform.scale.y);
       const safeRadius = w + h;
@@ -12696,8 +12720,10 @@ var World = class extends EventEmitter {
       const perspectiveScale = dz === 0 ? 1 : focalLength / dz;
       const screenX = dx * perspectiveScale;
       const screenY = dy * perspectiveScale;
-      const baseW = obj.__renderedSize?.w ?? style.width ?? 0;
-      const baseH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const rawBaseW = obj.__renderedSize?.w ?? style.width ?? 0;
+      const rawBaseH = obj.__renderedSize?.h ?? style.height ?? 0;
+      const baseW = clampSize2(rawBaseW, style.minWidth, style.maxWidth);
+      const baseH = clampSize2(rawBaseH, style.minHeight, style.maxHeight);
       const w = baseW * perspectiveScale * transform.scale.x;
       const h = baseH * perspectiveScale * transform.scale.y;
       if (w <= 0 || h <= 0) continue;
@@ -12949,11 +12975,11 @@ var World = class extends EventEmitter {
     if (!obj.attribute.physics) return;
     this.physics.addBody(obj, w ?? 32, h ?? 32);
     const resizeBody = () => {
-      const sw = (obj.style.width ?? w ?? 32) * obj.transform.scale.x;
-      const sh = (obj.style.height ?? h ?? 32) * obj.transform.scale.y;
+      const sw = clampSize2(obj.style.width ?? w ?? 32, obj.style.minWidth, obj.style.maxWidth) * obj.transform.scale.x;
+      const sh = clampSize2(obj.style.height ?? h ?? 32, obj.style.minHeight, obj.style.maxHeight) * obj.transform.scale.y;
       this.physics.updateBodySize(obj, sw, sh);
     };
-    const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "borderWidth", "margin"]);
+    const CSS_RESIZE_KEYS = /* @__PURE__ */ new Set(["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight", "borderWidth", "margin"]);
     obj.on("cssmodified", (key) => {
       if (CSS_RESIZE_KEYS.has(key)) resizeBody();
     });
