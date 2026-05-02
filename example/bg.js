@@ -10817,6 +10817,19 @@ function parseTextMarkup(raw, baseStyle) {
 }
 
 // src/utils/styleUtils.ts
+function parseMargin2(value) {
+  const zero = { top: 0, right: 0, bottom: 0, left: 0 };
+  if (value == null) return zero;
+  if (typeof value === "number") {
+    return { top: value, right: value, bottom: value, left: value };
+  }
+  const tokens = value.trim().split(/\s+/).map((t) => parseFloat(t) || 0);
+  if (tokens.length === 0) return zero;
+  if (tokens.length === 1) return { top: tokens[0], right: tokens[0], bottom: tokens[0], left: tokens[0] };
+  if (tokens.length === 2) return { top: tokens[0], right: tokens[1], bottom: tokens[0], left: tokens[1] };
+  if (tokens.length === 3) return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[1] };
+  return { top: tokens[0], right: tokens[1], bottom: tokens[2], left: tokens[3] };
+}
 function parseBorderRadius(value, w, h, bw = 0) {
   if (value == null) return [0, 0, 0, 0];
   let tl = 0, tr = 0, br = 0, bl = 0;
@@ -11048,6 +11061,9 @@ var Renderer2 = class {
   _width = 0;
   _height = 0;
   _lastFocalLength = -1;
+  _debugCamZ = 0;
+  /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
+  debugMode = false;
   constructor(canvas2) {
     const N = this._batchMaxSize;
     this._batchMat0 = new Float32Array(N * 4);
@@ -11189,6 +11205,9 @@ var Renderer2 = class {
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
         uBorderRadius: { value: [0, 0, 0, 0] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
+        uInnerBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) }
@@ -11331,6 +11350,7 @@ var Renderer2 = class {
     const camRotY = activeCamera.transform.rotation.y || 0;
     const camRotZ = activeCamera.transform.rotation.z || 0;
     const camZ = activeCamera.transform.position.z;
+    this._debugCamZ = camZ;
     this._buildViewMatrix(activeCamera);
     const rotChanged = camRotX !== this._lastCamRotX || camRotY !== this._lastCamRotY || camRotZ !== this._lastCamRotZ;
     const countChanged = objects.size !== this._lastObjCount;
@@ -11432,6 +11452,91 @@ var Renderer2 = class {
         break;
       default:
         break;
+    }
+    if (this.debugMode && w > 0 && h > 0) {
+      this._activeObj = obj;
+      this._activeRenderW = w;
+      this._activeRenderH = h;
+      this._drawDebugOverlay(obj, w, h);
+    }
+  }
+  // ─── 디버그 오버레이 ─────────────────────────────────────────────────────
+  /**
+   * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
+   * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
+   *
+   * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
+   * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+   */
+  _drawDebugOverlay(obj, w, h) {
+    this._flushBatch();
+    this._setBlendMode("source-over");
+    const DEBUG_OUTLINE_COLOR = "#00ff00";
+    const DEBUG_OUTLINE_PIXELS = 1;
+    const DEBUG_MARGIN_COLOR = "rgba(255, 152, 0, 0.3)";
+    const mArr = obj.__worldMatrix;
+    const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1);
+    const focalLength = Math.max(this._lastFocalLength, 1);
+    const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength;
+    const outerW = w + ow * 2;
+    const outerH = h + ow * 2;
+    const prog = this.colorProgram;
+    prog.uniforms["uColor"].value = parseCSSColor(DEBUG_OUTLINE_COLOR);
+    prog.uniforms["uOpacity"].value = 1;
+    prog.uniforms["uSize"].value = [outerW, outerH];
+    prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+    prog.uniforms["uIsBorder"].value = 1;
+    prog.uniforms["uInnerSize"].value = [w, h];
+    prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+    prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, outerW, outerH, 0, w, h);
+    prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+    this.colorMesh.draw({ camera: this.camera });
+    const margin = parseMargin2(obj.style.margin);
+    const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0;
+    if (!hasMargin) return;
+    const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR);
+    prog.uniforms["uColor"].value = [mr, mg, mb, ma];
+    prog.uniforms["uOpacity"].value = 1;
+    prog.uniforms["uIsBorder"].value = 0;
+    prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+    prog.uniforms["uInnerSize"].value = [0, 0];
+    prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+    const drawMarginStrip = (mw, mh, offsetX, offsetY) => {
+      const obj2 = this._activeObj;
+      const pivot = obj2.transform.pivot;
+      this._modelMat.copy(obj2.__worldMatrix);
+      this._tmpVec[0] = (0.5 - pivot.x) * w;
+      this._tmpVec[1] = -(0.5 - pivot.y) * h;
+      this._tmpVec[2] = 0;
+      this._modelMat.translate(this._tmpVec);
+      this._tmpVec[0] = offsetX;
+      this._tmpVec[1] = offsetY;
+      this._tmpVec[2] = 0;
+      this._modelMat.translate(this._tmpVec);
+      this._tmpVec[0] = mw;
+      this._tmpVec[1] = mh;
+      this._tmpVec[2] = 1;
+      this._modelMat.scale(this._tmpVec);
+      prog.uniforms["uSize"].value = [mw, mh];
+      prog.uniforms["uModelMatrix"].value = this._modelMat;
+      prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+      this.colorMesh.draw({ camera: this.camera });
+    };
+    if (margin.top > 0) {
+      const mw = w + margin.left + margin.right;
+      const mh = margin.top;
+      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2);
+    }
+    if (margin.bottom > 0) {
+      const mw = w + margin.left + margin.right;
+      const mh = margin.bottom;
+      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2);
+    }
+    if (margin.left > 0) {
+      drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0);
+    }
+    if (margin.right > 0) {
+      drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0);
     }
   }
   // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────
@@ -12851,6 +12956,20 @@ var World = class extends EventEmitter {
       throw new Error("The assigned object must be of camera type.");
     }
     this._activeCamera = camera2;
+  }
+  /**
+   * 디버그 모드 활성화 여부를 반환합니다.
+   */
+  get debugMode() {
+    return this.renderer.debugMode;
+  }
+  /**
+   * 디버그 모드를 활성화하거나 비활성화합니다.
+   * 활성화 시 각 오브젝트의 실제 렌더 경계(outline)와 margin 영역이
+   * 기존 스타일을 건드리지 않고 별도 레이어로 시각화됩니다.
+   */
+  set debugMode(value) {
+    this.renderer.debugMode = value;
   }
   /**
    * CSS querySelector와 유사한 방식으로 오브젝트를 선택합니다.

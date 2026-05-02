@@ -184,4 +184,6 @@ inputH.addEventListener('input', updateSize)
 inputMinH.addEventListener('input', updateSize)
 inputMaxH.addEventListener('input', updateSize)
 
+console.log(world)
+
 updateSize()

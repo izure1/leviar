@@ -18,7 +18,7 @@ import { shadowVertex, shadowFragment } from './shaders/shadow.js'
 import { alphaOutlineVertex, alphaOutlineFragment } from './shaders/alphaOutline.js'
 import { alphaShadowVertex, alphaShadowFragment } from './shaders/alphaShadow.js'
 import { parseTextMarkup } from './utils/textMarkup.js'
-import { parseBorderRadius } from './utils/styleUtils.js'
+import { parseBorderRadius, parseMargin } from './utils/styleUtils.js'
 import { TEXTURE_THROTTLE_FRAMES, TEXTURE_DEBOUNCE_FRAMES } from './dirty.js'
 
 import type { LeviarObject } from './LeviarObject.js'
@@ -278,6 +278,10 @@ export class Renderer {
   private _width: number = 0;
   private _height: number = 0;
   private _lastFocalLength: number = -1;
+  private _debugCamZ: number = 0;
+
+  /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
+  public debugMode: boolean = false
 
   constructor(canvas: HTMLCanvasElement) {
 
@@ -438,6 +442,9 @@ export class Renderer {
         uRadius: { value: 0 },
         uSize: { value: [1, 1] },
         uBorderRadius: { value: [0, 0, 0, 0] },
+        uIsBorder: { value: 0 },
+        uInnerSize: { value: [0, 0] },
+        uInnerBorderRadius: { value: [0, 0, 0, 0] },
         uModelMatrix: { value: new Float32Array(16) },
         uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
@@ -597,6 +604,7 @@ export class Renderer {
     const camRotY = activeCamera.transform.rotation.y || 0
     const camRotZ = activeCamera.transform.rotation.z || 0
     const camZ = activeCamera.transform.position.z
+    this._debugCamZ = camZ
 
     // ─── View Matrix 빌드 (1회/프레임) ─────────────────────────
     this._buildViewMatrix(activeCamera)
@@ -744,6 +752,119 @@ export class Renderer {
         break
       default:
         break
+    }
+
+    // ─── 디버그 오버레이 (스타일 영향 없이 별도 렌더) ───────────────
+    if (this.debugMode && w > 0 && h > 0) {
+      this._activeObj = obj
+      this._activeRenderW = w
+      this._activeRenderH = h
+      this._drawDebugOverlay(obj, w, h)
+    }
+  }
+
+  // ─── 디버그 오버레이 ─────────────────────────────────────────────────────
+
+  /**
+   * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
+   * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
+   *
+   * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
+   * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+   */
+  private _drawDebugOverlay(obj: LeviarObject, w: number, h: number) {
+    this._flushBatch()
+    this._setBlendMode('source-over')
+
+    const DEBUG_OUTLINE_COLOR = '#00ff00'
+    const DEBUG_OUTLINE_PIXELS = 1
+    const DEBUG_MARGIN_COLOR = 'rgba(255, 152, 0, 0.3)'
+
+    // 1. Outline: 오브젝트의 실제 렌더 경계(w × h)를 고정 픽셀 두께 테두리로 표시
+    //    원근 역산: worldUnitWidth = screenPixels × objectDepth / focalLength
+    const mArr = obj.__worldMatrix as unknown as Float32Array
+    const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1)
+    const focalLength = Math.max(this._lastFocalLength, 1)
+    const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength
+    const outerW = w + ow * 2
+    const outerH = h + ow * 2
+
+    const prog = this.colorProgram
+    prog.uniforms['uColor'].value = parseCSSColor(DEBUG_OUTLINE_COLOR)
+    prog.uniforms['uOpacity'].value = 1
+    prog.uniforms['uSize'].value = [outerW, outerH]
+    prog.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
+    prog.uniforms['uIsBorder'].value = 1
+    prog.uniforms['uInnerSize'].value = [w, h]
+    prog.uniforms['uInnerBorderRadius'].value = [0, 0, 0, 0]
+    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(0, 0, outerW, outerH, 0, w, h)
+    prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
+    this.colorMesh.draw({ camera: this.camera })
+
+
+    // 2. Margin: style.margin 범위를 반투명 주황색 영역으로 표시
+    const margin = parseMargin(obj.style.margin)
+    const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0
+    if (!hasMargin) return
+
+    const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR)
+
+    // 공통 uniform 설정 (isBorder=0, 내부 투명 없음)
+    prog.uniforms['uColor'].value = [mr, mg, mb, ma]
+    prog.uniforms['uOpacity'].value = 1
+    prog.uniforms['uIsBorder'].value = 0
+    prog.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
+    prog.uniforms['uInnerSize'].value = [0, 0]
+    prog.uniforms['uInnerBorderRadius'].value = [0, 0, 0, 0]
+
+    const drawMarginStrip = (mw: number, mh: number, offsetX: number, offsetY: number) => {
+      // worldMatrix에는 이미 부모 계층의 scale이 포함되어 있으므로,
+      // _makeModelMatrix의 x,y 파라미터를 쓰면 scale배만큼 오프셋이 틀어집니다.
+      // 대신 worldMatrix 복사 후 → pivot offset → strip offset → scale 순으로 직접 구성합니다.
+      const obj = this._activeObj
+      const pivot = obj.transform.pivot
+
+      this._modelMat.copy(obj.__worldMatrix)
+      // pivot offset (object 기준)
+      this._tmpVec[0] = (0.5 - pivot.x) * w
+      this._tmpVec[1] = -(0.5 - pivot.y) * h
+      this._tmpVec[2] = 0
+      this._modelMat.translate(this._tmpVec)
+      // strip center offset (object center 기준 상대 위치)
+      this._tmpVec[0] = offsetX; this._tmpVec[1] = offsetY; this._tmpVec[2] = 0
+      this._modelMat.translate(this._tmpVec)
+      // strip 크기 스케일
+      this._tmpVec[0] = mw; this._tmpVec[1] = mh; this._tmpVec[2] = 1
+      this._modelMat.scale(this._tmpVec)
+
+      prog.uniforms['uSize'].value = [mw, mh]
+      prog.uniforms['uModelMatrix'].value = this._modelMat as unknown as Float32Array
+      prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
+      this.colorMesh.draw({ camera: this.camera })
+    }
+
+    // 상단 margin 영역
+    if (margin.top > 0) {
+      const mw = w + margin.left + margin.right
+      const mh = margin.top
+      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2)
+    }
+
+    // 하단 margin 영역
+    if (margin.bottom > 0) {
+      const mw = w + margin.left + margin.right
+      const mh = margin.bottom
+      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2)
+    }
+
+    // 좌측 margin 영역 (top/bottom 겹치지 않는 순수 좌측 스트립)
+    if (margin.left > 0) {
+      drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0)
+    }
+
+    // 우측 margin 영역
+    if (margin.right > 0) {
+      drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0)
     }
   }
 

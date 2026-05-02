@@ -399,6 +399,22 @@ export class World extends EventEmitter<WorldEvents> {
   }
 
   /**
+   * 디버그 모드 활성화 여부를 반환합니다.
+   */
+  get debugMode(): boolean {
+    return this.renderer.debugMode
+  }
+
+  /**
+   * 디버그 모드를 활성화하거나 비활성화합니다.
+   * 활성화 시 각 오브젝트의 실제 렌더 경계(outline)와 margin 영역이
+   * 기존 스타일을 건드리지 않고 별도 레이어로 시각화됩니다.
+   */
+  set debugMode(value: boolean) {
+    this.renderer.debugMode = value
+  }
+
+  /**
    * CSS querySelector와 유사한 방식으로 오브젝트를 선택합니다.
    * 지원 셀렉터: `.className`, `#id`, `[attribute=value]`
    */
