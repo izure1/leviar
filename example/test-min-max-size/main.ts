@@ -94,7 +94,7 @@ world.createText({
 
 label('⑤ Image maxWidth → keep aspect ratio', 350, -250)
 world.createRectangle({
-  style: { color: 'transparent', width: 100, height: 100, borderColor: '#7ec8e3', borderWidth: 1 },
+  style: { color: 'rgba(0,0,0,0)', width: 100, height: 100, borderColor: '#7ec8e3', borderWidth: 1 },
   transform: { position: { x: 350, y: -190, z: 0 } },
 })
 world.createImage({
@@ -105,7 +105,7 @@ world.createImage({
 
 label('⑥ Image maxHeight → keep aspect ratio', 350, -80)
 world.createRectangle({
-  style: { color: 'transparent', width: 200, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
+  style: { color: 'rgba(0,0,0,0)', width: 200, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
   transform: { position: { x: 350, y: -35, z: 0 } },
 })
 world.createImage({
@@ -116,7 +116,7 @@ world.createImage({
 
 label('⑦ Image minWidth + minHeight (Aspect ratio scaling)', 350, 60)
 world.createRectangle({
-  style: { color: 'transparent', width: 300, height: 150, borderColor: '#f4a261', borderWidth: 1 },
+  style: { color: 'rgba(0,0,0,0)', width: 300, height: 150, borderColor: '#f4a261', borderWidth: 1 },
   transform: { position: { x: 350, y: 165, z: 0 } },
 })
 world.createImage({

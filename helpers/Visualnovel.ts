@@ -161,23 +161,23 @@ const WIPE_PRESETS: Record<WipePreset, { x: number, y: number }> = {
 }
 
 const MOOD_PRESETS: Record<MoodType, { color: string, vignette?: string, blendMode?: string }> = {
-  day: { color: 'rgba(255, 230, 180, 0.1)', vignette: 'transparent 70%, rgba(255, 200, 100, 0.15) 100%', blendMode: 'screen' },
-  night: { color: 'rgba(10, 15, 60, 0.5)', vignette: 'transparent 50%, rgba(0, 5, 25, 0.6) 100%', blendMode: 'multiply' },
-  dawn: { color: 'rgba(25, 35, 70, 0.4)', vignette: 'transparent 50%, rgba(65, 122, 164, 0.6) 100%', blendMode: 'multiply' },
-  sunset: { color: 'rgba(255, 120, 50, 0.25)', vignette: 'transparent 50%, rgba(255, 100, 50, 0.4) 100%', blendMode: 'screen' },
+  day: { color: 'rgba(255, 230, 180, 0.1)', vignette: 'rgba(0,0,0,0) 70%, rgba(255, 200, 100, 0.15) 100%', blendMode: 'screen' },
+  night: { color: 'rgba(10, 15, 60, 0.5)', vignette: 'rgba(0,0,0,0) 50%, rgba(0, 5, 25, 0.6) 100%', blendMode: 'multiply' },
+  dawn: { color: 'rgba(25, 35, 70, 0.4)', vignette: 'rgba(0,0,0,0) 50%, rgba(65, 122, 164, 0.6) 100%', blendMode: 'multiply' },
+  sunset: { color: 'rgba(255, 120, 50, 0.25)', vignette: 'rgba(0,0,0,0) 50%, rgba(255, 100, 50, 0.4) 100%', blendMode: 'screen' },
   foggy: { color: 'rgba(200, 210, 220, 0.4)', vignette: 'rgba(255,255,255,0.05) 0%, rgba(150, 160, 170, 0.4) 100%', blendMode: 'screen' },
-  sepia: { color: 'rgba(160, 110, 50, 0.3)', vignette: 'transparent 60%, rgba(80, 50, 20, 0.5) 100%', blendMode: 'multiply' },
-  cold: { color: 'rgba(80, 130, 220, 0.25)', vignette: 'transparent 50%, rgba(20, 40, 100, 0.4) 100%', blendMode: 'hard-light' },
-  noir: { color: 'rgba(0, 0, 0, 0.1)', vignette: 'transparent 50%, rgba(0, 0, 0, 0.6) 100%', blendMode: 'luminosity' },
-  horror: { color: 'rgba(150, 0, 0, 0.3)', vignette: 'transparent 40%, rgba(0, 0, 0, 0.7) 100%', blendMode: 'multiply' },
-  flashback: { color: 'rgba(200, 200, 200, 0.2)', vignette: 'transparent 60%, rgba(255, 255, 255, 0.5) 100%', blendMode: 'screen' },
-  dream: { color: 'rgba(180, 150, 255, 0.2)', vignette: 'transparent 60%, rgba(255, 200, 255, 0.4) 100%', blendMode: 'screen' },
-  danger: { color: 'rgba(255, 0, 0, 0.1)', vignette: 'transparent 50%, rgba(200, 0, 0, 0.5) 100%', blendMode: 'color-burn' },
-  none: { color: 'transparent' }
+  sepia: { color: 'rgba(160, 110, 50, 0.3)', vignette: 'rgba(0,0,0,0) 60%, rgba(80, 50, 20, 0.5) 100%', blendMode: 'multiply' },
+  cold: { color: 'rgba(80, 130, 220, 0.25)', vignette: 'rgba(0,0,0,0) 50%, rgba(20, 40, 100, 0.4) 100%', blendMode: 'hard-light' },
+  noir: { color: 'rgba(0, 0, 0, 0.1)', vignette: 'rgba(0,0,0,0) 50%, rgba(0, 0, 0, 0.6) 100%', blendMode: 'luminosity' },
+  horror: { color: 'rgba(150, 0, 0, 0.3)', vignette: 'rgba(0,0,0,0) 40%, rgba(0, 0, 0, 0.7) 100%', blendMode: 'multiply' },
+  flashback: { color: 'rgba(200, 200, 200, 0.2)', vignette: 'rgba(0,0,0,0) 60%, rgba(255, 255, 255, 0.5) 100%', blendMode: 'screen' },
+  dream: { color: 'rgba(180, 150, 255, 0.2)', vignette: 'rgba(0,0,0,0) 60%, rgba(255, 200, 255, 0.4) 100%', blendMode: 'screen' },
+  danger: { color: 'rgba(255, 0, 0, 0.1)', vignette: 'rgba(0,0,0,0) 50%, rgba(200, 0, 0, 0.5) 100%', blendMode: 'color-burn' },
+  none: { color: 'rgba(0,0,0,0)' }
 }
 
 const LIGHT_PRESETS: Record<LightPreset, { color: string, opacity: number }> = {
-  spot: { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,transparent 70%)', opacity: 0.6 },
+  spot: { color: 'radial-gradient(circle,rgba(255,240,180,0.8) 0%,rgba(0,0,0,0) 70%)', opacity: 0.6 },
   ambient: { color: 'rgba(255,230,150,1)', opacity: 0.15 },
   warm: { color: 'rgba(255,160,50,1)', opacity: 0.25 },
   cold: { color: 'rgba(100,160,255,1)', opacity: 0.2 }
@@ -817,7 +817,7 @@ export class Visualnovel<
           ; (existing as any).attribute.src = src
         }
       }
-      ;(existing as any)._currentImageKey = resolvedKey
+      ; (existing as any)._currentImageKey = resolvedKey
     } else {
       const targetW = imageDef.width ?? 500
       const img = this._track(this.world.createImage({
@@ -826,7 +826,7 @@ export class Visualnovel<
         transform: { position: { x: xPos, y: 0, z: zPos } }
       }))
       if (typeof (img as any).fadeIn === 'function') (img as any).fadeIn(400)
-      ;(img as any)._currentImageKey = resolvedKey
+        ; (img as any)._currentImageKey = resolvedKey
       this._characters.set(key, img)
     }
     return this
@@ -1268,7 +1268,7 @@ export class Visualnovel<
 
     const mergedMake = applyDefaults(def.make, {
       style: {
-        color: nodeType === 'rectangle' ? 'transparent' : undefined,
+        color: nodeType === 'rectangle' ? 'rgba(0,0,0,0)' : undefined,
         zIndex: Z_INDEX.UI_BASE, // 자동 배치 기본값
       },
       transform: {

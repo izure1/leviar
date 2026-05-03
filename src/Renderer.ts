@@ -570,31 +570,31 @@ export class Renderer {
       vertex: gradientVertex,
       fragment: gradientFragment,
       uniforms: {
-        uStopCount:    { value: 0 },
-        uStopColors0:  { value: [0, 0, 0, 1] },
-        uStopColors1:  { value: [0, 0, 0, 1] },
-        uStopColors2:  { value: [0, 0, 0, 1] },
-        uStopColors3:  { value: [0, 0, 0, 1] },
-        uStopColors4:  { value: [0, 0, 0, 1] },
-        uStopColors5:  { value: [0, 0, 0, 1] },
-        uStopColors6:  { value: [0, 0, 0, 1] },
-        uStopColors7:  { value: [0, 0, 0, 1] },
-        uStopOffset0:  { value: 0 },
-        uStopOffset1:  { value: 1 },
-        uStopOffset2:  { value: 1 },
-        uStopOffset3:  { value: 1 },
-        uStopOffset4:  { value: 1 },
-        uStopOffset5:  { value: 1 },
-        uStopOffset6:  { value: 1 },
-        uStopOffset7:  { value: 1 },
-        uDirection:    { value: 0 },
-        uType:         { value: 0 },
-        uSize:         { value: [1, 1] },
+        uStopCount: { value: 0 },
+        uStopColors0: { value: [0, 0, 0, 1] },
+        uStopColors1: { value: [0, 0, 0, 1] },
+        uStopColors2: { value: [0, 0, 0, 1] },
+        uStopColors3: { value: [0, 0, 0, 1] },
+        uStopColors4: { value: [0, 0, 0, 1] },
+        uStopColors5: { value: [0, 0, 0, 1] },
+        uStopColors6: { value: [0, 0, 0, 1] },
+        uStopColors7: { value: [0, 0, 0, 1] },
+        uStopOffset0: { value: 0 },
+        uStopOffset1: { value: 1 },
+        uStopOffset2: { value: 1 },
+        uStopOffset3: { value: 1 },
+        uStopOffset4: { value: 1 },
+        uStopOffset5: { value: 1 },
+        uStopOffset6: { value: 1 },
+        uStopOffset7: { value: 1 },
+        uDirection: { value: 0 },
+        uType: { value: 0 },
+        uSize: { value: [1, 1] },
         uBorderRadius: { value: [0, 0, 0, 0] },
-        uIsEllipse:    { value: 0 },
-        uOpacity:      { value: 1 },
-        uModelMatrix:      { value: new Float32Array(16) },
-        uViewMatrix:       { value: new Float32Array(16) },
+        uIsEllipse: { value: 0 },
+        uOpacity: { value: 1 },
+        uModelMatrix: { value: new Float32Array(16) },
+        uViewMatrix: { value: new Float32Array(16) },
         uProjectionMatrix: { value: new Float32Array(16) },
       },
       transparent: true,
@@ -611,7 +611,7 @@ export class Renderer {
     const overlay = document.createElement('canvas')
     overlay.width = this._width
     overlay.height = this._height
-    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;'
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;object-fit:contain;'
     const parent = this._canvas.parentElement
     if (parent) {
       if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative'
@@ -1416,9 +1416,9 @@ export class Renderer {
     prog.uniforms['uImageScale'].value = [drawW / expandedW, drawH / expandedH]
     prog.uniforms['uTexelStep'].value = [1.0 / drawW, 1.0 / drawH]
     prog.uniforms['uBorderWidth'].value = borderWidth
-    prog.uniforms['uBorderColor'].value = parseCSSColor(style.borderColor ?? 'transparent')
+    prog.uniforms['uBorderColor'].value = parseCSSColor(style.borderColor ?? 'rgba(0,0,0,0)')
     prog.uniforms['uOutlineWidth'].value = outlineWidth
-    prog.uniforms['uOutlineColor'].value = parseCSSColor(style.outlineColor ?? 'transparent')
+    prog.uniforms['uOutlineColor'].value = parseCSSColor(style.outlineColor ?? 'rgba(0,0,0,0)')
     prog.uniforms['uUVOffset'].value = uvOffset
     prog.uniforms['uUVScale'].value = uvScale
     prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, expandedW, expandedH, 0, drawW, drawH)
@@ -2310,11 +2310,11 @@ export class Renderer {
     const MAX_STOPS = 8
     const count = Math.min(stops.length, MAX_STOPS)
 
-    type ColorName  = 'uStopColors0'|'uStopColors1'|'uStopColors2'|'uStopColors3'|'uStopColors4'|'uStopColors5'|'uStopColors6'|'uStopColors7'
-    type OffsetName = 'uStopOffset0'|'uStopOffset1'|'uStopOffset2'|'uStopOffset3'|'uStopOffset4'|'uStopOffset5'|'uStopOffset6'|'uStopOffset7'
+    type ColorName = 'uStopColors0' | 'uStopColors1' | 'uStopColors2' | 'uStopColors3' | 'uStopColors4' | 'uStopColors5' | 'uStopColors6' | 'uStopColors7'
+    type OffsetName = 'uStopOffset0' | 'uStopOffset1' | 'uStopOffset2' | 'uStopOffset3' | 'uStopOffset4' | 'uStopOffset5' | 'uStopOffset6' | 'uStopOffset7'
 
-    const colorNames: ColorName[]  = ['uStopColors0','uStopColors1','uStopColors2','uStopColors3','uStopColors4','uStopColors5','uStopColors6','uStopColors7']
-    const offsetNames: OffsetName[] = ['uStopOffset0','uStopOffset1','uStopOffset2','uStopOffset3','uStopOffset4','uStopOffset5','uStopOffset6','uStopOffset7']
+    const colorNames: ColorName[] = ['uStopColors0', 'uStopColors1', 'uStopColors2', 'uStopColors3', 'uStopColors4', 'uStopColors5', 'uStopColors6', 'uStopColors7']
+    const offsetNames: OffsetName[] = ['uStopOffset0', 'uStopOffset1', 'uStopOffset2', 'uStopOffset3', 'uStopOffset4', 'uStopOffset5', 'uStopOffset6', 'uStopOffset7']
 
     const prog = this.gradientProgram
     prog.uniforms['uStopCount'].value = count
@@ -2322,18 +2322,18 @@ export class Renderer {
     for (let i = 0; i < MAX_STOPS; i++) {
       const src = i < count ? stops[i] : stops[count - 1]
       const [r, g, b, a] = parseCSSColor(src.color)
-      prog.uniforms[colorNames[i]].value  = [r, g, b, a]
+      prog.uniforms[colorNames[i]].value = [r, g, b, a]
       prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1.0
     }
 
-    prog.uniforms['uDirection'].value    = direction
-    prog.uniforms['uType'].value         = type === 'circular' ? 1 : 0
-    prog.uniforms['uSize'].value         = [w, h]
+    prog.uniforms['uDirection'].value = direction
+    prog.uniforms['uType'].value = type === 'circular' ? 1 : 0
+    prog.uniforms['uSize'].value = [w, h]
     prog.uniforms['uBorderRadius'].value = borderRadius ?? [0, 0, 0, 0]
-    prog.uniforms['uIsEllipse'].value    = isEllipse ? 1 : 0
-    prog.uniforms['uOpacity'].value      = opacity
-    prog.uniforms['uModelMatrix'].value      = this._makeModelMatrix(x, y, w, h)
-    prog.uniforms['uViewMatrix'].value       = this._viewMat
+    prog.uniforms['uIsEllipse'].value = isEllipse ? 1 : 0
+    prog.uniforms['uOpacity'].value = opacity
+    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, w, h)
+    prog.uniforms['uViewMatrix'].value = this._viewMat
     prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
     this.gradientMesh.draw({ camera: this.camera })
