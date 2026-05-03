@@ -12833,7 +12833,7 @@ var World = class extends EventEmitter {
       }
       return inside;
     };
-    const objectsData = Array.from(this.objects).filter((obj) => obj.attribute.type !== "camera" && obj.style.display !== "none" && obj.style.pointerEvents).map((obj) => {
+    const objectsData = Array.from(this.objects).filter((obj) => obj.attribute.type !== "camera" && obj.__worldDisplay !== "none" && obj.__worldOpacity > 0 && obj.style.pointerEvents).map((obj) => {
       const mat = obj.__worldMatrix;
       const wx = mat[12], wy = mat[13], wz = -mat[14];
       let dx = wx - camX;

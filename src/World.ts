@@ -248,7 +248,7 @@ export class World extends EventEmitter<WorldEvents> {
     // z 기준 내림차순 정렬을 위해 모든 변환 사전 계산 (상단 객체 우선 판정)
     // OGL 행렬은 열우선이므로 obj.__worldMatrix의 [12, 13, 14]가 월드 좌표(x, y, z)입니다.
     const objectsData = Array.from(this.objects)
-      .filter(obj => obj.attribute.type !== 'camera' && obj.style.display !== 'none' && obj.style.pointerEvents)
+      .filter(obj => obj.attribute.type !== 'camera' && obj.__worldDisplay !== 'none' && obj.__worldOpacity > 0 && obj.style.pointerEvents)
       .map(obj => {
         const mat = obj.__worldMatrix as unknown as Float32Array
         // Leviar와 OpenGL 좌표계 연결 과정에서 역방향된 z를 본래 양수 스케일로 복원 (-1 곱함)
