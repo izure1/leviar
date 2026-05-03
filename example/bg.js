@@ -10354,7 +10354,7 @@ var textureFragment = (
 
   void main() {
     vec4 color = texture2D(uTexture, vUV);
-    gl_FragColor = vec4(color.rgb * color.a * uOpacity, color.a * uOpacity);
+    gl_FragColor = vec4(color.rgb * uOpacity, color.a * uOpacity);
   }
 `
 );
@@ -10446,7 +10446,7 @@ var instancedFragment = (
     }
 
     vec4 color = texture2D(uTexture, vUV);
-    gl_FragColor = vec4(color.rgb * color.a * vOpacity, color.a * vOpacity);
+    gl_FragColor = vec4(color.rgb * vOpacity, color.a * vOpacity);
   }
 `
 );
@@ -11231,7 +11231,7 @@ var Renderer2 = class {
       height: canvas2.height,
       alpha: true,
       antialias: true,
-      premultipliedAlpha: false
+      premultipliedAlpha: true
     });
     this.gl = this.ogl.gl;
     this._width = canvas2.width;
@@ -12267,7 +12267,7 @@ var Renderer2 = class {
       } else {
         const canvas2 = document.createElement("canvas");
         const ctx = canvas2.getContext("2d");
-        const texture = new Texture(this.gl, { image: canvas2, generateMipmaps: false });
+        const texture = new Texture(this.gl, { image: canvas2, generateMipmaps: false, premultiplyAlpha: true });
         const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram });
         entry = { texture, canvas: canvas2, ctx, lastText: "", mesh };
         entry._contentKey = contentKey;
@@ -12292,7 +12292,7 @@ var Renderer2 = class {
         }
         const canvas2 = document.createElement("canvas");
         const ctx = canvas2.getContext("2d");
-        const texture = new Texture(this.gl, { image: canvas2, generateMipmaps: false });
+        const texture = new Texture(this.gl, { image: canvas2, generateMipmaps: false, premultiplyAlpha: true });
         const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram });
         entry = { texture, canvas: canvas2, ctx, lastText: "", mesh };
         this.textCache.set(id, entry);
@@ -12638,7 +12638,7 @@ var Renderer2 = class {
     this._drawRectBorders(obj, x, y, drawW, drawH, obj.__worldOpacity);
     let tex = this.videoTextureCache.get(src);
     if (!tex) {
-      tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
+      tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true });
       this.videoTextureCache.set(src, tex);
     }
     tex.image = asset;
@@ -12868,7 +12868,7 @@ var Renderer2 = class {
   _getOrCreateAssetTexture(src, asset) {
     let tex = this.assetTextureCache.get(src);
     if (!tex) {
-      tex = new Texture(this.gl, { image: asset, generateMipmaps: false });
+      tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true });
       this.assetTextureCache.set(src, tex);
     }
     return tex;

@@ -325,7 +325,7 @@ export class Renderer {
       height: canvas.height,
       alpha: true,
       antialias: true,
-      premultipliedAlpha: false,
+      premultipliedAlpha: true,
     })
     this.gl = this.ogl.gl
 
@@ -1582,7 +1582,7 @@ export class Renderer {
         // 새 Canvas/Texture 생성
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')!
-        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false })
+        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false, premultiplyAlpha: true })
         const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram })
         entry = { texture, canvas, ctx, lastText: '', mesh }
           ; (entry as any)._contentKey = contentKey
@@ -1611,7 +1611,7 @@ export class Renderer {
         // 이 entry를 다른 객체도 공유 중일 수 있으므로(ref count > 1) 항상 새 entry를 만들어 교체
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')!
-        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false })
+        const texture = new Texture(this.gl, { image: canvas, generateMipmaps: false, premultiplyAlpha: true })
         const mesh = new Mesh(this.gl, { geometry: this.quadGeo, program: this.textureProgram })
         entry = { texture, canvas, ctx, lastText: '', mesh }
         this.textCache.set(id, entry)
@@ -2062,7 +2062,7 @@ export class Renderer {
     // 비디오 텍스처는 매 프레임 업데이트
     let tex = this.videoTextureCache.get(src!)
     if (!tex) {
-      tex = new Texture(this.gl, { image: asset, generateMipmaps: false })
+      tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true })
       this.videoTextureCache.set(src!, tex)
     }
     tex.image = asset
@@ -2354,7 +2354,7 @@ export class Renderer {
   private _getOrCreateAssetTexture(src: string, asset: HTMLImageElement): Texture {
     let tex = this.assetTextureCache.get(src)
     if (!tex) {
-      tex = new Texture(this.gl, { image: asset, generateMipmaps: false })
+      tex = new Texture(this.gl, { image: asset, generateMipmaps: false, premultiplyAlpha: true })
       this.assetTextureCache.set(src, tex)
     }
     return tex
