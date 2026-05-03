@@ -279,11 +279,34 @@ export class Renderer {
   private _height: number = 0;
   private _lastFocalLength: number = -1;
   private _debugCamZ: number = 0;
+  private _canvas!: HTMLCanvasElement
 
-  /** 디버그 모드: 활성화 시 각 오브젝트의 렌더 경계(outline)와 margin을 별도 레이어로 시각화합니다. */
-  public debugMode: boolean = false
+  // ─── 디버그 상태 ─────────────────────────────────────────────────────────
+  private _debugMode: boolean = false
+  public debugHoveredIds: Set<string> = new Set()
+  public debugClickedIds: Map<string, number> = new Map()
+  public debugRipples: Array<{ x: number; y: number; time: number }> = []
+  private _debugOverlayCanvas: HTMLCanvasElement | null = null
+  private _debugOverlayCtx: CanvasRenderingContext2D | null = null
+  private _fpsPrevTime = 0
+  private _fpsFrameCount = 0
+  private _fpsValue = 0
+
+  get debugMode(): boolean { return this._debugMode }
+  set debugMode(value: boolean) {
+    this._debugMode = value
+    if (value) {
+      this._setupDebugOverlay()
+    } else {
+      this._teardownDebugOverlay()
+      this.debugHoveredIds.clear()
+      this.debugClickedIds.clear()
+      this.debugRipples.length = 0
+    }
+  }
 
   constructor(canvas: HTMLCanvasElement) {
+    this._canvas = canvas
 
     const N = this._batchMaxSize
     this._batchMat0 = new Float32Array(N * 4)
@@ -340,7 +363,11 @@ export class Renderer {
     this.ogl.setSize(w, h)
     this._width = w
     this._height = h
-    this._lastFocalLength = -1 // 다음 렌더링 시 투영 행렬 재계산 예약
+    this._lastFocalLength = -1
+    if (this._debugOverlayCanvas) {
+      this._debugOverlayCanvas.width = w
+      this._debugOverlayCanvas.height = h
+    }
   }
 
   // ─── 프로그램 초기화 ─────────────────────────────────────────────────────
@@ -537,6 +564,72 @@ export class Renderer {
     this.alphaShadowMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.alphaShadowProgram })
   }
 
+  // ─── 디버그 overlay 헬퍼 ──────────────────────────────────────────────────
+
+  private _setupDebugOverlay() {
+    if (this._debugOverlayCanvas) return
+    const overlay = document.createElement('canvas')
+    overlay.width = this._width
+    overlay.height = this._height
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;'
+    const parent = this._canvas.parentElement
+    if (parent) {
+      if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative'
+      parent.appendChild(overlay)
+    } else {
+      this._canvas.insertAdjacentElement('afterend', overlay)
+    }
+    this._debugOverlayCanvas = overlay
+    this._debugOverlayCtx = overlay.getContext('2d')
+  }
+
+  private _teardownDebugOverlay() {
+    this._debugOverlayCanvas?.remove()
+    this._debugOverlayCanvas = null
+    this._debugOverlayCtx = null
+  }
+
+  private _renderDebugOverlay(timestamp: number) {
+    if (!this._debugMode || !this._debugOverlayCtx || !this._debugOverlayCanvas) return
+    const ctx = this._debugOverlayCtx
+    const cw = this._debugOverlayCanvas.width
+    const ch = this._debugOverlayCanvas.height
+    ctx.clearRect(0, 0, cw, ch)
+
+    // FPS 업데이트
+    this._fpsFrameCount++
+    if (timestamp - this._fpsPrevTime >= 1000) {
+      this._fpsValue = this._fpsFrameCount
+      this._fpsFrameCount = 0
+      this._fpsPrevTime = timestamp
+    }
+    ctx.save()
+    ctx.font = 'bold 14px monospace'
+    ctx.fillStyle = '#00ff88'
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'top'
+    ctx.fillText(`FPS: ${this._fpsValue}`, cw - 10, 10)
+    ctx.restore()
+
+    // 클릭 Ripple
+    const RIPPLE_DURATION = 600
+    this.debugRipples = this.debugRipples.filter(r => {
+      const elapsed = timestamp - r.time
+      return elapsed >= 0 && elapsed < RIPPLE_DURATION
+    })
+    for (const r of this.debugRipples) {
+      const t = (timestamp - r.time) / RIPPLE_DURATION
+      const alpha = (1 - t) * 0.9
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(r.x, r.y, Math.max(0, t) * 50, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(255, 220, 0, ${alpha})`
+      ctx.lineWidth = 2.5 * (1 - t * 0.5)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
 
   render(objects: Set<LeviarObject>, assets: LoadedAssets = {}, timestamp: number = 0, activeCamera: LeviarObject | null = null) {
@@ -585,6 +678,7 @@ export class Renderer {
       })
       this._drawText(this._noCameraText as LeviarObject, 0, 0, 1, timestamp)
       this._flushBatch()
+      this._renderDebugOverlay(timestamp)
       return
     }
 
@@ -696,6 +790,7 @@ export class Renderer {
       this._drawObject(obj, assets, timestamp)
     }
     this._flushBatch()
+    this._renderDebugOverlay(timestamp)
   }
 
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
@@ -759,7 +854,7 @@ export class Renderer {
       this._activeObj = obj
       this._activeRenderW = w
       this._activeRenderH = h
-      this._drawDebugOverlay(obj, w, h)
+      this._drawDebugOverlay(obj, w, h, timestamp)
     }
   }
 
@@ -769,28 +864,34 @@ export class Renderer {
    * 디버그 모드에서 각 오브젝트의 실제 렌더 경계와 margin을 시각화합니다.
    * 기존 style을 일절 덮어쓰지 않고, 프레임 맨 마지막에 별도 레이어로 그립니다.
    *
-   * - outline: 청록색(#00e5ff) 1px 테두리 → 오브젝트의 실제 width × height 경계
-   * - margin: 반투명 주황색(#ff9800, 30%) → style.margin 범위를 오브젝트 외측에 표시
+   * - outline: 기본(#00ff88, 초록), hover(#ffee00, 노랑), depth가 깊을수록 파랑 계열로 변화
+   * - margin: 반투명 주황색(#ff9800, 30%)
+   * - click: 클릭 직후 0.5초 동안 반투명 오렌지 fill로 fade-out
    */
-  private _drawDebugOverlay(obj: LeviarObject, w: number, h: number) {
+  private _drawDebugOverlay(obj: LeviarObject, w: number, h: number, timestamp: number) {
     this._flushBatch()
     this._setBlendMode('source-over')
 
-    const DEBUG_OUTLINE_COLOR = '#00ff00'
-    const DEBUG_OUTLINE_PIXELS = 1
-    const DEBUG_MARGIN_COLOR = 'rgba(255, 152, 0, 0.3)'
-
-    // 1. Outline: 오브젝트의 실제 렌더 경계(w × h)를 고정 픽셀 두께 테두리로 표시
-    //    원근 역산: worldUnitWidth = screenPixels × objectDepth / focalLength
     const mArr = obj.__worldMatrix as unknown as Float32Array
     const objDepth = Math.max(-mArr[14] - this._debugCamZ, 0.1)
     const focalLength = Math.max(this._lastFocalLength, 1)
-    const ow = DEBUG_OUTLINE_PIXELS * objDepth / focalLength
+    const ow = objDepth / focalLength  // 1px fixed
     const outerW = w + ow * 2
     const outerH = h + ow * 2
 
+    // 1. Outline 색상: hover=노란, 기본=depth 기반(초록→파랑)
+    const isHovered = this.debugHoveredIds.has(obj.attribute.id)
+    let outlineColor: [number, number, number, number]
+    if (isHovered) {
+      outlineColor = [1, 0.93, 0, 1]  // #ffee00
+    } else {
+      // depth 1~2000 → 초록(0,255,136) ~ 파랑(0,85,255)
+      const t = Math.min((objDepth - 1) / 2000, 1)
+      outlineColor = [0, (1 - t) * 1 + t * 0.33, (1 - t) * 0.53 + t * 1, 1]
+    }
+
     const prog = this.colorProgram
-    prog.uniforms['uColor'].value = parseCSSColor(DEBUG_OUTLINE_COLOR)
+    prog.uniforms['uColor'].value = outlineColor
     prog.uniforms['uOpacity'].value = 1
     prog.uniforms['uSize'].value = [outerW, outerH]
     prog.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
@@ -801,16 +902,32 @@ export class Renderer {
     prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
     this.colorMesh.draw({ camera: this.camera })
 
+    // 2. Click hit-area: 0.5초 fade-out 오렌지 fill
+    const clickedTime = this.debugClickedIds.get(obj.attribute.id)
+    if (clickedTime !== undefined) {
+      const elapsed = timestamp - clickedTime
+      const CLICK_DURATION = 500
+      if (elapsed < CLICK_DURATION) {
+        const alpha = (1 - elapsed / CLICK_DURATION) * 0.4
+        prog.uniforms['uColor'].value = [1, 0.55, 0, alpha]
+        prog.uniforms['uOpacity'].value = 1
+        prog.uniforms['uSize'].value = [w, h]
+        prog.uniforms['uIsBorder'].value = 0
+        prog.uniforms['uInnerSize'].value = [0, 0]
+        prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(0, 0, w, h)
+        prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
+        this.colorMesh.draw({ camera: this.camera })
+      } else {
+        this.debugClickedIds.delete(obj.attribute.id)
+      }
+    }
 
-    // 2. Margin: style.margin 범위를 반투명 주황색 영역으로 표시
+    // 3. Margin: style.margin 범위를 반투명 주황색으로 표시
     const margin = parseMargin(obj.style.margin)
     const hasMargin = margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0
     if (!hasMargin) return
 
-    const [mr, mg, mb, ma] = parseCSSColor(DEBUG_MARGIN_COLOR)
-
-    // 공통 uniform 설정 (isBorder=0, 내부 투명 없음)
-    prog.uniforms['uColor'].value = [mr, mg, mb, ma]
+    prog.uniforms['uColor'].value = parseCSSColor('rgba(255, 152, 0, 0.3)')
     prog.uniforms['uOpacity'].value = 1
     prog.uniforms['uIsBorder'].value = 0
     prog.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
@@ -818,54 +935,26 @@ export class Renderer {
     prog.uniforms['uInnerBorderRadius'].value = [0, 0, 0, 0]
 
     const drawMarginStrip = (mw: number, mh: number, offsetX: number, offsetY: number) => {
-      // worldMatrix에는 이미 부모 계층의 scale이 포함되어 있으므로,
-      // _makeModelMatrix의 x,y 파라미터를 쓰면 scale배만큼 오프셋이 틀어집니다.
-      // 대신 worldMatrix 복사 후 → pivot offset → strip offset → scale 순으로 직접 구성합니다.
-      const obj = this._activeObj
-      const pivot = obj.transform.pivot
-
-      this._modelMat.copy(obj.__worldMatrix)
-      // pivot offset (object 기준)
+      const pivot = this._activeObj.transform.pivot
+      this._modelMat.copy(this._activeObj.__worldMatrix)
       this._tmpVec[0] = (0.5 - pivot.x) * w
       this._tmpVec[1] = -(0.5 - pivot.y) * h
       this._tmpVec[2] = 0
       this._modelMat.translate(this._tmpVec)
-      // strip center offset (object center 기준 상대 위치)
       this._tmpVec[0] = offsetX; this._tmpVec[1] = offsetY; this._tmpVec[2] = 0
       this._modelMat.translate(this._tmpVec)
-      // strip 크기 스케일
       this._tmpVec[0] = mw; this._tmpVec[1] = mh; this._tmpVec[2] = 1
       this._modelMat.scale(this._tmpVec)
-
       prog.uniforms['uSize'].value = [mw, mh]
       prog.uniforms['uModelMatrix'].value = this._modelMat as unknown as Float32Array
       prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.colorMesh.draw({ camera: this.camera })
     }
 
-    // 상단 margin 영역
-    if (margin.top > 0) {
-      const mw = w + margin.left + margin.right
-      const mh = margin.top
-      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, (h + mh) / 2)
-    }
-
-    // 하단 margin 영역
-    if (margin.bottom > 0) {
-      const mw = w + margin.left + margin.right
-      const mh = margin.bottom
-      drawMarginStrip(mw, mh, (-margin.left + margin.right) / 2, -(h + mh) / 2)
-    }
-
-    // 좌측 margin 영역 (top/bottom 겹치지 않는 순수 좌측 스트립)
-    if (margin.left > 0) {
-      drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0)
-    }
-
-    // 우측 margin 영역
-    if (margin.right > 0) {
-      drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0)
-    }
+    if (margin.top > 0) drawMarginStrip(w + margin.left + margin.right, margin.top, (-margin.left + margin.right) / 2, (h + margin.top) / 2)
+    if (margin.bottom > 0) drawMarginStrip(w + margin.left + margin.right, margin.bottom, (-margin.left + margin.right) / 2, -(h + margin.bottom) / 2)
+    if (margin.left > 0) drawMarginStrip(margin.left, h, -(w + margin.left) / 2, 0)
+    if (margin.right > 0) drawMarginStrip(margin.right, h, (w + margin.right) / 2, 0)
   }
 
   // ─── 모델 행렬 헬퍼 ─────────────────────────────────────────────────────

@@ -137,6 +137,24 @@ export class World extends EventEmitter<WorldEvents> {
     const dispatch = (eventName: string, e: MouseEvent) => {
       const wrapped = wrapMouseEvent(e)
       const hits = this._getHitObjects(wrapped)
+
+      // 디버그 모드: 클릭한 오브젝트 정보를 console에 출력합니다.
+      if (this.debugMode && eventName === 'click') {
+        if (hits.length > 0) {
+          console.log('[Leviar Debug] Clicked:', hits[0])
+          if (hits.length > 1) {
+            console.log('[Leviar Debug] All hit objects:', hits)
+          }
+          // hit-area 강조 (fade-out)
+          const now = performance.now()
+          for (const obj of hits) {
+            this.renderer.debugClickedIds.set(obj.attribute.id, now)
+          }
+        } else {
+          console.log('[Leviar Debug] Click: no object hit')
+        }
+      }
+
       for (const obj of hits) {
         obj.emit(eventName, wrapped)
         if (wrapped._propagationStopped) return
@@ -145,7 +163,19 @@ export class World extends EventEmitter<WorldEvents> {
       this.emit(eventName, hits[0], wrapped)
     }
 
-    canvas.addEventListener('click', (e) => dispatch('click', e))
+    canvas.addEventListener('click', (e) => {
+      if (this.debugMode) {
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        this.renderer.debugRipples.push({
+          x: (e.clientX - rect.left) * scaleX,
+          y: (e.clientY - rect.top) * scaleY,
+          time: performance.now(),
+        })
+      }
+      dispatch('click', e)
+    })
     canvas.addEventListener('dblclick', (e) => dispatch('dblclick', e))
     canvas.addEventListener('contextmenu', (e) => {
       if (this.disableContextMenu) {
@@ -160,6 +190,11 @@ export class World extends EventEmitter<WorldEvents> {
       const wrapped = wrapMouseEvent(e)
       const hits = this._getHitObjects(wrapped)
       const hitIds = new Set(hits.map(o => o.attribute.id))
+
+      // 디버그: hover 상태 동기화
+      if (this.debugMode) {
+        this.renderer.debugHoveredIds = hitIds
+      }
 
       // mouseover: 새로 진입한 객체
       for (const obj of hits) {
