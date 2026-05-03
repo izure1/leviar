@@ -11490,7 +11490,7 @@ var Renderer2 = class {
     const overlay = document.createElement("canvas");
     overlay.width = this._width;
     overlay.height = this._height;
-    overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;";
+    overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;object-fit:contain;";
     const parent = this._canvas.parentElement;
     if (parent) {
       if (getComputedStyle(parent).position === "static") parent.style.position = "relative";
@@ -12959,6 +12959,35 @@ var World = class extends EventEmitter {
     return canvas2;
   }
   // ─── 마우스 이벤트 ────────────────────────────────
+  /**
+   * 캔버스상의 정확한 내부 마우스 좌표를 계산합니다. (object-fit: contain 보정 포함)
+   */
+  _getCanvasMousePos(e) {
+    const canvas2 = this._canvas;
+    const rect = canvas2.getBoundingClientRect();
+    let cssWidth = rect.width;
+    let cssHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+    const objectFit = getComputedStyle(canvas2).objectFit;
+    if (objectFit === "contain") {
+      const cssRatio = cssWidth / cssHeight;
+      const canvasRatio = canvas2.width / canvas2.height;
+      if (cssRatio > canvasRatio) {
+        cssWidth = cssHeight * canvasRatio;
+        offsetX = (rect.width - cssWidth) / 2;
+      } else if (cssRatio < canvasRatio) {
+        cssHeight = cssWidth / canvasRatio;
+        offsetY = (rect.height - cssHeight) / 2;
+      }
+    }
+    const scaleX = canvas2.width / cssWidth;
+    const scaleY = canvas2.height / cssHeight;
+    return {
+      x: (e.clientX - rect.left - offsetX) * scaleX,
+      y: (e.clientY - rect.top - offsetY) * scaleY
+    };
+  }
   _setupMouseEvents(canvas2) {
     const dispatch = (eventName, e) => {
       const wrapped = wrapMouseEvent(e);
@@ -12985,12 +13014,10 @@ var World = class extends EventEmitter {
     };
     canvas2.addEventListener("click", (e) => {
       if (this.debugMode) {
-        const rect = canvas2.getBoundingClientRect();
-        const scaleX = canvas2.width / rect.width;
-        const scaleY = canvas2.height / rect.height;
+        const pos = this._getCanvasMousePos(e);
         this.renderer.debugRipples.push({
-          x: (e.clientX - rect.left) * scaleX,
-          y: (e.clientY - rect.top) * scaleY,
+          x: pos.x,
+          y: pos.y,
           time: performance.now()
         });
       }
@@ -13050,11 +13077,9 @@ var World = class extends EventEmitter {
   _getHitObjects(e) {
     const canvas2 = this._canvas;
     if (!canvas2) return [];
-    const rect = canvas2.getBoundingClientRect();
-    const scaleX = canvas2.width / rect.width;
-    const scaleY = canvas2.height / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX - canvas2.width / 2;
-    const mouseY = -((e.clientY - rect.top) * scaleY - canvas2.height / 2);
+    const pos = this._getCanvasMousePos(e);
+    const mouseX = pos.x - canvas2.width / 2;
+    const mouseY = -(pos.y - canvas2.height / 2);
     let camX = 0, camY = 0, camZ = 0;
     let camRotX = 0, camRotY = 0, camRotZ = 0;
     const activeCam = this.camera;

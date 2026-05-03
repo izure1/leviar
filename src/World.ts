@@ -132,6 +132,40 @@ export class World extends EventEmitter<WorldEvents> {
 
   // ─── 마우스 이벤트 ────────────────────────────────
 
+  /**
+   * 캔버스상의 정확한 내부 마우스 좌표를 계산합니다. (object-fit: contain 보정 포함)
+   */
+  private _getCanvasMousePos(e: MouseEvent): { x: number; y: number } {
+    const canvas = this._canvas!
+    const rect = canvas.getBoundingClientRect()
+    let cssWidth = rect.width
+    let cssHeight = rect.height
+    let offsetX = 0
+    let offsetY = 0
+
+    const objectFit = getComputedStyle(canvas).objectFit
+    if (objectFit === 'contain') {
+      const cssRatio = cssWidth / cssHeight
+      const canvasRatio = canvas.width / canvas.height
+      // 오차가 생기지 않도록 소수점 처리 방지 및 정확한 비율 계산
+      if (cssRatio > canvasRatio) {
+        cssWidth = cssHeight * canvasRatio
+        offsetX = (rect.width - cssWidth) / 2
+      } else if (cssRatio < canvasRatio) {
+        cssHeight = cssWidth / canvasRatio
+        offsetY = (rect.height - cssHeight) / 2
+      }
+    }
+
+    const scaleX = canvas.width / cssWidth
+    const scaleY = canvas.height / cssHeight
+
+    return {
+      x: (e.clientX - rect.left - offsetX) * scaleX,
+      y: (e.clientY - rect.top - offsetY) * scaleY
+    }
+  }
+
   private _setupMouseEvents(canvas: HTMLCanvasElement) {
     // 객체에 이벤트를 emit하고, 전파가 막히지 않으면 world로 버블링합니다.
     const dispatch = (eventName: string, e: MouseEvent) => {
@@ -165,12 +199,10 @@ export class World extends EventEmitter<WorldEvents> {
 
     canvas.addEventListener('click', (e) => {
       if (this.debugMode) {
-        const rect = canvas.getBoundingClientRect()
-        const scaleX = canvas.width / rect.width
-        const scaleY = canvas.height / rect.height
+        const pos = this._getCanvasMousePos(e)
         this.renderer.debugRipples.push({
-          x: (e.clientX - rect.left) * scaleX,
-          y: (e.clientY - rect.top) * scaleY,
+          x: pos.x,
+          y: pos.y,
           time: performance.now(),
         })
       }
@@ -240,12 +272,10 @@ export class World extends EventEmitter<WorldEvents> {
     const canvas = this._canvas
     if (!canvas) return []
 
-    // 캔버스 상대 마우스 좌표 (DPR 고려)
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    const mouseX = (e.clientX - rect.left) * scaleX - canvas.width / 2
-    const mouseY = -((e.clientY - rect.top) * scaleY - canvas.height / 2)
+    // 캔버스 상대 마우스 좌표 (DPR 및 object-fit: contain 고려)
+    const pos = this._getCanvasMousePos(e)
+    const mouseX = pos.x - canvas.width / 2
+    const mouseY = -(pos.y - canvas.height / 2)
 
     // 카메라 위치 및 회전
     let camX = 0, camY = 0, camZ = 0
