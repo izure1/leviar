@@ -17,6 +17,7 @@ import { instancedVertex, instancedFragment } from './shaders/instanced.js'
 import { shadowVertex, shadowFragment } from './shaders/shadow.js'
 import { alphaOutlineVertex, alphaOutlineFragment } from './shaders/alphaOutline.js'
 import { alphaShadowVertex, alphaShadowFragment } from './shaders/alphaShadow.js'
+import { gradientVertex, gradientFragment } from './shaders/gradient.js'
 import { parseTextMarkup } from './utils/textMarkup.js'
 import { parseBorderRadius, parseMargin } from './utils/styleUtils.js'
 import { TEXTURE_THROTTLE_FRAMES, TEXTURE_DEBOUNCE_FRAMES } from './dirty.js'
@@ -180,6 +181,7 @@ export class Renderer {
   private shadowProgram!: Program
   private alphaOutlineProgram!: Program
   private alphaShadowProgram!: Program
+  private gradientProgram!: Program
 
   // Placeholder 색상 Program (에러 표시)
   private placeholderProgram!: Program
@@ -192,6 +194,7 @@ export class Renderer {
   private shadowMesh!: Mesh
   private alphaOutlineMesh!: Mesh
   private alphaShadowMesh!: Mesh
+  private gradientMesh!: Mesh
 
   // 상태 보존용 렌더 변수 (Model/View 매트릭스 계산용)
   private _modelMat = new Mat4()
@@ -204,8 +207,7 @@ export class Renderer {
   // 오브젝트별 Mesh 캐시
   private meshCache = new Map<string, Mesh>()
 
-  // 그라디언트 텍스처 캐시 (gradient 키 → Texture)
-  private _gradientTextureCache = new Map<string, Texture>()
+  // gradient 렌더링은 WebGL 셰이더로 전환되어 텍스처 캐시 없음
 
   // 텍스트 텍스처 캐시 (id → TextTextureEntry)
   private textCache = new Map<string, TextTextureEntry>()
@@ -562,6 +564,44 @@ export class Renderer {
     this.shadowMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.shadowProgram })
     this.alphaOutlineMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.alphaOutlineProgram })
     this.alphaShadowMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.alphaShadowProgram })
+
+    // ─── gradient 셰이더 (Canvas 텍스처 없이 GLSL uniform으로 직접 렌더링) ───
+    this.gradientProgram = new Program(gl, {
+      vertex: gradientVertex,
+      fragment: gradientFragment,
+      uniforms: {
+        uStopCount:    { value: 0 },
+        uStopColors0:  { value: [0, 0, 0, 1] },
+        uStopColors1:  { value: [0, 0, 0, 1] },
+        uStopColors2:  { value: [0, 0, 0, 1] },
+        uStopColors3:  { value: [0, 0, 0, 1] },
+        uStopColors4:  { value: [0, 0, 0, 1] },
+        uStopColors5:  { value: [0, 0, 0, 1] },
+        uStopColors6:  { value: [0, 0, 0, 1] },
+        uStopColors7:  { value: [0, 0, 0, 1] },
+        uStopOffset0:  { value: 0 },
+        uStopOffset1:  { value: 1 },
+        uStopOffset2:  { value: 1 },
+        uStopOffset3:  { value: 1 },
+        uStopOffset4:  { value: 1 },
+        uStopOffset5:  { value: 1 },
+        uStopOffset6:  { value: 1 },
+        uStopOffset7:  { value: 1 },
+        uDirection:    { value: 0 },
+        uType:         { value: 0 },
+        uSize:         { value: [1, 1] },
+        uBorderRadius: { value: [0, 0, 0, 0] },
+        uIsEllipse:    { value: 0 },
+        uOpacity:      { value: 1 },
+        uModelMatrix:      { value: new Float32Array(16) },
+        uViewMatrix:       { value: new Float32Array(16) },
+        uProjectionMatrix: { value: new Float32Array(16) },
+      },
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    })
+    this.gradientMesh = new Mesh(gl, { geometry: this.quadGeo, program: this.gradientProgram })
   }
 
   // ─── 디버그 overlay 헬퍼 ──────────────────────────────────────────────────
@@ -1431,10 +1471,9 @@ export class Renderer {
       this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius)
     }
 
-    // 그라디언트 레이어 (color 위에 덮어씬움)
+    // 그라디언트 레이어 (WebGL 셰이더, 텍스처 생성 없음)
     if (style.gradient && w > 0 && h > 0) {
-      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', false, baseRadius)
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, targetOpacity)
+      this._drawGradient(style.gradient, style.gradientType ?? 'linear', x, y, w, h, targetOpacity, false, baseRadius)
     }
   }
 
@@ -1484,10 +1523,9 @@ export class Renderer {
       drawEllipse(w, h, style.color, false)
     }
 
-    // 그라디언트 레이어 — ellipse 형태에 맞게 원형 클리핑 포함
+    // 그라디언트 레이어 — WebGL 셰이더, ellipse SDF 클리핑
     if (style.gradient && w > 0 && h > 0) {
-      const tex = this._makeGradientTexture(w, h, style.gradient, style.gradientType ?? 'linear', true)
-      if (tex) this._drawTextureMesh(tex, x, y, w, h, obj.__worldOpacity)
+      this._drawGradient(style.gradient, style.gradientType ?? 'linear', x, y, w, h, obj.__worldOpacity, true, null)
     }
   }
 
@@ -2245,94 +2283,60 @@ export class Renderer {
 
   }
 
-  // ─── Gradient Texture ────────────────────────────────────────────────────
+  // ─── Gradient (WebGL Shader) ────────────────────────────────────────────────
 
   /**
-   * gradient stops 문자열로부터 Offscreen Canvas 텍스처를 생성합니다.
-   * @param ellipseClip true이면 ellipse SDF 원형 클리핑을 Canvas 내에서 적용합니다.
+   * WebGL 셰이더로 gradient를 직접 렌더링합니다.
+   * Canvas 텍스처 생성·캐싱 없이 uniform만 설정하여 즉시 draw합니다.
+   * 애니메이션 시 매 프레임 Canvas/Texture 재생성이 없어 GPU 메모리 누수가 없습니다.
    */
-  private _makeGradientTexture(
-    w: number,
-    h: number,
+  private _drawGradient(
     gradient: string,
     type: 'linear' | 'circular',
-    ellipseClip: boolean,
-    borderRadius: [number, number, number, number] | null = null
-  ): Texture | null {
-    const radiusKey = borderRadius ? borderRadius.join(',') : ''
-    const cacheKey = `${Math.round(w)}|${Math.round(h)}|${gradient}|${type}|${ellipseClip}|${radiusKey}`
-    let tex = this._gradientTextureCache.get(cacheKey)
-    if (tex) return tex
-
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    opacity: number,
+    isEllipse: boolean,
+    borderRadius: [number, number, number, number] | null
+  ) {
     const { direction, stops } = parseGradientStops(gradient)
-    if (stops.length === 0) return null
+    if (stops.length === 0) return
 
-    const pw = Math.max(1, Math.round(w))
-    const ph = Math.max(1, Math.round(h))
-    const canvas = document.createElement('canvas')
-    canvas.width = pw
-    canvas.height = ph
-    const ctx = canvas.getContext('2d')!
+    this._flushBatch()
+    this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
 
-    // ellipse 클리핑: 원형 영역 외부를 투명으로 유지
-    if (ellipseClip) {
-      ctx.beginPath()
-      ctx.ellipse(pw / 2, ph / 2, pw / 2, ph / 2, 0, 0, Math.PI * 2)
-      ctx.clip()
-    } else if (borderRadius && borderRadius.some(r => r > 0)) {
-      ctx.beginPath()
-      if (typeof (ctx as any).roundRect === 'function') {
-        ; (ctx as any).roundRect(0, 0, pw, ph, borderRadius)
-      } else {
-        // Fallback for older browsers
-        const [tl, tr, br, bl] = borderRadius
-        ctx.moveTo(tl, 0)
-        ctx.lineTo(pw - tr, 0)
-        ctx.quadraticCurveTo(pw, 0, pw, tr)
-        ctx.lineTo(pw, ph - br)
-        ctx.quadraticCurveTo(pw, ph, pw - br, ph)
-        ctx.lineTo(bl, ph)
-        ctx.quadraticCurveTo(0, ph, 0, ph - bl)
-        ctx.lineTo(0, tl)
-        ctx.quadraticCurveTo(0, 0, tl, 0)
-      }
-      ctx.clip()
+    const MAX_STOPS = 8
+    const count = Math.min(stops.length, MAX_STOPS)
+
+    type ColorName  = 'uStopColors0'|'uStopColors1'|'uStopColors2'|'uStopColors3'|'uStopColors4'|'uStopColors5'|'uStopColors6'|'uStopColors7'
+    type OffsetName = 'uStopOffset0'|'uStopOffset1'|'uStopOffset2'|'uStopOffset3'|'uStopOffset4'|'uStopOffset5'|'uStopOffset6'|'uStopOffset7'
+
+    const colorNames: ColorName[]  = ['uStopColors0','uStopColors1','uStopColors2','uStopColors3','uStopColors4','uStopColors5','uStopColors6','uStopColors7']
+    const offsetNames: OffsetName[] = ['uStopOffset0','uStopOffset1','uStopOffset2','uStopOffset3','uStopOffset4','uStopOffset5','uStopOffset6','uStopOffset7']
+
+    const prog = this.gradientProgram
+    prog.uniforms['uStopCount'].value = count
+
+    for (let i = 0; i < MAX_STOPS; i++) {
+      const src = i < count ? stops[i] : stops[count - 1]
+      const [r, g, b, a] = parseCSSColor(src.color)
+      prog.uniforms[colorNames[i]].value  = [r, g, b, a]
+      prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1.0
     }
 
-    if (type === 'circular') {
-      ctx.save()
-      const cx = pw / 2
-      const cy = ph / 2
-      ctx.translate(cx, cy)
-      ctx.scale(pw / 2, ph / 2)
-      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
-      for (const stop of stops) {
-        grad.addColorStop(stop.offset, stop.color)
-      }
-      ctx.fillStyle = grad
-      ctx.fillRect(-1, -1, 2, 2)
-      ctx.restore()
-    } else {
-      // linear: direction(deg) 기준 시작→끝 좌표 계산
-      const rad = (direction - 90) * Math.PI / 180
-      const cx = pw / 2
-      const cy = ph / 2
-      const halfLen = (Math.abs(pw * Math.cos(rad)) + Math.abs(ph * Math.sin(rad))) / 2
-      const x0 = cx - Math.cos(rad) * halfLen
-      const y0 = cy - Math.sin(rad) * halfLen
-      const x1 = cx + Math.cos(rad) * halfLen
-      const y1 = cy + Math.sin(rad) * halfLen
-      const grad = ctx.createLinearGradient(x0, y0, x1, y1)
-      for (const stop of stops) {
-        grad.addColorStop(stop.offset, stop.color)
-      }
-      ctx.fillStyle = grad
-      ctx.fillRect(0, 0, pw, ph)
-    }
+    prog.uniforms['uDirection'].value    = direction
+    prog.uniforms['uType'].value         = type === 'circular' ? 1 : 0
+    prog.uniforms['uSize'].value         = [w, h]
+    prog.uniforms['uBorderRadius'].value = borderRadius ?? [0, 0, 0, 0]
+    prog.uniforms['uIsEllipse'].value    = isEllipse ? 1 : 0
+    prog.uniforms['uOpacity'].value      = opacity
+    prog.uniforms['uModelMatrix'].value      = this._makeModelMatrix(x, y, w, h)
+    prog.uniforms['uViewMatrix'].value       = this._viewMat
+    prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
-    tex = new Texture(this.gl, { image: canvas, generateMipmaps: false })
-    this._gradientTextureCache.set(cacheKey, tex)
-    return tex
+    this.gradientMesh.draw({ camera: this.camera })
   }
 
   // ─── Placeholder ────────────────────────────────────────────────────────
