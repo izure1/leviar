@@ -24,7 +24,7 @@ world.on('click', (obj, e: MouseEvent) => {
   // 동적 객체 생성
   const box = world.createRectangle({
     attribute: { physics: 'dynamic' },
-    style: { width: 50, height: 50, color: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff' },
+    style: { width: 50, height: 50, color: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff', cursor: 'pointer' },
     transform: { position: { x: pos.x, y: pos.y, z: targetDepth }, rotation: { z: Math.random() * 360 } }
   })
     .addChild(world.createText({

@@ -15,6 +15,7 @@
 | `opacity` | `number` (0 ~ 1.0) | 불투명도. (0: 투명, 1: 불투명) |
 | `zIndex` | `number` | 레이어 순서. 높을수록 앞에 그려짐. (기본값: 0) |
 | `pointerEvents` | `boolean` | 마우스 인터랙션 수신 여부. `false` 시 이벤트를 통과시킴. |
+| `cursor` | `CssCursor` | 마우스 오버 시 표시할 커서 형태. CSS 표준 cursor 값 지원. |
 | `margin` | `string` | 물리 충돌 영역의 추가 여백. CSS 단축 표기법 지원. |
 
 ---
@@ -79,4 +80,51 @@
 ### BorderRadius (둥글기)
 - **비정형 모서리**: `'10 20 30 40'` 순서로 [좌상, 우상, 우하, 좌하] 적용.
 - **백분율(%)**: `'50%'`로 설정하면 원형으로 적용.
+
+---
+
+## 💡 Cursor (마우스 커서)
+
+`style.cursor`를 지정하면, 해당 객체 위에 마우스가 올라갔을 때 캔버스 커서 모양이 변경됩니다.
+미지정 시 브라우저 기본 동작을 따릅니다.
+
+```typescript
+const btn = world.createRectangle({
+  style: { cursor: 'pointer' }
+})
+```
+
+### 지원 값 (`CssCursor`)
+
+| 값 | 설명 |
+| :--- | :--- |
+| `auto` | 브라우저 자동 판단 |
+| `default` | 기본 화살표 |
+| `none` | 커서 숨김 |
+| `pointer` | 손가락 (링크/버튼) |
+| `grab` / `grabbing` | 드래그 가능 / 드래그 중 |
+| `move` | 이동 가능 |
+| `text` | 텍스트 선택 |
+| `crosshair` | 십자선 |
+| `wait` | 대기 중 (스피너) |
+| `progress` | 처리 중 (화살표 + 스피너) |
+| `not-allowed` | 금지 |
+| `no-drop` | 드롭 불가 |
+| `copy` | 복사 |
+| `alias` | 바로가기 |
+| `context-menu` | 컨텍스트 메뉴 |
+| `help` | 도움말 |
+| `cell` | 표 셀 선택 |
+| `vertical-text` | 세로 텍스트 |
+| `all-scroll` | 전방향 스크롤 |
+| `col-resize` / `row-resize` | 열/행 크기 조절 |
+| `n/e/s/w-resize` | 단방향 크기 조절 |
+| `ne/nw/se/sw-resize` | 대각 크기 조절 |
+| `ew/ns-resize` | 좌우/상하 크기 조절 |
+| `nesw/nwse-resize` | 대각 양방향 크기 조절 |
+| `zoom-in` / `zoom-out` | 확대 / 축소 |
+
+> **우선순위**: z축 기준 가장 앞에 위치한 객체의 `cursor` 값이 적용됩니다.
+> `pointerEvents: false`인 객체는 hit-test에서 제외되므로 cursor도 적용되지 않습니다.
+
 

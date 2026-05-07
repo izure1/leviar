@@ -228,6 +228,10 @@ export class World extends EventEmitter<WorldEvents> {
         this.renderer.debugHoveredIds = hitIds
       }
 
+      // cursor: 가장 위 hit 객체의 style.cursor를 canvas에 반영
+      const topCursor = hits.find(o => o.style.cursor)?.style.cursor
+      canvas.style.cursor = topCursor ?? ''
+
       // mouseover: 새로 진입한 객체
       for (const obj of hits) {
         if (!this._mouseOver.has(obj.attribute.id)) {
@@ -253,6 +257,7 @@ export class World extends EventEmitter<WorldEvents> {
     })
 
     canvas.addEventListener('mouseleave', (e: MouseEvent) => {
+      canvas.style.cursor = ''
       const wrapped = wrapMouseEvent(e)
       for (const id of Array.from(this._mouseOver)) {
         const obj = Array.from(this.objects).find(o => o.attribute.id === id)

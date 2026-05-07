@@ -8650,7 +8650,8 @@ function makeStyle(partial) {
     letterSpacing: partial?.letterSpacing ?? 0,
     gradient: partial?.gradient,
     gradientType: partial?.gradientType,
-    borderRadius: partial?.borderRadius
+    borderRadius: partial?.borderRadius,
+    cursor: partial?.cursor
   };
 }
 function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -13039,6 +13040,8 @@ var World = class extends EventEmitter {
       if (this.debugMode) {
         this.renderer.debugHoveredIds = hitIds;
       }
+      const topCursor = hits.find((o) => o.style.cursor)?.style.cursor;
+      canvas2.style.cursor = topCursor ?? "";
       for (const obj of hits) {
         if (!this._mouseOver.has(obj.attribute.id)) {
           this._mouseOver.add(obj.attribute.id);
@@ -13060,6 +13063,7 @@ var World = class extends EventEmitter {
       }
     });
     canvas2.addEventListener("mouseleave", (e) => {
+      canvas2.style.cursor = "";
       const wrapped = wrapMouseEvent(e);
       for (const id of Array.from(this._mouseOver)) {
         const obj = Array.from(this.objects).find((o) => o.attribute.id === id);

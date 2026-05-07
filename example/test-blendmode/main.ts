@@ -89,7 +89,8 @@ blendModes.forEach((mode, i) => {
       textAlign: 'center',
       pointerEvents: true,
       borderColor: '#444',
-      borderWidth: 1
+      borderWidth: 1,
+      cursor: 'pointer'
     },
     transform: { position: world.camera?.canvasToLocal(cx, cy) }
   })
