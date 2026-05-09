@@ -96,7 +96,7 @@ world.createText({
 
 // 5. 사각형 (Rectangle)
 const rect = world.createRectangle({
-  style: { width: 150, height: 150, color: '#fca311' },
+  style: { width: 150, height: 150, background: '#fca311' },
   transform: { position: getPos(0.5, 0.7), pivot: { x: 0.5, y: 0.5 } }
 })
 
@@ -108,7 +108,7 @@ world.createText({
 
 // 6. 원형 (Ellipse)
 const circle = world.createEllipse({
-  style: { width: 150, height: 150, color: '#e63946' },
+  style: { width: 150, height: 150, background: '#e63946' },
   transform: { position: getPos(0.8, 0.7), pivot: { x: 0.5, y: 0.5 } }
 })
 

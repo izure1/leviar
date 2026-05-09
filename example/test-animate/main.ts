@@ -19,7 +19,7 @@ text.animate({
 
 // 2. 복합 대입 연산자 테스트
 const box = world.createRectangle({
-  style: { color: '#c77dff', width: 50, height: 50 },
+  style: { background: '#c77dff', width: 50, height: 50 },
   transform: { position: { x: -100, y: 50, z: 0 }, rotation: { x: 0, y: 0, z: 0 } },
 })
 
@@ -98,16 +98,16 @@ colorText.animate({
 
 // 6. 사각형 색상 애니메이션 (HEX, RGBA, HSL 혼합)
 const colorBox = world.createRectangle({
-  style: { color: '#ff00ff', width: 200, height: 100 },
+  style: { background: '#ff00ff', width: 200, height: 100 },
   transform: { position: { x: 300, y: 100, z: 0 } },
 })
 
 colorBox.animate({
-  style: { color: 'rgba(255, 255, 0, 0.5)' },
+  style: { background: 'rgba(255, 255, 0, 0.5)' },
   transform: { rotation: { z: 3.14 } }
 }, 2000, 'easeInOut').on('end', () => {
   colorBox.animate({
-    style: { color: 'hsl(180, 100%, 50%)' },
+    style: { background: 'hsl(180, 100%, 50%)' },
     transform: { rotation: { z: 3.14 * 2 } }
   }, 2000, 'easeInOut')
 })
@@ -132,20 +132,19 @@ const gradientBox = world.createRectangle({
   style: {
     width: 300,
     height: 100,
-    gradient: '90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)',
   },
   transform: { position: { x: 300, y: 400, z: 0 } },
 })
 
 gradientBox.animate({
   style: {
-    gradient: '270deg, rgb(0, 255, 0) 20%, rgb(255, 255, 0) 80%'
+    background: 'linear-gradient(270deg, rgb(0, 255, 0) 20%, rgb(255, 255, 0) 80%)'
   }
 }, 3000, 'easeInOut').on('end', () => {
   gradientBox.animate({
     style: {
-      gradient: '90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%'
+      background: 'linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(0, 0, 255) 100%)'
     }
   }, 3000, 'easeInOut')
 })

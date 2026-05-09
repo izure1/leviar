@@ -22,7 +22,7 @@ for (const layer of layers) {
         className: 'parallax-layer'
       },
       style: {
-        color,
+        background: color,
         opacity: rand(0.3, 0.8),
         width: rand(layer.size * 0.5, layer.size * 1.5),
         height: rand(layer.size * 0.3, layer.size),
@@ -46,7 +46,7 @@ for (let i = 0; i < 25; i++) {
       className: 'parallax-layer'
     },
     style: {
-      color: `hsl(${rand(200, 300)}, 80%, 70%)`,
+      background: `hsl(${rand(200, 300)}, 80%, 70%)`,
       opacity: rand(0.4, 1.0),
       width: size,
       height: size,

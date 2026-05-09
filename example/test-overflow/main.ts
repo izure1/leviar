@@ -6,13 +6,13 @@ world.camera = camera
 
 // 부모 요소 (overflow: hidden)
 const parent = world.createRectangle({
-  style: { color: '#ff5555', width: 200, height: 200, overflow: 'hidden', borderWidth: 1, borderColor: '#ffffff' },
+  style: { background: '#ff5555', width: 200, height: 200, overflow: 'hidden', borderWidth: 1, borderColor: '#ffffff' },
   transform: { position: { x: 0, y: 0, z: 0 } }
 })
 
 // 자식 요소 (부모 영역 밖으로 벗어남)
 const child = world.createRectangle({
-  style: { color: '#5555ff', width: 180, height: 180 },
+  style: { background: '#5555ff', width: 180, height: 180 },
   transform: { position: { x: 150, y: 0, z: 0 } }
 })
 

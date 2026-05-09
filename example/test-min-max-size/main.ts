@@ -17,7 +17,7 @@ const box = world.createRectangle({
     maxWidth: 400,
     minHeight: 100,
     maxHeight: 400,
-    color: '#13132a',
+    background: '#13132a',
     borderRadius: 16,
     borderWidth: 4,
     borderColor: '#c77dff',
@@ -45,7 +45,7 @@ function label(t: string, x: number, y: number) {
 // ① maxWidth → word-wrap 경계 (width 없이)
 label('① maxWidth → word-wrap', -350, -250)
 world.createRectangle({
-  style: { color: '#13132a', width: 220, height: 80, borderColor: '#7ec8e3', borderWidth: 1 },
+  style: { background: '#13132a', width: 220, height: 80, borderColor: '#7ec8e3', borderWidth: 1 },
   transform: { position: { x: -350, y: -190, z: 0 } },
 })
 world.createText({
@@ -57,7 +57,7 @@ world.createText({
 // ② minWidth → 짧은 텍스트도 최소 폭 보장, textAlign: center 동작 확인
 label('② minWidth + center align', -350, -80)
 world.createRectangle({
-  style: { color: '#13132a', width: 200, height: 40, borderColor: '#f4a261', borderWidth: 1 },
+  style: { background: '#13132a', width: 200, height: 40, borderColor: '#f4a261', borderWidth: 1 },
   transform: { position: { x: -350, y: -35, z: 0 } },
 })
 world.createText({
@@ -69,7 +69,7 @@ world.createText({
 // ③ maxHeight → 초과 라인 클리핑
 label('③ maxHeight → clip', -350, 60)
 world.createRectangle({
-  style: { color: '#13132a', width: 220, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
+  style: { background: '#13132a', width: 220, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
   transform: { position: { x: -350, y: 105, z: 0 } },
 })
 world.createText({
@@ -81,7 +81,7 @@ world.createText({
 // ④ minHeight → 텍스트가 짧아도 캔버스 높이 최소 보장
 label('④ minHeight → expand canvas', -350, 200)
 world.createRectangle({
-  style: { color: '#13132a', width: 220, height: 80, borderColor: '#e71d36', borderWidth: 1 },
+  style: { background: '#13132a', width: 220, height: 80, borderColor: '#e71d36', borderWidth: 1 },
   transform: { position: { x: -350, y: 250, z: 0 } },
 })
 world.createText({
@@ -94,7 +94,7 @@ world.createText({
 
 label('⑤ Image maxWidth → keep aspect ratio', 350, -250)
 world.createRectangle({
-  style: { color: 'rgba(0,0,0,0)', width: 100, height: 100, borderColor: '#7ec8e3', borderWidth: 1 },
+  style: { background: 'rgba(0,0,0,0)', width: 100, height: 100, borderColor: '#7ec8e3', borderWidth: 1 },
   transform: { position: { x: 350, y: -190, z: 0 } },
 })
 world.createImage({
@@ -105,7 +105,7 @@ world.createImage({
 
 label('⑥ Image maxHeight → keep aspect ratio', 350, -80)
 world.createRectangle({
-  style: { color: 'rgba(0,0,0,0)', width: 200, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
+  style: { background: 'rgba(0,0,0,0)', width: 200, height: 50, borderColor: '#2ec4b6', borderWidth: 1 },
   transform: { position: { x: 350, y: -35, z: 0 } },
 })
 world.createImage({
@@ -116,7 +116,7 @@ world.createImage({
 
 label('⑦ Image minWidth + minHeight (Aspect ratio scaling)', 350, 60)
 world.createRectangle({
-  style: { color: 'rgba(0,0,0,0)', width: 300, height: 150, borderColor: '#f4a261', borderWidth: 1 },
+  style: { background: 'rgba(0,0,0,0)', width: 300, height: 150, borderColor: '#f4a261', borderWidth: 1 },
   transform: { position: { x: 350, y: 165, z: 0 } },
 })
 world.createImage({

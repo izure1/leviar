@@ -112,76 +112,92 @@ export function formatColor(rgba: RGBA): string {
 }
 
 export function interpolateColor(from: string, to: string, t: number): string | null {
-  const fromRGBA = parseColor(from);
-  const toRGBA = parseColor(to);
+  const fromRGBA = parseColor(from)
+  const toRGBA = parseColor(to)
   if (fromRGBA && toRGBA) {
     const result: RGBA = [
       fromRGBA[0] + (toRGBA[0] - fromRGBA[0]) * t,
       fromRGBA[1] + (toRGBA[1] - fromRGBA[1]) * t,
       fromRGBA[2] + (toRGBA[2] - fromRGBA[2]) * t,
       fromRGBA[3] + (toRGBA[3] - fromRGBA[3]) * t,
-    ];
-    return formatColor(result);
+    ]
+    return formatColor(result)
   }
 
-  // Handle gradient strings (e.g. '90deg, rgb(255,0,0) 0%, rgb(0,0,255) 100%')
-  if (from.includes(',') || to.includes(',')) {
-    const fromParts = from.split(/,(?![^(]*\))/).map(x => x.trim());
-    const toParts = to.split(/,(?![^(]*\))/).map(x => x.trim());
-    
-    if (fromParts.length === toParts.length && fromParts.length > 0) {
-      const resultParts = [];
-      let success = true;
-      
-      for (let i = 0; i < fromParts.length; i++) {
-        const fStr = fromParts[i];
-        const tStr = toParts[i];
+  // ─── linear-gradient / radial-gradient 전체 문자열 처리 ────────────────────
+  // 예: 'linear-gradient(90deg, rgb(255,0,0) 0%, rgb(0,0,255) 100%)'
+  const gradientPrefixRe = /^(linear-gradient|radial-gradient)\((.+)\)$/s
+  const fromGrad = from.trim().match(gradientPrefixRe)
+  const toGrad = to.trim().match(gradientPrefixRe)
 
-        // Is it an angle? (e.g. 90deg, 1turn)
-        const angleMatchF = fStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
-        const angleMatchT = tStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/);
+  if (fromGrad && toGrad && fromGrad[1] === toGrad[1]) {
+    const prefix = fromGrad[1]
+    const innerResult = interpolateColor(fromGrad[2], toGrad[2], t)
+    if (innerResult !== null) {
+      return `${prefix}(${innerResult})`
+    }
+    return null
+  }
+
+  // ─── stops-only 형식 처리 (기존 로직 유지) ───────────────────────────────
+  // 예: '90deg, rgb(255,0,0) 0%, rgb(0,0,255) 100%'
+  if (from.includes(',') || to.includes(',')) {
+    const fromParts = from.split(/,(?![^(]*\))/).map(x => x.trim())
+    const toParts = to.split(/,(?![^(]*\))/).map(x => x.trim())
+
+    if (fromParts.length === toParts.length && fromParts.length > 0) {
+      const resultParts = []
+      let success = true
+
+      for (let i = 0; i < fromParts.length; i++) {
+        const fStr = fromParts[i]
+        const tStr = toParts[i]
+
+        // 각도 보간 (e.g. 90deg, 1turn)
+        const angleMatchF = fStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/)
+        const angleMatchT = tStr.match(/^(-?\d*\.?\d+)(deg|turn|rad)$/)
         if (angleMatchF && angleMatchT && angleMatchF[2] === angleMatchT[2]) {
-           const v = parseFloat(angleMatchF[1]) + (parseFloat(angleMatchT[1]) - parseFloat(angleMatchF[1])) * t;
-           resultParts.push(`${v}${angleMatchF[2]}`);
-           continue;
+          const v = parseFloat(angleMatchF[1]) + (parseFloat(angleMatchT[1]) - parseFloat(angleMatchF[1])) * t
+          resultParts.push(`${v}${angleMatchF[2]}`)
+          continue
         }
 
-        // Color stop match
-        const stopRegex = /^(.+?)(?:\s+(-?\d*\.?\d+%?))?$/;
-        const fMatch = fStr.match(stopRegex);
-        const tMatch = tStr.match(stopRegex);
+        // color stop 보간
+        const stopRegex = /^(.+?)(?:\s+(-?\d*\.?\d+%?))?$/
+        const fMatch = fStr.match(stopRegex)
+        const tMatch = tStr.match(stopRegex)
         if (fMatch && tMatch) {
-          const fColorStr = fMatch[1];
-          const tColorStr = tMatch[1];
-          const fPos = fMatch[2] || "";
-          const tPos = tMatch[2] || "";
-          
-          const interpolatedColor = interpolateColor(fColorStr, tColorStr, t);
-          if (interpolatedColor) {
-            let interpolatedPos = fPos;
-            if (fPos.endsWith('%') && tPos.endsWith('%')) {
-               const fv = parseFloat(fPos);
-               const tv = parseFloat(tPos);
-               interpolatedPos = `${fv + (tv - fv) * t}%`;
-            }
+          const fColorStr = fMatch[1]
+          const tColorStr = tMatch[1]
+          const fPos = fMatch[2] || ''
+          const tPos = tMatch[2] || ''
 
-            if (interpolatedPos) resultParts.push(`${interpolatedColor} ${interpolatedPos}`);
-            else resultParts.push(`${interpolatedColor}`);
-            continue;
+          const interpolatedColor = interpolateColor(fColorStr, tColorStr, t)
+          if (interpolatedColor) {
+            let interpolatedPos = fPos
+            if (fPos.endsWith('%') && tPos.endsWith('%')) {
+              const fv = parseFloat(fPos)
+              const tv = parseFloat(tPos)
+              interpolatedPos = `${fv + (tv - fv) * t}%`
+            }
+            if (interpolatedPos) resultParts.push(`${interpolatedColor} ${interpolatedPos}`)
+            else resultParts.push(`${interpolatedColor}`)
+            continue
           }
         }
-        success = false;
-        break;
+        success = false
+        break
       }
-      
+
       if (success) {
-        return resultParts.join(', ');
+        return resultParts.join(', ')
       }
     }
   }
 
-  return null;
+  return null
 }
+
 
 export function isColorString(str: string): boolean {
   return typeof str === 'string' && (

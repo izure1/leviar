@@ -8,7 +8,7 @@ async function init() {
   // 배경 생성 구별용 텍스쳐나 작은 박스들 배치
   world.createRectangle({
     attribute: { name: 'bg' },
-    style: { width: 2000, height: 2000, color: '#34495e' },
+    style: { width: 2000, height: 2000, background: '#34495e' },
     transform: { position: { z: -100 } }
   })
 
@@ -18,7 +18,7 @@ async function init() {
       style: {
         width: 10 + Math.random() * 20,
         height: 10 + Math.random() * 20,
-        color: '#f1c40f',
+        background: '#f1c40f',
       },
       transform: {
         position: {
@@ -35,7 +35,7 @@ async function init() {
     attribute: { name: 'rect' },
     style: {
       width: 200, height: 200,
-      color: 'rgba(0, 0, 0, 0)',
+      background: 'rgba(0, 0, 0, 0)',
       borderRadius: 20,
       borderWidth: 10,
       borderColor: 'rgba(231, 76, 60, 1)',
@@ -57,7 +57,7 @@ async function init() {
     attribute: { name: 'ellipse' },
     style: {
       width: 200, height: 200,
-      color: 'rgba(0, 0, 0, 0)',
+      background: 'rgba(0, 0, 0, 0)',
       borderWidth: 10,
       borderColor: 'rgba(52, 152, 219, 1)',
       outlineWidth: 5,
@@ -78,7 +78,7 @@ async function init() {
     style: {
       width: 150,
       height: 150,
-      color: 'rgba(241, 196, 15, 0.5)',
+      background: 'rgba(241, 196, 15, 0.5)',
       borderRadius: '50%',
       borderWidth: 15,
       borderColor: 'rgba(230, 126, 34, 1)',

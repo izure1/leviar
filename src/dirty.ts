@@ -12,8 +12,8 @@ export type DirtyKind = 'texture' | 'physics'
 export const STYLE_DIRTY_MAP: Readonly<Record<string, DirtyKind[]>> = {
   // 텍스처만 재생성
   color: ['texture'],
-  gradient: ['texture'],
-  gradientType: ['texture'],
+  background: ['texture'],
+  backgroundSize: ['texture'],
   textAlign: ['texture'],
   textShadowColor: ['texture'],
   textShadowBlur: ['texture'],

@@ -148,6 +148,32 @@ function parseGradientStops(gradient: string): GradientParsed {
   return { direction, stops }
 }
 
+// ─── background 파서 ──────────────────────────────────────────────────────────
+
+type BackgroundKind =
+  | { kind: 'url'; assetKey: string }
+  | { kind: 'linear-gradient'; stops: string }
+  | { kind: 'radial-gradient'; stops: string }
+  | { kind: 'color'; value: string }
+  | { kind: 'none' }
+
+function resolveBackground(bg: string | undefined): BackgroundKind {
+  if (!bg) return { kind: 'none' }
+  if (bg.startsWith('url(')) {
+    const key = bg.slice(4, -1).trim()
+    return { kind: 'url', assetKey: key }
+  }
+  if (bg.startsWith('linear-gradient(')) {
+    const stops = bg.slice('linear-gradient('.length, -1)
+    return { kind: 'linear-gradient', stops }
+  }
+  if (bg.startsWith('radial-gradient(')) {
+    const stops = bg.slice('radial-gradient('.length, -1)
+    return { kind: 'radial-gradient', stops }
+  }
+  return { kind: 'color', value: bg }
+}
+
 // ─── 텍스처 캐시 키 ──────────────────────────────────────────────────────────
 
 // 텍스트 오브젝트의 Offscreen Canvas → Texture 캐시
@@ -990,10 +1016,10 @@ export class Renderer {
 
     switch (type) {
       case 'rectangle':
-        this._drawRectangle(obj, px, py, w, h)
+        this._drawRectangle(obj, px, py, w, h, assets)
         break
       case 'ellipse':
-        this._drawEllipse(obj, px, py, w, h)
+        this._drawEllipse(obj, px, py, w, h, assets)
         break
       case 'text':
         this._drawText(obj, px, py, 1, timestamp)
@@ -1586,35 +1612,42 @@ export class Renderer {
 
   // ─── Rectangle ──────────────────────────────────────────────────────────
 
-  private _drawRectangle(obj: LeviarObject, x: number, y: number, w: number, h: number) {
+  private _drawRectangle(obj: LeviarObject, x: number, y: number, w: number, h: number, assets: LoadedAssets) {
     const { style } = obj
-    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
+    if (!style.background && !style.borderColor && !style.outlineColor) return
 
     const targetOpacity = obj.__worldOpacity
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0)
 
     this._drawShadow(obj, x, y, w, h, undefined, undefined, false, baseRadius)
-
     this._drawRectBorders(obj, x, y, w, h, targetOpacity)
 
-    // 본체 color
-    if (style.color) {
-      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius)
-    }
-
-    // 그라디언트 레이어 (WebGL 셰이더, 텍스처 생성 없음)
-    if (style.gradient && w > 0 && h > 0) {
-      this._drawGradient(style.gradient, style.gradientType ?? 'linear', x, y, w, h, targetOpacity, false, baseRadius)
+    const bg = resolveBackground(style.background)
+    switch (bg.kind) {
+      case 'color':
+        this._drawColorMesh(this.colorProgram, x, y, w, h, bg.value, targetOpacity, w, h, baseRadius)
+        break
+      case 'linear-gradient':
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, 'linear', x, y, w, h, targetOpacity, false, baseRadius)
+        break
+      case 'radial-gradient':
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, 'circular', x, y, w, h, targetOpacity, false, baseRadius)
+        break
+      case 'url':
+        if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, targetOpacity, baseRadius, style.backgroundSize)
+        break
+      default:
+        break
     }
   }
 
   // ─── Ellipse ────────────────────────────────────────────────────────────
 
-  private _drawEllipse(obj: LeviarObject, x: number, y: number, w: number, h: number) {
-    this._flushBatch();
-    this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over');
+  private _drawEllipse(obj: LeviarObject, x: number, y: number, w: number, h: number, assets: LoadedAssets) {
+    this._flushBatch()
+    this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
     const { style } = obj
-    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return
+    if (!style.background && !style.borderColor && !style.outlineColor) return
 
     this._drawShadow(obj, x, y, w, h, undefined, undefined, true)
 
@@ -1622,9 +1655,9 @@ export class Renderer {
       const [r, g, b, a] = parseCSSColor(color)
       this.ellipseProgram.uniforms['uColor'].value = [r, g, b, a]
       this.ellipseProgram.uniforms['uOpacity'].value = obj.__worldOpacity
-      if (this.ellipseProgram.uniforms['uSize']) this.ellipseProgram.uniforms['uSize'].value = [ew, eh];
-      if (this.ellipseProgram.uniforms['uIsBorder']) this.ellipseProgram.uniforms['uIsBorder'].value = isBorder ? 1 : 0;
-      if (this.ellipseProgram.uniforms['uInnerSize']) this.ellipseProgram.uniforms['uInnerSize'].value = [innerEW, innerEH];
+      if (this.ellipseProgram.uniforms['uSize']) this.ellipseProgram.uniforms['uSize'].value = [ew, eh]
+      if (this.ellipseProgram.uniforms['uIsBorder']) this.ellipseProgram.uniforms['uIsBorder'].value = isBorder ? 1 : 0
+      if (this.ellipseProgram.uniforms['uInnerSize']) this.ellipseProgram.uniforms['uInnerSize'].value = [innerEW, innerEH]
       this.ellipseProgram.uniforms['uModelMatrix'].value = this._makeModelMatrix(x, y, ew, eh, 0, w, h)
       this.ellipseProgram.uniforms['uProjectionMatrix'].value = this._projMatrix()
       this.ellipseMesh.draw({ camera: this.camera })
@@ -1649,14 +1682,24 @@ export class Renderer {
       drawEllipse(outerW, outerH, style.borderColor, true, w, h)
     }
 
-    // 본체 color
-    if (style.color) {
-      drawEllipse(w, h, style.color, false)
-    }
-
-    // 그라디언트 레이어 — WebGL 셰이더, ellipse SDF 클리핑
-    if (style.gradient && w > 0 && h > 0) {
-      this._drawGradient(style.gradient, style.gradientType ?? 'linear', x, y, w, h, obj.__worldOpacity, true, null)
+    // 본체 background
+    const bg = resolveBackground(style.background)
+    switch (bg.kind) {
+      case 'color':
+        drawEllipse(w, h, bg.value, false)
+        break
+      case 'linear-gradient':
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, 'linear', x, y, w, h, obj.__worldOpacity, true, null)
+        break
+      case 'radial-gradient':
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, 'circular', x, y, w, h, obj.__worldOpacity, true, null)
+        break
+      case 'url':
+        // 이미지 배경은 ellipse SDF 클리핑 없이 rect로 렌더링
+        if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, obj.__worldOpacity, null, style.backgroundSize)
+        break
+      default:
+        break
     }
   }
 
@@ -2419,10 +2462,9 @@ export class Renderer {
   /**
    * WebGL 셰이더로 gradient를 직접 렌더링합니다.
    * Canvas 텍스처 생성·캐싱 없이 uniform만 설정하여 즉시 draw합니다.
-   * 애니메이션 시 매 프레임 Canvas/Texture 재생성이 없어 GPU 메모리 누수가 없습니다.
    */
   private _drawGradient(
-    gradient: string,
+    stops: string,
     type: 'linear' | 'circular',
     x: number,
     y: number,
@@ -2432,14 +2474,14 @@ export class Renderer {
     isEllipse: boolean,
     borderRadius: [number, number, number, number] | null
   ) {
-    const { direction, stops } = parseGradientStops(gradient)
-    if (stops.length === 0) return
+    const { direction, stops: parsedStops } = parseGradientStops(stops)
+    if (parsedStops.length === 0) return
 
     this._flushBatch()
     this._setBlendMode(this._activeObj?.style?.blendMode ?? 'source-over')
 
     const MAX_STOPS = 8
-    const count = Math.min(stops.length, MAX_STOPS)
+    const count = Math.min(parsedStops.length, MAX_STOPS)
 
     type ColorName = 'uStopColors0' | 'uStopColors1' | 'uStopColors2' | 'uStopColors3' | 'uStopColors4' | 'uStopColors5' | 'uStopColors6' | 'uStopColors7'
     type OffsetName = 'uStopOffset0' | 'uStopOffset1' | 'uStopOffset2' | 'uStopOffset3' | 'uStopOffset4' | 'uStopOffset5' | 'uStopOffset6' | 'uStopOffset7'
@@ -2451,7 +2493,7 @@ export class Renderer {
     prog.uniforms['uStopCount'].value = count
 
     for (let i = 0; i < MAX_STOPS; i++) {
-      const src = i < count ? stops[i] : stops[count - 1]
+      const src = i < count ? parsedStops[i] : parsedStops[count - 1]
       const [r, g, b, a] = parseCSSColor(src.color)
       prog.uniforms[colorNames[i]].value = [r, g, b, a]
       prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1.0
@@ -2468,6 +2510,55 @@ export class Renderer {
     prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
 
     this.gradientMesh.draw({ camera: this.camera })
+  }
+
+  // ─── Rect Background (Image) ────────────────────────────────────────────────
+
+  /**
+   * style.background = 'url(에셋키)' 에 대응하는 이미지 배경 렌더링.
+   * backgroundSize에 따라 UV를 계산하여 _drawTextureMesh로 전달합니다.
+   *
+   * - 'cover'  : 가로·세로 중 큰 쪽에 맞춰 채움 (중앙 크롭)
+   * - 'contain': 가로·세로 중 작은 쪽에 맞춰 맞춤 (중앙 레터박스)
+   * - 'auto'   : 컨테이너에 그대로 늘림 (기본값)
+   */
+  private _drawRectBackground(
+    assetKey: string,
+    assets: LoadedAssets,
+    x: number, y: number, w: number, h: number,
+    opacity: number,
+    borderRadius: [number, number, number, number] | null,
+    backgroundSize?: 'cover' | 'contain' | 'auto',
+  ) {
+    const asset = assets[assetKey]
+    if (!asset || !(asset instanceof HTMLImageElement)) return
+
+    const texture = this._getOrCreateAssetTexture(assetKey, asset)
+    const natW = asset.naturalWidth
+    const natH = asset.naturalHeight
+    if (natW === 0 || natH === 0) return
+
+    let uvOffset: [number, number] = [0, 0]
+    let uvScale: [number, number] = [1, 1]
+
+    if (backgroundSize === 'cover') {
+      // 더 큰 비율로 채움 → 이미지 중앙 크롭
+      const scale = Math.max(w / natW, h / natH)
+      const visW = w / (natW * scale)
+      const visH = h / (natH * scale)
+      uvOffset = [(1 - visW) / 2, (1 - visH) / 2]
+      uvScale = [visW, visH]
+    } else if (backgroundSize === 'contain') {
+      // 더 작은 비율로 맞춤 → 레터박스 (남은 영역 투명)
+      const scale = Math.min(w / natW, h / natH)
+      const visW = w / (natW * scale)
+      const visH = h / (natH * scale)
+      uvOffset = [(1 - visW) / 2, (1 - visH) / 2]
+      uvScale = [visW, visH]
+    }
+    // 'auto' 또는 미지정: UV [0,0]~[1,1] 그대로 스트레치
+
+    this._drawTextureMesh(texture, x, y, w, h, opacity, false, uvOffset, uvScale, 0, borderRadius)
   }
 
   // ─── Placeholder ────────────────────────────────────────────────────────

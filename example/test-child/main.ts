@@ -18,7 +18,7 @@ window.addEventListener('wheel', (e) => {
 
 // 1. 태양 (최상위 부모)
 const sun = world.createEllipse({
-  style: { color: '#ffcc00', width: 100, height: 100, boxShadowColor: '#ffcc00', boxShadowSpread: 25, boxShadowBlur: 25 },
+  style: { background: '#ffcc00', width: 100, height: 100, boxShadowColor: '#ffcc00', boxShadowSpread: 25, boxShadowBlur: 25 },
   transform: { position: { x: 0, y: 0, z: 0 } }
 }).addChild(
   world.createText({
@@ -32,7 +32,7 @@ const sun = world.createEllipse({
 
 // 2. 지구 (태양의 자식)
 const earth = world.createEllipse({
-  style: { color: '#0077ff', width: 40, height: 40, boxShadowColor: '#0077ff', boxShadowSpread: 10, boxShadowBlur: 10, opacity: 0.75 },
+  style: { background: '#0077ff', width: 40, height: 40, boxShadowColor: '#0077ff', boxShadowSpread: 10, boxShadowBlur: 10, opacity: 0.75 },
   // 태양으로부터 x축으로 200만큼 떨어져 있습니다.
   transform: { position: { x: 200, y: 0, z: 0 } }
 }).on('click', () => {
@@ -42,7 +42,7 @@ sun.addChild(earth) // 지구를 태양에 종속
 
 // 3. 달 (지구의 자식 - 자식에 자식을 넣기!)
 const moon = world.createEllipse({ // 달을 rectangle로 시연
-  style: { color: '#dddddd', width: 15, height: 15, boxShadowColor: '#ffffff', boxShadowSpread: 5, boxShadowBlur: 5, opacity: 0.75 },
+  style: { background: '#dddddd', width: 15, height: 15, boxShadowColor: '#ffffff', boxShadowSpread: 5, boxShadowBlur: 5, opacity: 0.75 },
   // 지구로부터 x축으로 60만큼 떨어져 있습니다.
   transform: { position: { x: 60, y: 0, z: 0 } }
 }).on('click', () => {

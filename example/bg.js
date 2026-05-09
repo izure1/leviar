@@ -8132,6 +8132,17 @@ function interpolateColor(from, to, t) {
     ];
     return formatColor(result);
   }
+  const gradientPrefixRe = /^(linear-gradient|radial-gradient)\((.+)\)$/s;
+  const fromGrad = from.trim().match(gradientPrefixRe);
+  const toGrad = to.trim().match(gradientPrefixRe);
+  if (fromGrad && toGrad && fromGrad[1] === toGrad[1]) {
+    const prefix = fromGrad[1];
+    const innerResult = interpolateColor(fromGrad[2], toGrad[2], t);
+    if (innerResult !== null) {
+      return `${prefix}(${innerResult})`;
+    }
+    return null;
+  }
   if (from.includes(",") || to.includes(",")) {
     const fromParts = from.split(/,(?![^(]*\))/).map((x) => x.trim());
     const toParts = to.split(/,(?![^(]*\))/).map((x) => x.trim());
@@ -8546,8 +8557,8 @@ var FadeTransition = class extends BaseTransition {
 var STYLE_DIRTY_MAP = {
   // 텍스처만 재생성
   color: ["texture"],
-  gradient: ["texture"],
-  gradientType: ["texture"],
+  background: ["texture"],
+  backgroundSize: ["texture"],
   textAlign: ["texture"],
   textShadowColor: ["texture"],
   textShadowBlur: ["texture"],
@@ -8648,8 +8659,8 @@ function makeStyle(partial) {
     zIndex: partial?.zIndex ?? 0,
     blendMode: partial?.blendMode,
     letterSpacing: partial?.letterSpacing ?? 0,
-    gradient: partial?.gradient,
-    gradientType: partial?.gradientType,
+    background: partial?.background,
+    backgroundSize: partial?.backgroundSize,
     borderRadius: partial?.borderRadius,
     cursor: partial?.cursor,
     overflow: partial?.overflow ?? "visible"
@@ -11092,6 +11103,22 @@ function parseGradientStops(gradient) {
   }
   return { direction, stops };
 }
+function resolveBackground(bg) {
+  if (!bg) return { kind: "none" };
+  if (bg.startsWith("url(")) {
+    const key = bg.slice(4, -1).trim();
+    return { kind: "url", assetKey: key };
+  }
+  if (bg.startsWith("linear-gradient(")) {
+    const stops = bg.slice("linear-gradient(".length, -1);
+    return { kind: "linear-gradient", stops };
+  }
+  if (bg.startsWith("radial-gradient(")) {
+    const stops = bg.slice("radial-gradient(".length, -1);
+    return { kind: "radial-gradient", stops };
+  }
+  return { kind: "color", value: bg };
+}
 var TEXT_RENDER_SCALE = 2;
 var Renderer2 = class {
   ogl;
@@ -11777,10 +11804,10 @@ var Renderer2 = class {
     const type = obj.attribute.type;
     switch (type) {
       case "rectangle":
-        this._drawRectangle(obj, px, py, w, h);
+        this._drawRectangle(obj, px, py, w, h, assets);
         break;
       case "ellipse":
-        this._drawEllipse(obj, px, py, w, h);
+        this._drawEllipse(obj, px, py, w, h, assets);
         break;
       case "text":
         this._drawText(obj, px, py, 1, timestamp);
@@ -12286,26 +12313,37 @@ var Renderer2 = class {
     }
   }
   // ─── Rectangle ──────────────────────────────────────────────────────────
-  _drawRectangle(obj, x, y, w, h) {
+  _drawRectangle(obj, x, y, w, h, assets) {
     const { style } = obj;
-    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
+    if (!style.background && !style.borderColor && !style.outlineColor) return;
     const targetOpacity = obj.__worldOpacity;
     const baseRadius = parseBorderRadius(style.borderRadius, w, h, 0);
     this._drawShadow(obj, x, y, w, h, void 0, void 0, false, baseRadius);
     this._drawRectBorders(obj, x, y, w, h, targetOpacity);
-    if (style.color) {
-      this._drawColorMesh(this.colorProgram, x, y, w, h, style.color, targetOpacity, w, h, baseRadius);
-    }
-    if (style.gradient && w > 0 && h > 0) {
-      this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, targetOpacity, false, baseRadius);
+    const bg = resolveBackground(style.background);
+    switch (bg.kind) {
+      case "color":
+        this._drawColorMesh(this.colorProgram, x, y, w, h, bg.value, targetOpacity, w, h, baseRadius);
+        break;
+      case "linear-gradient":
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, "linear", x, y, w, h, targetOpacity, false, baseRadius);
+        break;
+      case "radial-gradient":
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, "circular", x, y, w, h, targetOpacity, false, baseRadius);
+        break;
+      case "url":
+        if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, targetOpacity, baseRadius, style.backgroundSize);
+        break;
+      default:
+        break;
     }
   }
   // ─── Ellipse ────────────────────────────────────────────────────────────
-  _drawEllipse(obj, x, y, w, h) {
+  _drawEllipse(obj, x, y, w, h, assets) {
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const { style } = obj;
-    if (!style.color && !style.gradient && !style.borderColor && !style.outlineColor) return;
+    if (!style.background && !style.borderColor && !style.outlineColor) return;
     this._drawShadow(obj, x, y, w, h, void 0, void 0, true);
     const drawEllipse = (ew, eh, color, isBorder = false, innerEW = 0, innerEH = 0) => {
       const [r, g, b, a] = parseCSSColor(color);
@@ -12333,11 +12371,22 @@ var Renderer2 = class {
       const outerH = h + bw * 2;
       drawEllipse(outerW, outerH, style.borderColor, true, w, h);
     }
-    if (style.color) {
-      drawEllipse(w, h, style.color, false);
-    }
-    if (style.gradient && w > 0 && h > 0) {
-      this._drawGradient(style.gradient, style.gradientType ?? "linear", x, y, w, h, obj.__worldOpacity, true, null);
+    const bg = resolveBackground(style.background);
+    switch (bg.kind) {
+      case "color":
+        drawEllipse(w, h, bg.value, false);
+        break;
+      case "linear-gradient":
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, "linear", x, y, w, h, obj.__worldOpacity, true, null);
+        break;
+      case "radial-gradient":
+        if (w > 0 && h > 0) this._drawGradient(bg.stops, "circular", x, y, w, h, obj.__worldOpacity, true, null);
+        break;
+      case "url":
+        if (w > 0 && h > 0) this._drawRectBackground(bg.assetKey, assets, x, y, w, h, obj.__worldOpacity, null, style.backgroundSize);
+        break;
+      default:
+        break;
     }
   }
   // ─── Text (Offscreen Canvas → Texture) ──────────────────────────────────
@@ -12925,21 +12974,20 @@ var Renderer2 = class {
   /**
    * WebGL 셰이더로 gradient를 직접 렌더링합니다.
    * Canvas 텍스처 생성·캐싱 없이 uniform만 설정하여 즉시 draw합니다.
-   * 애니메이션 시 매 프레임 Canvas/Texture 재생성이 없어 GPU 메모리 누수가 없습니다.
    */
-  _drawGradient(gradient, type, x, y, w, h, opacity, isEllipse, borderRadius) {
-    const { direction, stops } = parseGradientStops(gradient);
-    if (stops.length === 0) return;
+  _drawGradient(stops, type, x, y, w, h, opacity, isEllipse, borderRadius) {
+    const { direction, stops: parsedStops } = parseGradientStops(stops);
+    if (parsedStops.length === 0) return;
     this._flushBatch();
     this._setBlendMode(this._activeObj?.style?.blendMode ?? "source-over");
     const MAX_STOPS = 8;
-    const count = Math.min(stops.length, MAX_STOPS);
+    const count = Math.min(parsedStops.length, MAX_STOPS);
     const colorNames = ["uStopColors0", "uStopColors1", "uStopColors2", "uStopColors3", "uStopColors4", "uStopColors5", "uStopColors6", "uStopColors7"];
     const offsetNames = ["uStopOffset0", "uStopOffset1", "uStopOffset2", "uStopOffset3", "uStopOffset4", "uStopOffset5", "uStopOffset6", "uStopOffset7"];
     const prog = this.gradientProgram;
     prog.uniforms["uStopCount"].value = count;
     for (let i = 0; i < MAX_STOPS; i++) {
-      const src = i < count ? stops[i] : stops[count - 1];
+      const src = i < count ? parsedStops[i] : parsedStops[count - 1];
       const [r, g, b, a] = parseCSSColor(src.color);
       prog.uniforms[colorNames[i]].value = [r, g, b, a];
       prog.uniforms[offsetNames[i]].value = i < count ? src.offset : 1;
@@ -12954,6 +13002,39 @@ var Renderer2 = class {
     prog.uniforms["uViewMatrix"].value = this._viewMat;
     prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
     this.gradientMesh.draw({ camera: this.camera });
+  }
+  // ─── Rect Background (Image) ────────────────────────────────────────────────
+  /**
+   * style.background = 'url(에셋키)' 에 대응하는 이미지 배경 렌더링.
+   * backgroundSize에 따라 UV를 계산하여 _drawTextureMesh로 전달합니다.
+   *
+   * - 'cover'  : 가로·세로 중 큰 쪽에 맞춰 채움 (중앙 크롭)
+   * - 'contain': 가로·세로 중 작은 쪽에 맞춰 맞춤 (중앙 레터박스)
+   * - 'auto'   : 컨테이너에 그대로 늘림 (기본값)
+   */
+  _drawRectBackground(assetKey, assets, x, y, w, h, opacity, borderRadius, backgroundSize) {
+    const asset = assets[assetKey];
+    if (!asset || !(asset instanceof HTMLImageElement)) return;
+    const texture = this._getOrCreateAssetTexture(assetKey, asset);
+    const natW = asset.naturalWidth;
+    const natH = asset.naturalHeight;
+    if (natW === 0 || natH === 0) return;
+    let uvOffset = [0, 0];
+    let uvScale = [1, 1];
+    if (backgroundSize === "cover") {
+      const scale5 = Math.max(w / natW, h / natH);
+      const visW = w / (natW * scale5);
+      const visH = h / (natH * scale5);
+      uvOffset = [(1 - visW) / 2, (1 - visH) / 2];
+      uvScale = [visW, visH];
+    } else if (backgroundSize === "contain") {
+      const scale5 = Math.min(w / natW, h / natH);
+      const visW = w / (natW * scale5);
+      const visH = h / (natH * scale5);
+      uvOffset = [(1 - visW) / 2, (1 - visH) / 2];
+      uvScale = [visW, visH];
+    }
+    this._drawTextureMesh(texture, x, y, w, h, opacity, false, uvOffset, uvScale, 0, borderRadius);
   }
   // ─── Placeholder ────────────────────────────────────────────────────────
   _drawPlaceholder(x, y, w, h) {

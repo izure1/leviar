@@ -11,7 +11,7 @@ world.createRectangle({
   attribute: { className: 'student' },
   dataset: { name: 'alice', hp: 50 },
   transform: { position: { x: -200, y: 100 } },
-  style: { width: 100, height: 100, color: '#444' }
+  style: { width: 100, height: 100, background: '#444' }
 })
 
 // 테스트 용 객체 2: HP가 100인 여학생
@@ -19,7 +19,7 @@ world.createRectangle({
   attribute: { className: 'student' },
   dataset: { name: 'girl', hp: 100 },
   transform: { position: { x: 0, y: 100 } },
-  style: { width: 100, height: 100, color: '#444' }
+  style: { width: 100, height: 100, background: '#444' }
 })
 
 // 테스트 용 객체 3: 여학생이면서 리더
@@ -27,7 +27,7 @@ const student = world.createRectangle({
   attribute: { className: 'student leader' },
   dataset: { name: 'girl', hp: 200 },
   transform: { position: { x: 200, y: 100 } },
-  style: { width: 100, height: 100, color: '#444' }
+  style: { width: 100, height: 100, background: '#444' }
 })
 
 // 배경 안내 텍스트
@@ -46,11 +46,11 @@ setTimeout(() => {
 
   // 2. .student[data-hp=100] 찾아서 색 변경
   world.select('.student[data-hp=100]').forEach(o => {
-    o.style.color = '#ff4444'
+    o.style.background = '#ff4444'
   })
 
   // 3. .student.leader[attribute-id="xxx"] 찾아서 색 변경
   world.select(`.student.leader[attr-id="${student.attribute.id}"]`).forEach(o => {
-    o.style.color = '#44ff44'
+    o.style.background = '#44ff44'
   })
 }, 1000)

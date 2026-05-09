@@ -16,7 +16,7 @@ world.createRectangle({
   style: {
     width: 600,
     height: 50,
-    color: '#444444'
+    background: '#444444'
   },
   transform: {
     position: { x: 0, y: -300, z: 0 }
@@ -38,7 +38,7 @@ function addBox(x: number, y: number) {
     style: {
       width: 50,
       height: 50,
-      color: color,
+      background: color,
       boxShadowColor: color,
       boxShadowBlur: 0,
       boxShadowSpread: 0,

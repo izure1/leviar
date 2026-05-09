@@ -24,7 +24,9 @@
 
 | 속성 | 타입 | 설명 |
 | :--- | :--- | :--- |
-| `color` | `string` | 채우기 색상 (HEX, RGB 등 지원). |
+| `background` | `string` | 배경. 단색 (HEX, RGB), 이미지(`url('key')`), 그라디언트(`linear-gradient(...)`, `radial-gradient(...)`) 중 1가지 형태. (Rectangle, Ellipse 전용) |
+| `backgroundSize` | `'cover' \| 'contain' \| 'auto'` | 배경 이미지를 채우는 방식. (기본값: `'auto'`) |
+| `color` | `string` | 텍스트 전용 채우기 색상. (Text 전용) |
 | `blur` | `number` | 가우시안 블러 강도. |
 | `borderColor` | `string` | 테두리 색상. |
 | `borderWidth` | `number` | 테두리 두께 (내부 방향). |
@@ -56,8 +58,7 @@
 | `boxShadowBlur` | `number` | 그림자 흐림 정도. |
 | `boxShadowSpread` | `number` | 그림자 확장 크기. |
 | `boxShadowOffset` | `x, y: number` | 그림자 거리 (`boxShadowOffsetX`, `boxShadowOffsetY`). |
-| `gradient` | `string` | 그라디언트 정보 (예: `90deg, #ff0000 0%, #0000ff 100%`). |
-| `gradientType` | `enum` | 그라디언트 유형 (`linear`, `circular`). |
+| `boxShadowOffset` | `x, y: number` | 그림자 거리 (`boxShadowOffsetX`, `boxShadowOffsetY`). |
 
 ---
 
@@ -80,6 +81,15 @@
 ### BorderRadius (둥글기)
 - **비정형 모서리**: `'10 20 30 40'` 순서로 [좌상, 우상, 우하, 좌하] 적용.
 - **백분율(%)**: `'50%'`로 설정하면 원형으로 적용.
+
+### Background (배경)
+`style.background` 속성은 세 가지 용도로 사용할 수 있습니다. `Rectangle` 및 `Ellipse` 객체에서만 동작합니다.
+1. **단색 채우기**: `rgb(255, 0, 0)`, `#ff0000`, `hsl(...)` 등의 색상 코드
+2. **이미지 텍스처**: `url('assetKey')` 형식으로 애셋 매니저에서 불러온 이미지 키를 지정.
+   - 텍스처 사용 시 `backgroundSize`(`'cover'`, `'contain'`, `'auto'`) 속성으로 이미지 비율 처리를 설정할 수 있습니다.
+3. **그라디언트**: CSS 문법인 `linear-gradient(...)` 또는 `radial-gradient(...)` 사용.
+
+> **주의**: 텍스트의 색상을 바꿀 때는 `style.color`를 사용해야 합니다.
 
 ---
 

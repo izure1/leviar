@@ -91,7 +91,18 @@ export type BlendMode =
   | 'difference'
 
 export interface Style {
+  /** text 객체의 텍스트 색상 전용 */
   color?: string
+  /**
+   * 도형(rect, ellipse) 배경. 아래 3가지 방식 중 하나로 동작합니다.
+   * - `'url(에셋키)'`            — load로 불러온 이미지 에셋을 배경으로 표시
+   * - `'linear-gradient(...)'`  — 선형 그라디언트
+   * - `'radial-gradient(...)'`  — 원형 그라디언트
+   * - `'rgba(...)' | '#hex' | ...` — 단색 배경
+   */
+  background?: string
+  /** 이미지 배경의 크기 조절 방식 ('cover' | 'contain' | 'auto') */
+  backgroundSize?: 'cover' | 'contain' | 'auto'
   opacity: number
   width?: number
   height?: number
@@ -125,8 +136,6 @@ export interface Style {
   zIndex: number
   blendMode?: BlendMode
   letterSpacing?: number
-  gradient?: string
-  gradientType?: 'linear' | 'circular'
   borderRadius?: string | number
   cursor?: CssCursor
   overflow: 'hidden' | 'visible'

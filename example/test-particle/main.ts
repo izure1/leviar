@@ -123,7 +123,7 @@ pStrictFast.play()
 const floorY = -(H / 2 - 200)
 const floor = world.createRectangle({
   attribute: { name: 'floor', physics: 'static', collisionCategory: 0x0002 },
-  style: { width: 600, height: 20, color: '#fff' },
+  style: { width: 600, height: 20, background: '#fff' },
   transform: { position: { x: rightX, y: floorY, z: Z } },
 })
 floor.style.opacity = 0.3

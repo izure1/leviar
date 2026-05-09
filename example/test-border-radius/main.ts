@@ -17,7 +17,7 @@ world.createRectangle({
   style: {
     width: 100,
     height: 100,
-    color: '#ff4d4d',
+    background: '#ff4d4d',
     borderRadius: 20,
     boxShadowColor: 'rgba(255, 77, 77, 0.5)',
     boxShadowBlur: 10,
@@ -31,7 +31,7 @@ world.createRectangle({
   style: {
     width: 120,
     height: 80,
-    color: '#4dff4d',
+    background: '#4dff4d',
     borderRadius: '10 20 40 10',
     borderWidth: 4,
     borderColor: '#ffffff',
@@ -44,7 +44,7 @@ world.createRectangle({
   style: {
     width: 100,
     height: 150,
-    color: '#4d4dff',
+    background: '#4d4dff',
     borderRadius: '50% 10',
     boxShadowColor: '#4d4dff',
     boxShadowSpread: 20,
@@ -58,7 +58,7 @@ world.createRectangle({
   style: {
     width: 200,
     height: 100,
-    gradient: '45deg, #ff00cc 0%, #333399 100%',
+    background: 'linear-gradient(45deg, #ff00cc 0%, #333399 100%)',
     borderRadius: '30',
     outlineColor: '#ffffff',
     outlineWidth: 5,

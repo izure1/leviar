@@ -20,8 +20,7 @@ shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    gradient: 'rgb(100, 180, 255) 0%, rgb(30, 60, 180) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(rgb(100, 180, 255) 0%, rgb(30, 60, 180) 100%)',
   },
   transform: { position: { x: -260, y: -120, z: 0 } }
 }))
@@ -32,8 +31,7 @@ shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    gradient: '90deg, rgb(255, 100, 100) 0%, rgb(255, 200, 50) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(90deg, rgb(255, 100, 100) 0%, rgb(255, 200, 50) 100%)',
   },
   transform: { position: { x: -80, y: -120, z: 0 } }
 }))
@@ -44,69 +42,62 @@ shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    gradient: '45deg, rgb(0, 220, 130) 0%, rgb(0, 80, 200) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(45deg, rgb(0, 220, 130) 0%, rgb(0, 80, 200) 100%)',
   },
   transform: { position: { x: 100, y: -120, z: 0 } }
 }))
 label('linear 45deg', 100, -50)
 
-// ── 4. Rectangle - circular ──────────────────────────────────────────────────
+// ── 4. Rectangle - radial ─────────────────────────────────────────────────────
 shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    gradient: 'rgb(255, 255, 100) 0%, rgb(200, 50, 0) 100%',
-    gradientType: 'circular',
+    background: 'radial-gradient(rgb(255, 255, 100) 0%, rgb(200, 50, 0) 100%)',
   },
   transform: { position: { x: 280, y: -120, z: 0 } }
 }))
-label('circular', 280, -50)
+label('radial', 280, -50)
 
 // ── 5. Ellipse - linear ──────────────────────────────────────────────────────
 shapes.push(world.createEllipse({
   style: {
     width: 160,
     height: 100,
-    gradient: 'rgb(220, 100, 255) 0%, rgb(60, 20, 180) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(rgb(220, 100, 255) 0%, rgb(60, 20, 180) 100%)',
   },
   transform: { position: { x: -260, y: 80, z: 0 } }
 }))
 label('ellipse linear', -260, 150)
 
-// ── 6. Ellipse - circular ────────────────────────────────────────────────────
+// ── 6. Ellipse - radial ───────────────────────────────────────────────────────
 shapes.push(world.createEllipse({
   style: {
     width: 100,
     height: 100,
-    gradient: 'rgb(255, 255, 255) 0%, rgb(20, 200, 100) 50%, rgba(0, 50, 130, 0) 100%',
-    gradientType: 'circular',
+    background: 'radial-gradient(rgb(255, 255, 255) 0%, rgb(20, 200, 100) 50%, rgba(0, 50, 130, 0) 100%)',
   },
   transform: { position: { x: -80, y: 80, z: 0 } }
 }))
-label('ellipse circular', -80, 150)
+label('ellipse radial', -80, 150)
 
-// ── 7. color + gradient 동시 사용 ────────────────────────────────────────────
+// ── 7. 단색 배경 ──────────────────────────────────────────────────────────────
 shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    color: 'rgb(40, 40, 80)',
-    gradient: '135deg, rgba(255, 100, 50, 0.7) 0%, rgba(255, 50, 150, 0) 60%',
-    gradientType: 'linear',
+    background: 'rgb(40, 40, 80)',
   },
   transform: { position: { x: 100, y: 80, z: 0 } }
 }))
-label('color + gradient', 100, 150)
+label('color', 100, 150)
 
 // ── 8. 다중 stops ────────────────────────────────────────────────────────────
 shapes.push(world.createRectangle({
   style: {
     width: 160,
     height: 100,
-    gradient: '90deg, rgb(255,0,0) 0%, rgb(255,165,0) 25%, rgb(255,255,0) 50%, rgb(0,200,100) 75%, rgb(100,100,255) 100%',
-    gradientType: 'linear',
+    background: 'linear-gradient(90deg, rgb(255,0,0) 0%, rgb(255,165,0) 25%, rgb(255,255,0) 50%, rgb(0,200,100) 75%, rgb(100,100,255) 100%)',
   },
   transform: { position: { x: 280, y: 80, z: 0 } }
 }))

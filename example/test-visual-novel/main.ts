@@ -56,9 +56,7 @@ const vn = Visualnovel.create()
         style: {
           width: 800,
           height: 200,
-          color: 'rgba(0, 0, 0, 0)',
-          gradientType: 'linear',
-          gradient: '180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 102, 255, 0.75) 100%'
+          background: 'linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 102, 255, 0.75) 100%)'
         },
         transform: {
           position: { y: 250 }

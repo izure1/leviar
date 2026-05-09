@@ -8,7 +8,7 @@ world.camera = camera
 // 바닥 역할을 할 정적 물리 객체
 const ground = world.createRectangle({
   attribute: { physics: 'static' },
-  style: { width: 800, height: 50, color: '#444444' },
+  style: { width: 800, height: 50, background: '#444444' },
   transform: { position: { x: 0, y: -300, z: 0 } }
 })
 
@@ -24,7 +24,7 @@ world.on('click', (obj, e: MouseEvent) => {
   // 동적 객체 생성
   const box = world.createRectangle({
     attribute: { physics: 'dynamic' },
-    style: { width: 50, height: 50, color: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff', cursor: 'pointer' },
+    style: { width: 50, height: 50, background: `hsl(${Math.random() * 360}, 80%, 60%)`, borderWidth: 2, borderColor: '#fff', cursor: 'pointer' },
     transform: { position: { x: pos.x, y: pos.y, z: targetDepth }, rotation: { z: Math.random() * 360 } }
   })
     .addChild(world.createText({

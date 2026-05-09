@@ -6,7 +6,7 @@ world.camera = camera
 
 // 1. 좌우로 반복 이동하는 타겟 객체
 const targetItem = world.createRectangle({
-  style: { color: '#ff5e5b', width: 60, height: 60 },
+  style: { background: '#ff5e5b', width: 60, height: 60 },
   transform: { position: { x: -250, y: 0, z: 0 } },
 })
 
@@ -20,7 +20,7 @@ moveRight()
 
 // 2. targetItem을 따라다닐 첫 번째 객체
 const followerA = world.createEllipse({
-  style: { color: '#00cecb', width: 40, height: 40 },
+  style: { background: '#00cecb', width: 40, height: 40 },
   transform: { position: { x: 0, y: 0, z: 0 } },
 })
 // targetItem의 좌측 아래로 80, 50만큼 떨어진 위치를 끝없이 추적

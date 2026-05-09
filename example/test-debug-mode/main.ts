@@ -9,7 +9,7 @@ const rectBase = world.createRectangle({
   style: {
     width: 150,
     height: 150,
-    color: '#3498db',
+    background: '#3498db',
     borderRadius: '16px',
   },
   transform: { position: { x: -200, y: 100, z: 50 } }
@@ -35,7 +35,7 @@ const parentRect = world.createRectangle({
   style: {
     width: 200,
     height: 200,
-    color: 'rgba(231, 76, 60, 0.5)',
+    background: 'rgba(231, 76, 60, 0.5)',
     margin: '20px',
   },
   transform: {
@@ -49,7 +49,7 @@ const childEllipse = world.createEllipse({
   style: {
     width: 80,
     height: 80,
-    color: '#f1c40f',
+    background: '#f1c40f',
   },
   transform: {
     position: { x: 0, y: 50, z: 50 } // 부모보다 카메라에 가깝게
