@@ -6,7 +6,7 @@ world.camera = camera
 
 // 테스트를 위한 이미지 에셋 (기존 에셋 재활용)
 await world.loader.load({
-  'sample_img': '../asset/image/background.jpg' // 적절한 이미지 키
+  'sample_img': '../asset/image/girl_sd.png' // 적절한 이미지 키
 })
 
 const label = (text: string, x: number, y: number) => {

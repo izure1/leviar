@@ -160,7 +160,9 @@ type BackgroundKind =
 function resolveBackground(bg: string | undefined): BackgroundKind {
   if (!bg) return { kind: 'none' }
   if (bg.startsWith('url(')) {
-    const key = bg.slice(4, -1).trim()
+    const raw = bg.slice(4, -1).trim()
+    // url('key') 또는 url("key") 형태의 따옴표 제거
+    const key = raw.replace(/^['"]|['"]$/g, '')
     return { kind: 'url', assetKey: key }
   }
   if (bg.startsWith('linear-gradient(')) {
