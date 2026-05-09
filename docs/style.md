@@ -17,6 +17,7 @@
 | `pointerEvents` | `boolean` | 마우스 인터랙션 수신 여부. `false` 시 이벤트를 통과시킴. |
 | `cursor` | `CssCursor` | 마우스 오버 시 표시할 커서 형태. CSS 표준 cursor 값 지원. |
 | `margin` | `string` | 물리 충돌 영역의 추가 여백. CSS 단축 표기법 지원. |
+| `overflow` | `'hidden' \| 'visible'` | 자식 객체가 부모 영역을 벗어날 때 표시 방식. (기본값: `'visible'`) |
 
 ---
 
@@ -137,4 +138,41 @@ const btn = world.createRectangle({
 > **우선순위**: z축 기준 가장 앞에 위치한 객체의 `cursor` 값이 적용됩니다.
 > `pointerEvents: false`인 객체는 hit-test에서 제외되므로 cursor도 적용되지 않습니다.
 
+---
+
+## 💡 Overflow (영역 클리핑)
+
+`style.overflow` 속성을 사용하여 자식 객체가 부모 객체의 영역(Bounding Box)을 벗어났을 때 렌더링을 어떻게 처리할지 제어할 수 있습니다. 
+주로 UI 패널의 마스크나 스크롤 영역을 구현할 때 사용합니다. 내부적으로 WebGL의 Scissor Test를 사용하여 처리되므로 성능 저하 없이 깔끔하게 잘라냅니다.
+
+```typescript
+const container = world.createRectangle({
+  style: { 
+    width: 200, 
+    height: 200, 
+    overflow: 'hidden', // 영역을 벗어나는 자식을 숨김
+    background: '#333'
+  }
+})
+
+const child = world.createRectangle({
+  style: { 
+    width: 400, 
+    height: 400, 
+    background: 'red' 
+  }
+})
+
+// 자식이 부모보다 크지만, overflow: 'hidden'에 의해 200x200 영역까지만 렌더링됨
+container.addChild(child)
+```
+
+### 지원 값
+
+| 값 | 설명 |
+| :--- | :--- |
+| `visible` | **(기본값)** 자식 객체가 부모 영역을 벗어나도 그대로 렌더링됩니다. |
+| `hidden` | 부모 요소의 경계 밖으로 나가는 자식 객체의 픽셀을 모두 잘라냅니다(Clipping). |
+
+> **주의**: 부모 객체에 회전(Rotation)이 적용되어 있는 경우에도, 회전된 부모의 경계에 맞춰 정상적으로 자식 객체가 잘라집니다.
 
