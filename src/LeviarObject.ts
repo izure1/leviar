@@ -78,6 +78,7 @@ function makeStyle(partial?: Partial<Style>): Style {
     gradientType: partial?.gradientType,
     borderRadius: partial?.borderRadius,
     cursor: partial?.cursor,
+    overflow: partial?.overflow ?? 'visible',
   }
 }
 

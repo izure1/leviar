@@ -8651,7 +8651,8 @@ function makeStyle(partial) {
     gradient: partial?.gradient,
     gradientType: partial?.gradientType,
     borderRadius: partial?.borderRadius,
-    cursor: partial?.cursor
+    cursor: partial?.cursor,
+    overflow: partial?.overflow ?? "visible"
   };
 }
 function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -11126,6 +11127,11 @@ var Renderer2 = class {
   _activeObj;
   _activeRenderW = 0;
   _activeRenderH = 0;
+  // overflow: 'hidden' 스텐실 클리핑용 임시 행렬
+  _scissorTmpMat = new Mat4();
+  _scissorMvpMat = new Mat4();
+  // 현재 중첩 스텐실 depth (다중 overflow:hidden 중첩 지원)
+  _stencilDepth = 0;
   // 오브젝트별 Mesh 캐시
   meshCache = /* @__PURE__ */ new Map();
   // gradient 렌더링은 WebGL 셰이더로 전환되어 텍스처 캐시 없음
@@ -11232,7 +11238,8 @@ var Renderer2 = class {
       height: canvas2.height,
       alpha: true,
       antialias: true,
-      premultipliedAlpha: true
+      premultipliedAlpha: true,
+      stencil: true
     });
     this.gl = this.ogl.gl;
     this._width = canvas2.width;
@@ -11666,6 +11673,87 @@ var Renderer2 = class {
     this._flushBatch();
     this._renderDebugOverlay(timestamp);
   }
+  // ─── overflow: 'hidden' 스텐실 클리핑 헬퍼 ──────────────────────────────────
+  /**
+   * obj 기준으로 조상 중 overflow:'hidden'인 것들을 수집합니다.
+   */
+  _collectOverflowAncestors(obj) {
+    const result = [];
+    let curr = obj.parent;
+    while (curr) {
+      if (curr.style.overflow === "hidden") result.push(curr);
+      curr = curr.parent;
+    }
+    return result;
+  }
+  /**
+   * overflow:'hidden' 조상들을 스텐실 버퍼에 그려 클리핑 마스크를 설정합니다.
+   * 호출 후에는 스텐실 == depth 인 픽셀만 통과합니다.
+   * 반환값: 적용된 스텐실 depth 수 (0이면 조상 없음)
+   */
+  _applyStencilClip(ancestors) {
+    if (ancestors.length === 0) return 0;
+    const gl = this.gl;
+    gl.enable(gl.STENCIL_TEST);
+    gl.colorMask(false, false, false, false);
+    for (let i = ancestors.length - 1; i >= 0; i--) {
+      const ancestor = ancestors[i];
+      const depth = ancestors.length - i;
+      gl.stencilFunc(gl.ALWAYS, depth, 255);
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+      this._drawStencilShape(ancestor);
+    }
+    gl.colorMask(true, true, true, true);
+    const maxDepth = ancestors.length;
+    gl.stencilFunc(gl.EQUAL, maxDepth, 255);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+    return maxDepth;
+  }
+  /**
+   * 스텐실 버퍼를 초기화하고 스텐실 테스트를 비활성화합니다.
+   */
+  _clearStencilClip() {
+    const gl = this.gl;
+    gl.colorMask(false, false, false, false);
+    gl.stencilFunc(gl.ALWAYS, 0, 255);
+    gl.stencilOp(gl.ZERO, gl.ZERO, gl.ZERO);
+    gl.clear(gl.STENCIL_BUFFER_BIT);
+    gl.colorMask(true, true, true, true);
+    gl.disable(gl.STENCIL_TEST);
+  }
+  /**
+   * 스텐실 쓰기 전용으로 obj의 사각형 형태를 colorMesh로 렌더합니다.
+   * 현재 _activeObj 상태를 임시 교체하여 _makeModelMatrix를 활용합니다.
+   */
+  _drawStencilShape(obj) {
+    const style = obj.style;
+    const rawW = obj.__renderedSize?.w ?? style.width ?? 0;
+    const rawH = obj.__renderedSize?.h ?? style.height ?? 0;
+    const w = clampSize(rawW, style.minWidth, style.maxWidth);
+    const h = clampSize(rawH, style.minHeight, style.maxHeight);
+    if (w <= 0 || h <= 0) return;
+    const prevObj = this._activeObj;
+    const prevW = this._activeRenderW;
+    const prevH = this._activeRenderH;
+    this._activeObj = obj;
+    this._activeRenderW = w;
+    this._activeRenderH = h;
+    const prog = this.colorProgram;
+    prog.uniforms["uColor"].value = [1, 1, 1, 1];
+    prog.uniforms["uOpacity"].value = 1;
+    prog.uniforms["uRadius"].value = 0;
+    prog.uniforms["uSize"].value = [w, h];
+    prog.uniforms["uBorderRadius"].value = [0, 0, 0, 0];
+    prog.uniforms["uIsBorder"].value = 0;
+    prog.uniforms["uInnerSize"].value = [0, 0];
+    prog.uniforms["uInnerBorderRadius"].value = [0, 0, 0, 0];
+    prog.uniforms["uModelMatrix"].value = this._makeModelMatrix(0, 0, w, h);
+    prog.uniforms["uProjectionMatrix"].value = this._projMatrix();
+    this.colorMesh.draw({ camera: this.camera });
+    this._activeObj = prevObj;
+    this._activeRenderW = prevW;
+    this._activeRenderH = prevH;
+  }
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
   _drawObject(obj, assets, timestamp) {
     const { style, transform } = obj;
@@ -11680,6 +11768,12 @@ var Renderer2 = class {
     this._activeRenderH = h;
     const px = 0;
     const py = 0;
+    const overflowAncestors = this._collectOverflowAncestors(obj);
+    const hasClip = overflowAncestors.length > 0;
+    if (hasClip) {
+      this._flushBatch();
+      this._applyStencilClip(overflowAncestors);
+    }
     const type = obj.attribute.type;
     switch (type) {
       case "rectangle":
@@ -11705,6 +11799,10 @@ var Renderer2 = class {
         break;
       default:
         break;
+    }
+    if (hasClip) {
+      this._flushBatch();
+      this._clearStencilClip();
     }
     if (this.debugMode && w > 0 && h > 0) {
       this._activeObj = obj;

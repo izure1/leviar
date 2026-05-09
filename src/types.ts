@@ -129,6 +129,7 @@ export interface Style {
   gradientType?: 'linear' | 'circular'
   borderRadius?: string | number
   cursor?: CssCursor
+  overflow: 'hidden' | 'visible'
 }
 
 // ============================================================

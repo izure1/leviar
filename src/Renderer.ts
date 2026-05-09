@@ -204,6 +204,12 @@ export class Renderer {
   private _activeRenderW = 0
   private _activeRenderH = 0
 
+  // overflow: 'hidden' 스텐실 클리핑용 임시 행렬
+  private _scissorTmpMat = new Mat4()
+  private _scissorMvpMat = new Mat4()
+  // 현재 중첩 스텐실 depth (다중 overflow:hidden 중첩 지원)
+  private _stencilDepth = 0
+
   // 오브젝트별 Mesh 캐시
   private meshCache = new Map<string, Mesh>()
 
@@ -326,6 +332,7 @@ export class Renderer {
       alpha: true,
       antialias: true,
       premultipliedAlpha: true,
+      stencil: true,
     })
     this.gl = this.ogl.gl
 
@@ -833,6 +840,116 @@ export class Renderer {
     this._renderDebugOverlay(timestamp)
   }
 
+  // ─── overflow: 'hidden' 스텐실 클리핑 헬퍼 ──────────────────────────────────
+
+  /**
+   * obj 기준으로 조상 중 overflow:'hidden'인 것들을 수집합니다.
+   */
+  private _collectOverflowAncestors(obj: LeviarObject): LeviarObject[] {
+    const result: LeviarObject[] = []
+    let curr = obj.parent
+    while (curr) {
+      if (curr.style.overflow === 'hidden') result.push(curr)
+      curr = curr.parent
+    }
+    return result
+  }
+
+  /**
+   * overflow:'hidden' 조상들을 스텐실 버퍼에 그려 클리핑 마스크를 설정합니다.
+   * 호출 후에는 스텐실 == depth 인 픽셀만 통과합니다.
+   * 반환값: 적용된 스텐실 depth 수 (0이면 조상 없음)
+   */
+  private _applyStencilClip(ancestors: LeviarObject[]): number {
+    if (ancestors.length === 0) return 0
+
+    const gl = this.gl
+
+    // 스텐실 버퍼 활성화
+    gl.enable(gl.STENCIL_TEST)
+
+    // 색상 쓰기 비활성화 — 스텐실에만 기록
+    gl.colorMask(false, false, false, false)
+
+    // ancestors는 outermost → innermost 순서 (push 순서 반전)
+    // 각 레이어별로 stencil ref를 1씩 증가시켜 중첩 마스킹을 지원
+    for (let i = ancestors.length - 1; i >= 0; i--) {
+      const ancestor = ancestors[i]
+      const depth = ancestors.length - i // 1-based
+
+      // depth 값을 스텐실에 쓰기: 항상 REPLACE
+      gl.stencilFunc(gl.ALWAYS, depth, 0xff)
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+
+      // 조상 형태를 스텐실 버퍼에 렌더
+      this._drawStencilShape(ancestor)
+    }
+
+    // 색상 쓰기 복원
+    gl.colorMask(true, true, true, true)
+
+    // 이제 스텐실 == 최대 depth인 픽셀(= 모든 클리핑 사각형 안)만 통과
+    const maxDepth = ancestors.length
+    gl.stencilFunc(gl.EQUAL, maxDepth, 0xff)
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP)
+
+    return maxDepth
+  }
+
+  /**
+   * 스텐실 버퍼를 초기화하고 스텐실 테스트를 비활성화합니다.
+   */
+  private _clearStencilClip() {
+    const gl = this.gl
+    gl.colorMask(false, false, false, false)
+    gl.stencilFunc(gl.ALWAYS, 0, 0xff)
+    gl.stencilOp(gl.ZERO, gl.ZERO, gl.ZERO)
+    // 풀스크린 쿼드로 스텐실 클리어 (gl.clear는 범위 한정이 어려움)
+    // 대신 gl.clear(STENCIL_BUFFER_BIT) 사용
+    gl.clear(gl.STENCIL_BUFFER_BIT)
+    gl.colorMask(true, true, true, true)
+    gl.disable(gl.STENCIL_TEST)
+  }
+
+  /**
+   * 스텐실 쓰기 전용으로 obj의 사각형 형태를 colorMesh로 렌더합니다.
+   * 현재 _activeObj 상태를 임시 교체하여 _makeModelMatrix를 활용합니다.
+   */
+  private _drawStencilShape(obj: LeviarObject) {
+    const style = obj.style
+    const rawW = obj.__renderedSize?.w ?? style.width ?? 0
+    const rawH = obj.__renderedSize?.h ?? style.height ?? 0
+    const w = clampSize(rawW, style.minWidth, style.maxWidth)
+    const h = clampSize(rawH, style.minHeight, style.maxHeight)
+    if (w <= 0 || h <= 0) return
+
+    // _activeObj를 임시로 교체하여 _makeModelMatrix가 올바른 worldMatrix를 참조하게 함
+    const prevObj = this._activeObj
+    const prevW = this._activeRenderW
+    const prevH = this._activeRenderH
+    this._activeObj = obj
+    this._activeRenderW = w
+    this._activeRenderH = h
+
+    const prog = this.colorProgram
+    prog.uniforms['uColor'].value = [1, 1, 1, 1]
+    prog.uniforms['uOpacity'].value = 1
+    prog.uniforms['uRadius'].value = 0
+    prog.uniforms['uSize'].value = [w, h]
+    prog.uniforms['uBorderRadius'].value = [0, 0, 0, 0]
+    prog.uniforms['uIsBorder'].value = 0
+    prog.uniforms['uInnerSize'].value = [0, 0]
+    prog.uniforms['uInnerBorderRadius'].value = [0, 0, 0, 0]
+    prog.uniforms['uModelMatrix'].value = this._makeModelMatrix(0, 0, w, h)
+    prog.uniforms['uProjectionMatrix'].value = this._projMatrix()
+    this.colorMesh.draw({ camera: this.camera })
+
+    // _activeObj 복원
+    this._activeObj = prevObj
+    this._activeRenderW = prevW
+    this._activeRenderH = prevH
+  }
+
   // ─── 내부 오브젝트 렌더 ──────────────────────────────────────────────────
 
   private _drawObject(
@@ -861,6 +978,14 @@ export class Renderer {
     const px = 0
     const py = 0
 
+    // ─── overflow: 'hidden' 스텐실 클리핑 적용 ──────────────────────
+    const overflowAncestors = this._collectOverflowAncestors(obj)
+    const hasClip = overflowAncestors.length > 0
+    if (hasClip) {
+      this._flushBatch()
+      this._applyStencilClip(overflowAncestors)
+    }
+
     const type = obj.attribute.type
 
     switch (type) {
@@ -887,6 +1012,12 @@ export class Renderer {
         break
       default:
         break
+    }
+
+    // 스텐실 해제 (배치 먼저 플러시하여 스텐실 상태에서 모든 드로우 완료 보장)
+    if (hasClip) {
+      this._flushBatch()
+      this._clearStencilClip()
     }
 
     // ─── 디버그 오버레이 (스타일 영향 없이 별도 렌더) ───────────────
