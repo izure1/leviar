@@ -35,17 +35,17 @@ for (let i = 0; i < 1500; i++) {
 
   // Closer particles are larger
   const size = Math.random() * 5 + 1.5
-  const color = colors[Math.floor(Math.random() * colors.length)]
+  const background = colors[Math.floor(Math.random() * colors.length)]
 
   const p = world.createEllipse({
     style: {
       width: size,
       height: size,
-      color,
+      background,
       blendMode: 'lighter',
       opacity: Math.random() * 0.6 + 0.2, // Glowing transparency
       pointerEvents: false, // Performance optimize, ignore mouse raycast
-      boxShadowColor: color, // Extends glow
+      boxShadowColor: background, // Extends glow
       boxShadowSpread: 2,
       boxShadowBlur: 5
     },

@@ -13648,18 +13648,18 @@ for (let i = 0; i < 1500; i++) {
   const x = Math.cos(angle2) * tunnelRadius;
   const y = Math.sin(angle2) * tunnelRadius;
   const size = Math.random() * 5 + 1.5;
-  const color = colors[Math.floor(Math.random() * colors.length)];
+  const background = colors[Math.floor(Math.random() * colors.length)];
   const p = world.createEllipse({
     style: {
       width: size,
       height: size,
-      color,
+      background,
       blendMode: "lighter",
       opacity: Math.random() * 0.6 + 0.2,
       // Glowing transparency
       pointerEvents: false,
       // Performance optimize, ignore mouse raycast
-      boxShadowColor: color,
+      boxShadowColor: background,
       // Extends glow
       boxShadowSpread: 2,
       boxShadowBlur: 5
