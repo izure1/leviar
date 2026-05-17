@@ -69,6 +69,10 @@ export class World extends EventEmitter<WorldEvents> {
   private _gravityProxy: { x: number; y: number }
   /** mouseover 상태 추적 (객체 id → boolean) */
   private _mouseOver: Set<string> = new Set()
+  /** destroy 호출 여부 — true이면 모든 공개 메서드가 즉시 반환됩니다 */
+  private _destroyed: boolean = false
+  /** 캔버스에 등록된 마우스 이벤트 핸들러 (destroy 시 제거용) */
+  private _mouseEventHandlers: Array<{ type: string; handler: EventListener }> = []
 
   /** 브라우저 기본 컨텍스트 메뉴 비활성화 여부 */
   public disableContextMenu: boolean
@@ -197,7 +201,12 @@ export class World extends EventEmitter<WorldEvents> {
       this.emit(eventName, hits[0], wrapped)
     }
 
-    canvas.addEventListener('click', (e) => {
+    const addTracked = (type: string, handler: EventListener) => {
+      canvas.addEventListener(type, handler)
+      this._mouseEventHandlers.push({ type, handler })
+    }
+
+    addTracked('click', ((e: MouseEvent) => {
       if (this.debugMode) {
         const pos = this._getCanvasMousePos(e)
         this.renderer.debugRipples.push({
@@ -207,18 +216,18 @@ export class World extends EventEmitter<WorldEvents> {
         })
       }
       dispatch('click', e)
-    })
-    canvas.addEventListener('dblclick', (e) => dispatch('dblclick', e))
-    canvas.addEventListener('contextmenu', (e) => {
+    }) as EventListener)
+    addTracked('dblclick', ((e: MouseEvent) => dispatch('dblclick', e)) as EventListener)
+    addTracked('contextmenu', ((e: MouseEvent) => {
       if (this.disableContextMenu) {
         e.preventDefault()
       }
       dispatch('contextmenu', e)
-    })
-    canvas.addEventListener('mousedown', (e) => dispatch('mousedown', e))
-    canvas.addEventListener('mouseup', (e) => dispatch('mouseup', e))
+    }) as EventListener)
+    addTracked('mousedown', ((e: MouseEvent) => dispatch('mousedown', e)) as EventListener)
+    addTracked('mouseup', ((e: MouseEvent) => dispatch('mouseup', e)) as EventListener)
 
-    canvas.addEventListener('mousemove', (e) => {
+    addTracked('mousemove', ((e: MouseEvent) => {
       const wrapped = wrapMouseEvent(e)
       const hits = this._getHitObjects(wrapped)
       const hitIds = new Set(hits.map(o => o.attribute.id))
@@ -254,9 +263,9 @@ export class World extends EventEmitter<WorldEvents> {
           }
         }
       }
-    })
+    }) as EventListener)
 
-    canvas.addEventListener('mouseleave', (e: MouseEvent) => {
+    addTracked('mouseleave', ((e: MouseEvent) => {
       canvas.style.cursor = ''
       const wrapped = wrapMouseEvent(e)
       for (const id of Array.from(this._mouseOver)) {
@@ -267,7 +276,7 @@ export class World extends EventEmitter<WorldEvents> {
         }
       }
       this._mouseOver.clear()
-    })
+    }) as EventListener)
   }
 
   /**
@@ -653,6 +662,10 @@ export class World extends EventEmitter<WorldEvents> {
     this.renderer.markSortDirty()
   }
 
+  /**
+   * 렌더 루프를 시작합니다. 파괴된 월드에서는 아무것도 하지 않습니다.
+   * @returns this
+   */
   start(): this {
     if (this.rafId != null) return this
     let prevTime = 0
@@ -681,12 +694,94 @@ export class World extends EventEmitter<WorldEvents> {
     return this
   }
 
+  /**
+   * 렌더 루프를 중지합니다. 재시작은 start() 호출로 가능합니다.
+   * @returns this
+   */
   stop(): this {
     if (this.rafId != null) {
       cancelAnimationFrame(this.rafId)
       this.rafId = null
     }
     return this
+  }
+
+  /**
+   * 월드가 파괴되었는지 여부를 반환합니다.
+   */
+  get destroyed(): boolean {
+    return this._destroyed
+  }
+
+  /**
+   * 월드를 완전히 파괴합니다.
+   * 렌더 루프를 중지하고, 모든 비디오를 정지하며, 에셋의 Blob URL을 해제하고,
+   * 물리 엔진·매니저·렌더러(WebGL 컨텍스트 포함)를 정리합니다.
+   * 호출 후 이 World 인스턴스는 다시 사용할 수 없습니다.
+   */
+  destroy(): void {
+    if (this._destroyed) return
+    this._destroyed = true
+
+    // 1. 렌더 루프 중지
+    this.stop()
+
+    // 2. 모든 비디오 정지 및 비디오 객체 정리
+    for (const obj of this.objects) {
+      if (obj instanceof LeviarVideo) {
+        obj.stop()
+        if (obj.__videoElement) {
+          obj.__videoElement.pause()
+          obj.__videoElement = null
+        }
+      }
+    }
+
+    // 3. 에셋의 Blob URL 해제 (Loader에서 createObjectURL로 생성한 것들)
+    for (const asset of Object.values(this._assets)) {
+      if (asset instanceof HTMLVideoElement) {
+        const blobUrl = asset.src
+        asset.pause()
+        asset.removeAttribute('src')
+        asset.load()
+        if (blobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(blobUrl)
+        }
+      }
+    }
+    this._assets = {}
+
+    // 4. 물리 엔진에서 모든 바디 제거
+    for (const obj of this.objects) {
+      this.physics.removeBody(obj)
+    }
+
+    // 5. 오브젝트 Set 비우기
+    this.objects.clear()
+
+      // 6. 매니저 클립 비우기
+      ; (this.spriteManager as any).clips?.clear?.()
+      ; (this.videoManager as any).clips?.clear?.()
+      ; (this.particleManager as any).clips?.clear?.()
+
+    // 7. 렌더러 파괴 (WebGL 컨텍스트, 텍스처 캐시, 디버그 오버레이)
+    this.renderer.destroy()
+
+    // 8. 캔버스 이벤트 리스너 제거
+    if (this._canvas) {
+      for (const { type, handler } of this._mouseEventHandlers) {
+        this._canvas.removeEventListener(type, handler)
+      }
+    }
+    this._mouseEventHandlers.length = 0
+    this._mouseOver.clear()
+
+    // 9. 카메라 참조 해제
+    this._activeCamera = null
+
+    // 10. 이벤트 emit 후 리스너 전체 해제
+    this.emit('destroy')
+      ; (this as any).listeners?.clear?.()
   }
 
   /**

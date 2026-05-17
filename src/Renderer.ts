@@ -2583,4 +2583,40 @@ export class Renderer {
     }
     return tex
   }
+
+  /**
+   * 렌더러의 모든 리소스를 해제합니다.
+   * WebGL 컨텍스트, 텍스처 캐시, 디버그 오버레이 등을 정리합니다.
+   * @internal World.destroy()에서 호출됩니다.
+   */
+  destroy() {
+    // 텍스트 텍스처 캐시 정리
+    for (const entry of this.textCache.values()) {
+      if (entry.texture && (entry.texture as any).delete) {
+        ;(entry.texture as any).delete()
+      }
+    }
+    this.textCache.clear()
+    this.textContentCache.clear()
+    this.textContentRefCount.clear()
+
+    // 에셋 텍스처 캐시 정리
+    this.assetTextureCache.clear()
+
+    // 비디오 텍스처 캐시 정리
+    this.videoTextureCache.clear()
+
+    // 메쉬 캐시 정리
+    this.meshCache.clear()
+
+    // 정렬 캐시 초기화
+    this._sortedObjects.length = 0
+
+    // 디버그 오버레이 제거
+    this._teardownDebugOverlay()
+
+    // WebGL 컨텍스트 강제 해제
+    const loseCtx = this.gl.getExtension('WEBGL_lose_context')
+    if (loseCtx) loseCtx.loseContext()
+  }
 }

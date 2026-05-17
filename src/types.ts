@@ -274,4 +274,5 @@ export interface WorldEvents {
   mouseover: [obj: LeviarObject | undefined, e: MouseEvent]
   mouseout: [obj: LeviarObject | undefined, e: MouseEvent]
   update: [timestamp: number]
+  destroy: []
 }
