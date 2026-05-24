@@ -1,54 +1,54 @@
-# Dataset (데이터셋) 가이드
+# Dataset Guide
 
-**Dataset**은 개발자가 객체에 **나만의 커스텀 데이터**를 자유롭게 보관할 수 있는 스마트한 저장소입니다. 레비아 엔진은 이 값이 변할 때마다 이벤트를 방출하여, 데이터 흐름에 따라 화면을 자동으로 갱신하는 정교한 시스템을 지원합니다.
+**Dataset** is a smart storage where developers can freely store their **own custom data** on objects. The leviar engine emits events whenever these values change, supporting an elaborate system that automatically updates the screen according to the data flow.
 
 ---
 
-## 📦 1. 데이터 보관 (Storage)
+## 📦 1. Data Storage
 
-모든 객체는 `dataset` 속성을 통해 데이터를 관리합니다.
+All objects manage data through the `dataset` attribute.
 
-| 속성 | 타입 | 설명 |
+| Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `dataset` | `Record<string, any>` | 자유로운 키-값 쌍을 저장합니다. (문자열, 숫자, 불리언, 객체 등) |
+| `dataset` | `Record<string, any>` | Stores free key-value pairs. (strings, numbers, booleans, objects, etc.) |
 
--  **감지 시스템 (Proxy)**: `dataset`은 특수 객체(Proxy)로 감싸져 있어, 값을 대입하는 즉시 엔진이 이를 감지하고 이벤트를 처리합니다.
+-  **Detection System (Proxy)**: The `dataset` is wrapped in a special object (Proxy), so the engine immediately detects any value assignment and processes events.
 
 ---
 
-## 🔔 2. 데이터 변경 감지 (datamodified)
+## 🔔 2. Data Change Detection (datamodified)
 
-데이터가 변할 때마다 객체는 `datamodified` 이벤트를 발생시킵니다.
+Whenever data changes, the object triggers a `datamodified` event.
 
-| 이벤트 명 | 인자(Arguments) | 설명 |
+| Event Name | Arguments | Description |
 | :--- | :--- | :--- |
-| `datamodified` | `key, value, prev` | 특정 키의 값이 변경되었을 때 발생합니다. |
+| `datamodified` | `key, value, prev` | Occurs when the value of a specific key changes. |
 
 ---
 
-## 🏃 3. 애니메이션 연계 (Animation)
+## 🏃 3. Animation Integration
 
-`dataset` 내부의 수치 데이터는 `animate()` 메서드를 통해 **부동 소수점 단위로 부드럽게** 변화시킬 수 있습니다.
+Numeric data within the `dataset` can be **smoothly changed in floating-point units** through the `animate()` method.
 
--  💡 **주요 활용 사례**: 체력바 수치 서서히 줄이기, 점수 텍스트 부드럽게 올리기, 스킬 쿨타임 계산 등.
+-  💡 **Main Use Cases**: Gradually decreasing a health bar value, smoothly increasing score text, calculating skill cooldowns, etc.
 
 ---
 
-## 💻 사용 예시
+## 💻 Usage Example
 
-### 체력 수치에 따라 색상이 변하는 몬스터 만들기
+### Creating a monster that changes color based on health
 ```typescript
 const monster = world.createImage({
-  attribute: { name: 'monster_01' }, // 고유 식별을 위해 name 사용
-  dataset: { hp: 100, maxHp: 100 } // 초기 데이터 설정
+  attribute: { name: 'monster_01' }, // Using name for unique identification
+  dataset: { hp: 100, maxHp: 100 } // Setting initial data
 });
 
-// 데이터가 변할 때 실시간 반응
+// Reacting in real-time when data changes
 monster.on('datamodified', (key, val, prev) => {
   if (key === 'hp') {
-    console.log(`체력 변경: ${prev} -> ${val}`);
+    console.log(`HP changed: ${prev} -> ${val}`);
     
-    // 체력이 30% 이하로 떨어지면 물체를 붉게 강조
+    // Highlight the object in red if health drops below 30%
     if (val <= monster.dataset.maxHp * 0.3) {
       monster.style.outlineColor = '#ff0000';
       monster.style.outlineWidth = 5;
@@ -56,9 +56,8 @@ monster.on('datamodified', (key, val, prev) => {
   }
 });
 
-// 체력을 서서히 깎는 애니메이션 실행
+// Execute an animation to gradually decrease health
 monster.animate({
-  dataset: { hp: 10 } // 100에서 10까지 부드럽게 감소
+  dataset: { hp: 10 } // Smoothly decreases from 100 to 10
 }, 1000, 'easeOutCubic');
 ```
-

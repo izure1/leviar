@@ -1,43 +1,44 @@
-# Animation (애니메이션) 가이드
+# Animation Guide
 
-안녕하세요! **Animation**은 레비아 엔진의 모든 시각적 변화를 **부드럽고 생동감 있게** 연결해 주는 핵심 엔진입니다. 단순히 수치를 바꾸는 것을 넘어, 물리 시스템 및 데이터셋과 연동하여 풍부한 연출을 가능하게 합니다.
+Hello! **Animation** is the core engine that connects all visual changes in the leviar engine **smoothly and vividly**. Beyond simply changing numerical values, it enables rich directing by integrating with the physics system and datasets.
 
 ---
 
-## 🏃 1. 기본 사용법 (animate)
+## 🏃 1. Basic Usage (animate)
 
-모든 객체는 `animate()` 메서드를 호출하여 애니메이션을 시작할 수 있습니다.
+All objects can start an animation by calling the `animate()` method.
 
 #### `animate(target, duration, easing)`
 
-| 파라미터 | 타입 | 기본값 | 설명 |
+| Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `target` | `AnimateTarget` | - | 변경하려는 속성(`style`, `transform`, `dataset`)의 목표값들입니다. |
-| `duration` | `number` | - | 애니메이션이 지속될 시간(ms)입니다. |
-| `easing` | `EasingType` | `'linear'` | 애니메이션 가속도 조절 함수 이름입니다. |
+| `target` | `AnimateTarget` | - | The target values of the attributes (`style`, `transform`, `dataset`) you want to change. |
+| `duration` | `number` | - | The duration of the animation in milliseconds (ms). |
+| `easing` | `EasingType` | `'linear'` | The name of the animation acceleration control function. |
 
-- **반환값**: 중단하거나 상태를 확인할 수 있는 전용 `Animation` 객체를 반환합니다.
+- **Returns**: Returns a dedicated `Animation` object that can be stopped or whose status can be checked.
 
 > [!IMPORTANT]
-> 일반적으로 `animate()` 메서드는 숫자 자료형에만 적용할 수 있습니다. 하지만 사용자 편의성을 위해 예외적으로 *color (rgb, rgba, hex, hsl)* 서식의 문자열 자료형과 *gradient* 서식의 문자열 자료형에 대해서도 적용할 수 있습니다. 이 경우, `colorUtils.ts`에 정의된 색상 보간 함수를 통해 색상이 부드럽게 변환됩니다.
+> Generally, the `animate()` method can only be applied to numeric data types. However, for user convenience, as an exception, it can also be applied to string data types in *color (rgb, rgba, hex, hsl)* format and string data types in *gradient* format. In this case, colors are smoothly transitioned through the color interpolation function defined in `colorUtils.ts`.
 
-### ➕ 상대 연산자 (Relative Operators)
-목표값을 현재 값 기준으로 상대적으로 설정할 수 있는 4가지 연산자를 지원합니다.
+### ➕ Relative Operators
 
-| 연산자 | 예시 | 설명 |
+It supports 4 operators that allow you to set the target value relative to the current value.
+
+| Operator | Example | Description |
 | :--- | :--- | :--- |
-| `+=` | `'+=100'` | 현재 값에 100을 더함 |
-| `-=` | `'-=50'` | 현재 값에서 50을 뺌 |
-| `*=` | `'*=2'` | 현재 값의 2배로 만듦 |
-| `/=` | `'/=2'` | 현재 값의 절반으로 줄임 |
+| `+=` | `'+=100'` | Add 100 to the current value |
+| `-=` | `'-=50'` | Subtract 50 from the current value |
+| `*=` | `'*=2'` | Multiply the current value by 2 |
+| `/=` | `'/=2'` | Divide the current value by 2 |
 
 ---
 
-## 📋 2. 애니메이션 이징(Easing) 목록 (34종)
+## 📋 2. Animation Easing List (34 types)
 
-레비아 엔진은 수치의 변화를 정교하게 제어할 수 있는 34가지 표준 이징 함수를 제공합니다.
+The leviar engine provides 34 standard easing functions that allow precise control of numerical changes.
 
-| 분류 | 함수 목록 |
+| Classification | Function List |
 | :--- | :--- |
 | **Linear** | `linear` |
 | **Quad** | `easeInQuad`, `easeOutQuad`, `easeInOutQuad` |
@@ -53,22 +54,22 @@
 
 ---
 
-## 🔔 3. 생명주기 이벤트 (Events)
+## 🔔 3. Lifecycle Events
 
-| 이벤트 명 | 시점 | 인자(Arguments) |
+| Event Name | Timing | Arguments |
 | :--- | :--- | :--- |
-| `start` | 애니메이션 시작 시 | - |
-| `update` | 매 프레임 수치 변화 시 | `state: { progress: number, [key: string]: any }` |
-| `end` | 종료(목표치 도달) 시 | - |
-| `pause` | 일시 정지 시 | - |
-| `resume` | 다시 시작 시 | - |
-| `stop` | 강제 중단(`anim.stop()`) 시 | - |
+| `start` | When the animation starts | - |
+| `update` | When numerical values change every frame | `state: { progress: number, [key: string]: any }` |
+| `end` | On completion (reaching target) | - |
+| `pause` | On pause | - |
+| `resume` | On resume | - |
+| `stop` | On forced stop (`anim.stop()`) | - |
 
 ---
 
-## 💻 사용 예시
+## 💻 Usage Example
 
-### 회전하며 서서히 사라지는 상자 만들기
+### Creating a rotating and fading box
 ```typescript
 const box = world.createRectangle({
   style: { width: 100, height: 100, color: '#f1c40f' }
@@ -76,13 +77,13 @@ const box = world.createRectangle({
 
 box.animate({
   style: { opacity: 0 },
-  transform: { rotation: { z: '+=360' } }, // 360도 회전
-  dataset: { score: 100 }               // 유저 데이터도 부드럽게 증가 가능
+  transform: { rotation: { z: '+=360' } }, // Rotate 360 degrees
+  dataset: { score: 100 }               // User data can also increase smoothly
 }, 2000, 'easeInOutBack').on('end', () => {
-  // 애니메이션이 끝나면 객체 삭제
+  // Delete the object when the animation ends
   box.remove();
 }).on('update', (state) => {
-  // 매 프레임 진행률 콘솔 출력
-  console.log(`진행도: ${Math.floor(state.progress * 100)}%`);
+  // Console output of progress per frame
+  console.log(`Progress: ${Math.floor(state.progress * 100)}%`);
 });
 ```

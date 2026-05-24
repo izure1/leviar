@@ -1,59 +1,58 @@
-# Transform (변환) 가이드
+# Transform Guide
 
-**Transform**은 객체가 월드 상의 **어디에, 어떤 방향으로, 어떤 크기로** 놓일지를 결정하는 가장 중요한 물리적 배치 정보입니다. 레비아 엔진은 "부모-자식(Parent-Child)" 계층 구조를 지원하여, 복잡한 3D 변환을 직관적으로 관리할 수 있도록 돕습니다.
+**Transform** is the most important physical placement information that determines **where, in what direction, and at what size** an object will be placed in the world. The leviar engine supports a "Parent-Child" hierarchy structure, helping you manage complex 3D transformations intuitively.
 
 ---
 
-## 📍 1. 변환 요소 (Components)
+## 📍 1. Transform Components
 
-모든 객체는 `transform` 속성 아래에 다음과 같은 데이터를 가집니다.
+Every object has the following data under the `transform` attribute.
 
-| 속성 | 타입 / 단위 | 기본값 | 설명 |
+| Attribute | Type / Unit | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `position` | `{x, y, z}` (px) | `0, 0, 0` | 객체의 중심 위치. Z축은 카메라와의 거리를 의미함. |
-| `rotation` | `{x, y, z}` (도) | `0, 0, 0` | 객체의 각 축 기준 회전 각도. 적용 순서: Z -> Y -> X. |
-| `scale` | `{x, y, z}` (배율) | `1, 1, 1` | 객체의 크기 배율. |
-| `pivot` | `{x, y}` (0~1.0) | `0.5, 0.5` | 변환의 기준점 (0,0: 좌상단, 1,1: 우하단). |
+| `position` | `{x, y, z}` (px) | `0, 0, 0` | The center position of the object. The Z-axis represents distance from the camera. |
+| `rotation` | `{x, y, z}` (degrees) | `0, 0, 0` | The rotation angle of the object for each axis. Application order: Z -> Y -> X. |
+| `scale` | `{x, y, z}` (multiplier) | `1, 1, 1` | The size multiplier of the object. |
+| `pivot` | `{x, y}` (0~1.0) | `0.5, 0.5` | The reference point for transformations (0,0: Top-left, 1,1: Bottom-right). |
 
 ---
 
-## ⛓️ 2. 계층 구조와 상속 (Hierarchy)
+## ⛓️ 2. Hierarchy and Inheritance
 
-레비아 엔진은 객체 간의 부모-자식 관계를 통해 복잡한 움직임을 단순화합니다.
+The leviar engine simplifies complex movements through parent-child relationships between objects.
 
-| 메서드 | 파라미터 | 설명 |
+| Method | Parameter | Description |
 | :--- | :--- | :--- |
-| `addChild` | `child: LeviarObject` | 자식을 등록하며 부모의 모든 변환 정보를 상속받음. |
-| **Matrix World** | - | 부모와 자신의 로컬 변환을 곱하여 최종 좌표를 자동 계산함. |
+| `addChild` | `child: LeviarObject` | Registers a child and inherits all transform information from the parent. |
+| **Matrix World** | - | Automatically calculates final coordinates by multiplying the parent's and its own local transforms. |
 
 ---
 
-## 👣 3. 추적 시스템 (Following System)
+## 👣 3. Following System
 
-자식 관계 외에도, 독립성을 유지하면서 따라다니는 고유 시스템을 제공합니다.
+Aside from child relationships, it provides a unique system for tracking while maintaining independence.
 
-| 메서드 | 파라미터 | 설명 |
+| Method | Parameter | Description |
 | :--- | :--- | :--- |
-| `follow` | `target, offset?` | 타겟의 **위치(position)**만 실시간 복제. 회전/크기 변화에는 영향받지 않음. |
+| `follow` | `target, offset?` | Replicates only the target's **position** in real-time. Unaffected by rotation/scale changes. |
 
 ---
 
-## 💻 사용 예시
+## 💻 Usage Example
 
-### 행성과 위성 만들기 (계층 구조 활용)
+### Creating a Planet and Satellite (Using Hierarchy)
 ```typescript
 const planet = world.createCircle({ style: { width: 100, color: '#e67e22' } });
 const satellite = world.createCircle({ style: { width: 30, color: '#95a5a6' } });
 
-// 자식으로 등록하면 부모(행성)를 따라 움직입니다.
+// When registered as a child, it moves along with the parent (planet).
 planet.addChild(satellite);
 
-// 위성을 옆으로 살짝 떼어 놓습니다.
+// Place the satellite slightly apart to the side.
 satellite.transform.position.x = 150;
 
-// 행성을 회전시키면 위성이 행성 주위를 공전합니다!
+// Rotating the planet makes the satellite orbit around it!
 planet.animate({
   transform: { rotation: { z: '+=360' } }
 }, 5000, 'linear');
 ```
-

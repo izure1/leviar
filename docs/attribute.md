@@ -1,55 +1,54 @@
-# Attribute (속성) 가이드
+# Attribute Guide
 
-**Attribute**는 객체의 **식별 정보와 물리적 성격**을 정의하는 데이터 세트입니다. 레비아 엔진은 모든 객체의 기본 사양을 이 속성들을 통해 관리합니다.
+**Attribute** is a dataset that defines an object's **identification information and physical characteristics**. The leviar engine manages the basic specifications of all objects through these attributes.
 
 ---
 
-## 📋 1. 식별 및 분류 (Identity)
-객체를 구분하고 선택하는 데 사용되는 가장 기본적인 정보입니다.
+## 📋 1. Identification and Classification (Identity)
+The most basic information used to distinguish and select objects.
 
-| 속성 | 타입 | 설명 |
+| Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `id` | `string` | 시스템 내부에서 관리하는 객체의 고유 식별자입니다. 생성 시 자동으로 UUID가 부여되며, **사용자가 직접 지정하거나 수정할 수 없습니다.** |
-| `type` | `string` | 객체의 종류를 나타냅니다. (`image`, `video`, `rectangle`, `ellipse`, `text`, `sprite`, `particle`, `camera`) |
-| `name` | `string` | 사용자가 정의하는 객체의 이름입니다. **다른 객체와 이름이 중복될 수 있으며**, 논리적인 분류나 그룹화를 위해 자유롭게 사용할 수 있습니다. 특정 객체를 유일하게 구분하고 싶다면 사용자가 직접 고유한 이름을 부여하여 관리하십시오. (`[attr-name="hero"]` 형식을 통해 검색 가능) |
-| `className` | `string` | 객체에 부여된 클래스 목록입니다. 공백으로 구분하여 여러 개를 넣을 수 있으며, 스타일링이나 그룹 선택에 활용됩니다. (`.active` 형식을 통해 검색 가능) |
+| `id` | `string` | A unique identifier for the object managed internally by the system. A UUID is automatically assigned upon creation, and **users cannot directly specify or modify it.** |
+| `type` | `string` | Indicates the type of object. (`image`, `video`, `rectangle`, `ellipse`, `text`, `sprite`, `particle`, `camera`) |
+| `name` | `string` | The name of the object defined by the user. **It can be duplicated with other objects' names**, and can be freely used for logical classification or grouping. If you want to uniquely identify a specific object, assign and manage a unique name yourself. (Searchable via `[attr-name="hero"]` format) |
+| `className` | `string` | A list of classes assigned to the object. Multiple classes can be added separated by spaces, and are used for styling or group selection. (Searchable via `.active` format) |
 
 ---
 
-## 📋 2. 물리적 성질 (Physics)
-`physics` 속성이 설정된 동적(`dynamic`) 또는 정적(`static`) 객체에 적용되는 물리 사양입니다.
+## 📋 2. Physical Properties (Physics)
+Physical specifications applied to dynamic (`dynamic`) or static (`static`) objects where the `physics` attribute is set.
 
-| 속성 | 타입 | 설명 |
+| Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `physics` | `'dynamic' \| 'static' \| null` | 물리 시스템 적용 여부를 결정합니다. `dynamic`은 충돌과 중력의 영향을 받으며, `static`은 고정된 물체입니다. |
-| `density` | `number` | 물체의 밀도입니다. 면적과 곱해져서 질량(`mass`)이 결정됩니다. |
-| `friction` | `number` (0 ~ 1) | 다른 물체와 접촉했을 때 발생하는 마찰 계수입니다. (0: 미끄러움, 1: 뻑뻑함) |
-| `frictionAir` | `number` | 공기 저항 계수입니다. 매 프레임 속도가 줄어드는 정도를 결정합니다. |
-| `restitution` | `number` (0 ~ 1) | 탄성 계수(반발력)입니다. (0: 튀지 않음, 1: 완전 탄성 충돌) |
-| `fixedRotation` | `boolean` | `true` 설정 시 충돌이 발생해도 물체가 회전하지 않고 똑바로 유지됩니다. |
-| `gravityScale` | `number` | 이 물체에만 적용되는 중력의 배율입니다. (0: 무중력) |
+| `physics` | `'dynamic' \| 'static' \| null` | Determines whether to apply the physics system. `dynamic` is affected by collisions and gravity, while `static` is a fixed object. |
+| `density` | `number` | The density of the object. Multiplied by the area to determine its `mass`. |
+| `friction` | `number` (0 ~ 1) | The coefficient of friction when in contact with other objects. (0: slippery, 1: stiff) |
+| `frictionAir` | `number` | The air resistance coefficient. Determines how much velocity decreases every frame. |
+| `restitution` | `number` (0 ~ 1) | The coefficient of restitution (bounciness). (0: does not bounce, 1: perfectly elastic collision) |
+| `fixedRotation` | `boolean` | If set to `true`, the object will not rotate and will stay upright even if a collision occurs. |
+| `gravityScale` | `number` | A multiplier for gravity applied only to this object. (0: zero gravity) |
 
 ---
 
-## 📋 3. 충돌 필터 (Collision Filter)
-물체끼리 부딪힐지 말지를 결정하는 비트마스크 시스템입니다.
+## 📋 3. Collision Filter
+A bitmask system that determines whether objects will collide with each other or not.
 
-| 속성 | 타입 | 설명 |
+| Attribute | Type | Description |
 | :--- | :--- | :--- |
-| `collisionGroup` | `number` | 특수 충돌 그룹 번호입니다. 같은 음수면 서로 부딪히지 않고, 같은 양수면 무조건 부딪힙니다. |
-| `collisionMask` | `number` | 내가 어떤 카테고리의 물체와 부딪힐 것인지를 결정하는 32비트 정수입니다. |
-| `collisionCategory` | `number` | 내가 어떤 카테고리에 속해 있는지를 나타내는 32비트 정수입니다. |
+| `collisionGroup` | `number` | A special collision group number. If it is the same negative number, they do not collide with each other, and if it is the same positive number, they collide unconditionally. |
+| `collisionMask` | `number` | A 32-bit integer that determines the category of objects this object will collide with. |
+| `collisionCategory` | `number` | A 32-bit integer representing the category this object belongs to. |
 
 ---
 
-## 📋 4. 특수 속성 (Special Attributes)
-특정 객체 타입에만 존재하는 데이터들입니다.
+## 📋 4. Special Attributes
+Data that exists only on specific object types.
 
-| 속성 | 타입 | 적용 대상 | 설명 |
+| Attribute | Type | Applied To | Description |
 | :--- | :--- | :--- | :--- |
-| `focalLength` | `number` | Camera | 카메라의 초점 거리입니다. (기본값: `100`) 원근감 계산의 기준이 됩니다. |
-| `src` | `string` | Image, Video, Sprite, Particle | 사용할 소스 자원의 경로 또는 키 값입니다. 변경 시 Video/Sprite는 재생 위치가 초기화되고 정지됩니다. |
-| `volume` | `number` (0 ~ 1) | Video | 비디오의 음량 크기입니다. |
-| `playbackRate` | `number` | Video, Sprite | 재생 속도 배율입니다. `1.0`이 정상 속도입니다. |
-| `currentTime` | `number` | Video, Sprite | 현재 재생 지점(초 또는 프레임 단위)입니다. 값을 변경하면 해당 위치로 즉시 이동합니다. |
-
+| `focalLength` | `number` | Camera | The focal length of the camera. (Default: `100`) It serves as the basis for perspective calculations. |
+| `src` | `string` | Image, Video, Sprite, Particle | The path or key value of the source resource to use. Upon change, playback position is initialized and paused for Video/Sprite. |
+| `volume` | `number` (0 ~ 1) | Video | The volume level of the video. |
+| `playbackRate` | `number` | Video, Sprite | The playback speed multiplier. `1.0` is normal speed. |
+| `currentTime` | `number` | Video, Sprite | The current playback position (in seconds or frames). Changing the value instantly moves to that position. |
