@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leviar – ㉖ 스케일 성능 테스트</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0b0d14;
+      color: #d0d4de;
+      overflow: hidden;
+    }
+
+    /* ── 사이드바 ── */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 300px;
+      height: 100vh;
+      overflow-y: auto;
+      background: rgba(14, 17, 30, 0.85);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 24px 18px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    #sidebar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #7ec8e3;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* ── FPS 디스플레이 ── */
+    .fps-display {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .fps-title {
+      font-size: 12px;
+      color: #7b8099;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .fps-number {
+      font-size: 36px;
+      font-weight: 600;
+      color: #00ffcc;
+      font-feature-settings: "tnum";
+    }
+
+    /* ── 컨트롤 카드 ── */
+    .control-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #c77dff;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-header label {
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .card-header input[type=checkbox] {
+      width: 14px;
+      height: 14px;
+      accent-color: #7ec8e3;
+      cursor: pointer;
+    }
+
+    /* ── 슬라이더 ── */
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #7b8099;
+    }
+
+    .row span {
+      width: 70px;
+      white-space: nowrap;
+    }
+
+    .row .val {
+      width: 40px;
+      text-align: right;
+      color: #c0c4d0;
+      font-weight: 500;
+    }
+
+    .row input[type=range] {
+      flex: 1;
+      accent-color: #7ec8e3;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    /* ── 설명 가이드 ── */
+    .info-panel {
+      font-size: 11px;
+      line-height: 1.6;
+      color: #8c92ac;
+      background: rgba(126, 200, 227, 0.04);
+      border: 1px solid rgba(126, 200, 227, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .info-panel strong {
+      color: #7ec8e3;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ── 버튼 ── */
+    #reset-btn {
+      margin-top: auto;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #7b8099;
+      font-size: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #reset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #d0d4de;
+    }
+
+    /* ── 뒤로 링크 ── */
+    #back {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #444;
+      font-size: 11px;
+      text-decoration: none;
+      z-index: 200;
+      letter-spacing: 0.04em;
+    }
+
+    #back:hover {
+      color: #7ec8e3;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── 사이드바 컨트롤 ─────────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <h1>㉖ Scale Performance</h1>
+
+    <!-- 실시간 FPS 디스플레이 -->
+    <div class="fps-display">
+      <div class="fps-title">Realtime FPS</div>
+      <div class="fps-number" id="fps-val">--</div>
+    </div>
+
+    <!-- Transform Scale 조절 -->
+    <div class="control-card">
+      <div class="card-title">Transform Scale</div>
+      <div class="row">
+        <span>Scale</span>
+        <input type="range" id="scale-range" min="0.1" max="20" value="1" step="0.1" />
+        <span class="val" id="scale-val">1.0</span>
+      </div>
+    </div>
+
+    <!-- Style Size (width, height) 조절 -->
+    <div class="control-card">
+      <div class="card-title">Style Dimensions</div>
+      <div class="row">
+        <span>Width/Height</span>
+        <input type="range" id="size-range" min="100" max="6000" value="500" step="50" />
+        <span class="val" id="size-val">500px</span>
+      </div>
+    </div>
+
+    <!-- 알파 셰이더 토글 컨트롤 -->
+    <div class="control-card">
+      <div class="card-title">Shader Features</div>
+      
+      <!-- Box Shadow -->
+      <div class="card-header" style="margin-top: 6px;">
+        <input type="checkbox" id="cb-shadow" checked />
+        <label for="cb-shadow">Box Shadow (알파 그림자)</label>
+      </div>
+      <div class="row" id="shadow-blur-row">
+        <span>Blur Radius</span>
+        <input type="range" id="shadow-blur" min="0" max="40" value="20" step="1" />
+        <span class="val" id="shadow-blur-val">20</span>
+      </div>
+
+      <!-- Outline -->
+      <div class="card-header" style="margin-top: 10px;">
+        <input type="checkbox" id="cb-outline" checked />
+        <label for="cb-outline">Outline (알파 테두리)</label>
+      </div>
+    </div>
+
+    <!-- 분석 안내 가이드 -->
+    <div class="info-panel">
+      <strong>💡 성능 분석 핵심 가이드</strong>
+      크기를 엄청나게 키우면 VRAM 용량이 증가하는 것이 아닙니다. 
+      화면에 그려질 렌더 영역(픽셀 수) 자체가 100배(10×10)로 급증합니다.<br /><br />
+      특히 <strong>알파 그림자나 테두리 효과</strong>가 켜져 있으면, 화면 전체를 덮는 수백만 픽셀 각각에 대해 25회 이상의 무거운 텍스처 샘플링 셰이더 루프 연산이 구동되어 <strong>GPU 병목(Fill Rate 제한)</strong>이 발생하여 렉이 심하게 걸립니다.<br /><br />
+      이 효과들을 꺼보거나 크기를 줄이면 프레임이 즉각 정상화되는 것을 볼 수 있습니다.
+    </div>
+
+    <button id="reset-btn">모두 초기화</button>
+  </aside>
+
+  <a id="back" href="../">← 목록으로</a>
+  <script type="module" src="./main.js"></script>
+</body>
+
+</html>
