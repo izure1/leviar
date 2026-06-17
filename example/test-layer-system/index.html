@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leviar - ㉗ 레이어 시스템 데모</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #09090e;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    #hud {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      line-height: 1.8;
+      pointer-events: none;
+      z-index: 100;
+      background: rgba(15, 15, 30, 0.7);
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    #hud strong {
+      color: #7ec8e3;
+      font-size: 16px;
+    }
+
+    #hud span.bg-layer {
+      color: #ff557f;
+      font-weight: bold;
+    }
+
+    #hud span.actor-layer {
+      color: #00ffaa;
+      font-weight: bold;
+    }
+
+    #back {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      text-decoration: none;
+      z-index: 100;
+      background: rgba(15, 15, 30, 0.7);
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    #back:hover {
+      color: #7ec8e3;
+      border-color: rgba(126, 200, 227, 0.5);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="hud">
+    <strong>transformStyle: 'flat' 레이어 데모</strong><br />
+    * 화면 클릭: 새로운 물리 다이내믹 박스 낙하<br />
+    * 마우스 이동: 카메라 시점 변환 (패럴랙스)<br />
+    * 마우스 휠: 카메라 Z축 줌인/아웃<br />
+    <br />
+    <span class="bg-layer">■ 배경 레이어 (Z: 80, zIndex: 1)</span> - 빨강/주황 상자<br />
+    <span class="actor-layer">■ 액터 레이어 (Z: -20, zIndex: 2)</span> - 초록/청록 상자<br />
+    <br />
+    <em>* 다른 레이어끼리는 충돌 없이 관통하며,<br />
+    Z좌표 깊이와 관계없이 액터 레이어의 상자가 항상 위에 렌더링됩니다.</em>
+  </div>
+  <a id="back" href="../">← 목록으로</a>
+  <script type="module" src="./main.js"></script>
+</body>
+
+</html>

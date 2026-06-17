@@ -79,6 +79,7 @@ function makeStyle(partial?: Partial<Style>): Style {
     borderRadius: partial?.borderRadius,
     cursor: partial?.cursor,
     overflow: partial?.overflow ?? 'visible',
+    transformStyle: partial?.transformStyle ?? 'preserve-3d',
   }
 }
 

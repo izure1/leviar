@@ -12,64 +12,75 @@ const layers = [
   { z: 150, count: 12, size: 36, colors: ['#9b30ff', '#c77dff', '#e0aaff'] },
 ]
 
+const wrapper = world.createRectangle()
+
 const rand = (min: number, max: number) => Math.random() * (max - min) + min
 
 for (const layer of layers) {
   for (let i = 0; i < layer.count; i++) {
     const color = layer.colors[Math.floor(Math.random() * layer.colors.length)]
-    world.createEllipse({
-      attribute: {
-        className: 'parallax-layer'
-      },
-      style: {
-        background: color,
-        opacity: rand(0.3, 0.8),
-        width: rand(layer.size * 0.5, layer.size * 1.5),
-        height: rand(layer.size * 0.3, layer.size),
-        blur: rand(2, 8),
-      },
-      transform: {
-        position: {
-          x: rand(-1200, 1200),
-          y: rand(-700, 700),
-          z: layer.z + rand(-50, 50),
+  
+    wrapper.addChild(
+      world.createEllipse({
+        attribute: {
+          className: 'parallax-layer'
         },
-      },
-    })
+        style: {
+          background: color,
+          opacity: rand(0.3, 0.8),
+          width: rand(layer.size * 0.5, layer.size * 1.5),
+          height: rand(layer.size * 0.3, layer.size),
+          blur: rand(2, 8),
+        },
+        transform: {
+          position: {
+            x: rand(-1200, 1200),
+            y: rand(-700, 700),
+            z: layer.z + rand(-50, 50),
+          },
+        },
+      })
+    )
   }
 }
 
 for (let i = 0; i < 25; i++) {
   const size = rand(4, 18)
-  world.createRectangle({
-    attribute: {
-      className: 'parallax-layer'
-    },
-    style: {
-      background: `hsl(${rand(200, 300)}, 80%, 70%)`,
-      opacity: rand(0.4, 1.0),
-      width: size,
-      height: size,
-      borderRadius: 2,
-    },
-    transform: {
-      position: { x: rand(-900, 900), y: rand(-500, 500), z: rand(60, 130) },
-      rotation: { z: rand(0, 45) },
-    },
-  })
+  wrapper.addChild(
+    world.createRectangle({
+      attribute: {
+        className: 'parallax-layer'
+      },
+      style: {
+        background: `hsl(${rand(200, 300)}, 80%, 70%)`,
+        opacity: rand(0.4, 1.0),
+        width: size,
+        height: size,
+        borderRadius: 2,
+      },
+      transform: {
+        position: { x: rand(-900, 900), y: rand(-500, 500), z: rand(60, 130) },
+        rotation: { z: rand(0, 45) },
+      },
+    })
+  )
 }
 
-world.createText({
-  attribute: { text: 'Leviar' },
-  style: { color: '#ffffff', opacity: 0.95, fontSize: 72, fontFamily: 'sans-serif, Segoe UI, sans-serif', fontWeight: 'bold', textAlign: 'center' },
-  transform: { position: { x: -100, y: -30, z: 200 } },
-})
+wrapper.addChild(
+  world.createText({
+    attribute: { text: 'Leviar' },
+    style: { color: '#ffffff', opacity: 0.95, fontSize: 72, fontFamily: 'sans-serif, Segoe UI, sans-serif', fontWeight: 'bold', textAlign: 'center' },
+    transform: { position: { x: -100, y: -30, z: 200 } },
+  })
+)
 
-world.createText({
-  attribute: { text: '2.5D <style fontSize="30" borderWidth="2">Parallax</style> Engine' },
-  style: { color: '#c77dff', opacity: 0.8, fontSize: 22, fontFamily: 'sans-seif, Segoe UI, sans-serif', borderWidth: 1, borderColor: 'rgb(255, 255, 255)', textAlign: 'center' },
-  transform: { position: { x: -100, y: 60, z: 200 } },
-})
+wrapper.addChild(
+  world.createText({
+    attribute: { text: '2.5D <style fontSize="30" borderWidth="2">Parallax</style> Engine' },
+    style: { color: '#c77dff', opacity: 0.8, fontSize: 22, fontFamily: 'sans-seif, Segoe UI, sans-serif', borderWidth: 1, borderColor: 'rgb(255, 255, 255)', textAlign: 'center' },
+    transform: { position: { x: -100, y: 60, z: 200 } },
+  })
+)
 
 window.addEventListener('mousemove', (e) => {
   if (!world.camera) return

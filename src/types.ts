@@ -139,6 +139,7 @@ export interface Style {
   borderRadius?: string | number
   cursor?: CssCursor
   overflow: 'hidden' | 'visible'
+  transformStyle?: 'preserve-3d' | 'flat'
 }
 
 // ============================================================

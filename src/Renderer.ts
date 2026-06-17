@@ -705,6 +705,39 @@ export class Renderer {
     }
   }
 
+  private getFlatAncestor(o: LeviarObject): LeviarObject | null {
+    let curr: LeviarObject | null = o.parent
+    while (curr) {
+      if (curr.style.transformStyle === 'flat') {
+        return curr
+      }
+      curr = curr.parent
+    }
+    return null
+  }
+
+  private compareHierarchical(
+    a: LeviarObject,
+    b: LeviarObject,
+    siblingCompare: (sa: LeviarObject, sb: LeviarObject) => number
+  ): number {
+    const La = this.getFlatAncestor(a)
+    const Lb = this.getFlatAncestor(b)
+
+    if (La === Lb) {
+      return siblingCompare(a, b)
+    }
+
+    const targetA = La !== null ? La : a
+    const targetB = Lb !== null ? Lb : b
+
+    if (targetA !== a || targetB !== b) {
+      return this.compareHierarchical(targetA, targetB, siblingCompare)
+    }
+
+    return siblingCompare(targetA, targetB)
+  }
+
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
 
   render(objects: Set<LeviarObject>, assets: LoadedAssets = {}, timestamp: number = 0, activeCamera: LeviarObject | null = null) {
@@ -841,8 +874,8 @@ export class Renderer {
         return (-mB[14]) - (-mA[14])
       }
 
-      worldObjects.sort(worldSortLogic)
-      uiObjects.sort(uiSortLogic)
+      worldObjects.sort((a, b) => this.compareHierarchical(a, b, worldSortLogic))
+      uiObjects.sort((a, b) => this.compareHierarchical(a, b, uiSortLogic))
 
       this._sortedObjects = [...worldObjects, ...uiObjects]
     }

@@ -792,7 +792,7 @@ export class World extends EventEmitter<WorldEvents> {
       if (axis === 'z') this.renderer.markSortDirty()
     })
     obj.on('cssmodified', (key: string) => {
-      if (key === 'zIndex' || key === 'display') this.renderer.markSortDirty()
+      if (key === 'zIndex' || key === 'display' || key === 'transformStyle') this.renderer.markSortDirty()
     })
   }
 

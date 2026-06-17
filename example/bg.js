@@ -8663,7 +8663,8 @@ function makeStyle(partial) {
     backgroundSize: partial?.backgroundSize,
     borderRadius: partial?.borderRadius,
     cursor: partial?.cursor,
-    overflow: partial?.overflow ?? "visible"
+    overflow: partial?.overflow ?? "visible",
+    transformStyle: partial?.transformStyle ?? "preserve-3d"
   };
 }
 function makeTrackedProxy(target, emitter, eventName, delegatedKeys) {
@@ -10001,7 +10002,7 @@ var PhysicsEngine = class {
   prevTime = 0;
   /** syncObjectSizes에서 크기 변경 감지용 - border/margin 제외한 순수 w, h */
   lastSizeMap = /* @__PURE__ */ new Map();
-  /** Z → 양수 그룹 번호 매핑 (1-based). 같은 Z = 같은 양수 그룹 = 충돌, 다른 Z = 다른 그룹 = 차단 */
+  /** Z 또는 레이어 ID → 양수 그룹 번호 매핑 (1-based). 같은 그룹 = 충돌, 다른 그룹 = 차단 */
   zGroupMap = /* @__PURE__ */ new Map();
   nextZGroup = 1;
   constructor() {
@@ -10168,23 +10169,34 @@ var PhysicsEngine = class {
     import_matter_js2.default.Engine.update(this.engine, delta);
     this.syncToObjects();
   }
+  getFlatAncestor(o) {
+    let curr = o.parent;
+    while (curr) {
+      if (curr.style.transformStyle === "flat") {
+        return curr;
+      }
+      curr = curr.parent;
+    }
+    return null;
+  }
   /**
-   * 매 step 전, 오브젝트의 Z 좌표를 기반으로 collisionFilter.group을 동적으로 갱신합니다.
-   * - 같은 Z → 같은 양수 group → matter-js 규칙상 무조건 충돌
-   * - 다른 Z → 다른 group → category=0/mask=0 으로 충돌 차단
-   * - 사용자가 attr.collisionGroup을 명시한 경우 Z 로직을 건너뜁니다.
+   * 매 step 전, 오브젝트가 속한 레이어 또는 Z 좌표를 기반으로 collisionFilter.group을 동적으로 갱신합니다.
+   * - 같은 레이어/Z → 같은 category 비트 → 충돌 허용
+   * - 다른 레이어/Z → 다른 category 비트 → 충돌 차단
+   * - 사용자가 attr.collisionGroup을 명시한 경우 Z/레이어 로직을 건너뜁니다.
    */
   updateZCollisionFilters() {
     for (const [id, body] of this.bodyMap) {
       const obj = this.objMap.get(id);
       if (!obj) continue;
       if (obj.attribute.collisionCategory != null || obj.attribute.collisionMask != null) continue;
-      const z = obj.transform.position.z ?? 0;
-      if (!this.zGroupMap.has(z)) {
+      const layer = this.getFlatAncestor(obj);
+      const layerKey = layer ? layer.attribute.id : `z_${obj.transform.position.z ?? 0}`;
+      if (!this.zGroupMap.has(layerKey)) {
         const bit = 1 << (this.nextZGroup++ - 1) % 31 + 1;
-        this.zGroupMap.set(z, bit);
+        this.zGroupMap.set(layerKey, bit);
       }
-      const category = this.zGroupMap.get(z);
+      const category = this.zGroupMap.get(layerKey);
       const cf = body.collisionFilter;
       if (cf.group !== 0 || cf.category !== category || cf.mask !== category) {
         import_matter_js2.default.Body.set(body, {
@@ -11578,6 +11590,29 @@ var Renderer2 = class {
       ctx.restore();
     }
   }
+  getFlatAncestor(o) {
+    let curr = o.parent;
+    while (curr) {
+      if (curr.style.transformStyle === "flat") {
+        return curr;
+      }
+      curr = curr.parent;
+    }
+    return null;
+  }
+  compareHierarchical(a, b, siblingCompare) {
+    const La = this.getFlatAncestor(a);
+    const Lb = this.getFlatAncestor(b);
+    if (La === Lb) {
+      return siblingCompare(a, b);
+    }
+    const targetA = La !== null ? La : a;
+    const targetB = Lb !== null ? Lb : b;
+    if (targetA !== a || targetB !== b) {
+      return this.compareHierarchical(targetA, targetB, siblingCompare);
+    }
+    return siblingCompare(targetA, targetB);
+  }
   // ─── 공개 렌더 메서드 ────────────────────────────────────────────────────
   render(objects, assets = {}, timestamp = 0, activeCamera = null) {
     if (!activeCamera) {
@@ -11683,8 +11718,8 @@ var Renderer2 = class {
         const mB = b.__worldMatrix;
         return -mB[14] - -mA[14];
       };
-      worldObjects.sort(worldSortLogic);
-      uiObjects.sort(uiSortLogic);
+      worldObjects.sort((a, b) => this.compareHierarchical(a, b, worldSortLogic));
+      uiObjects.sort((a, b) => this.compareHierarchical(a, b, uiSortLogic));
       this._sortedObjects = [...worldObjects, ...uiObjects];
     }
     this.gl.clearColor(0, 0, 0, 0);
@@ -13700,7 +13735,7 @@ var World = class extends EventEmitter {
       if (axis === "z") this.renderer.markSortDirty();
     });
     obj.on("cssmodified", (key) => {
-      if (key === "zIndex" || key === "display") this.renderer.markSortDirty();
+      if (key === "zIndex" || key === "display" || key === "transformStyle") this.renderer.markSortDirty();
     });
   }
   _tryAddPhysics(obj, w, h) {
